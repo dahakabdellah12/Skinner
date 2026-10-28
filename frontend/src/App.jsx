@@ -85,6 +85,36 @@ export default function App() {
     init();
   }, [showToast, isRTL]);
 
+  // Startup auto-update check — runs once after initial load, only if the user has it enabled
+  useEffect(() => {
+    const autoUpdateEnabled = (() => {
+      try { return localStorage.getItem('brawlcraft_auto_update') !== 'false'; } catch { return true; }
+    })();
+
+    if (!autoUpdateEnabled) return;
+
+    // Delay slightly so the UI is fully ready before the network call
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.checkForUpdates();
+        if (res && res.hasUpdate) {
+          showToast(
+            isRTL
+              ? `يتوفر إصدار جديد من BrawlCraft: v${res.latestVersion}! افتح الإعدادات ← التحديثات.`
+              : `BrawlCraft v${res.latestVersion} is available! Open Settings → Updates to download.`,
+            'info'
+          );
+        }
+      } catch {
+        // Silent — startup auto-check failures are not shown to the user
+      }
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  // Run only once on mount — intentionally no deps (we use the closure value of showToast/isRTL at mount time)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const reloadCatalog = useCallback(async () => {
     try {
       const [sys, cat] = await Promise.all([

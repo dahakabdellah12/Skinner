@@ -3,6 +3,20 @@ import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
 import { clearAssetImageCache } from './AssetImage';
 
+// ─── GitHub icon (Octicons-style filled mark) ────────────────────────────────
+const GitHubIcon = ({ size = 18 }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+  </svg>
+);
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -16,6 +30,22 @@ export default function SettingsModal({
   const [confirmResetStock, setConfirmResetStock] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const langDropdownRef = useRef(null);
+
+  // Auto-update preference (persisted in localStorage)
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('brawlcraft_auto_update') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAutoUpdate = (val) => {
+    setAutoUpdateEnabled(val);
+    try {
+      localStorage.setItem('brawlcraft_auto_update', String(val));
+    } catch {}
+  };
 
   // Maintenance & Troubleshooting State
   const [repairLoading, setRepairLoading] = useState(false);
@@ -202,6 +232,9 @@ export default function SettingsModal({
     maintenance: {
       title: isRTL ? 'الصيانة والاستعادة' : 'Maintenance & Reset'
     },
+    updates: {
+      title: isRTL ? 'تحديثات البرنامج' : 'Software Updates'
+    },
     about: {
       title: isRTL ? 'حول التطبيق' : 'About BrawlCraft'
     }
@@ -283,6 +316,19 @@ export default function SettingsModal({
                 </svg>
               </span>
               <span className="nav-text">{isRTL ? 'الصيانة والاستعادة' : 'Maintenance'}</span>
+            </button>
+
+            <button
+              type="button"
+              className={`nav-item ${activeTab === 'updates' ? 'active' : ''}`}
+              onClick={() => handleTabChange('updates')}
+            >
+              <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z" />
+                </svg>
+              </span>
+              <span className="nav-text">{isRTL ? 'التحديثات' : 'Updates'}</span>
             </button>
 
             <button
@@ -611,38 +657,80 @@ export default function SettingsModal({
                     <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>MIT License</span>
                   </div>
 
-                  {/* OPEN SOURCE GITHUB ROW */}
+                  {/* OPEN SOURCE GITHUB ROW — icon only */}
                   <div className="setting" style={{ alignItems: 'center' }}>
                     <div className="setting-info" style={{ flex: 1 }}>
                       <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>📂</span>
-                        <span>{isRTL ? 'المستودع المفتوح المصدر (GitHub)' : 'Open Source Repository (GitHub)'}</span>
+                        <GitHubIcon size={15} />
+                        <span>{isRTL ? 'المستودع المفتوح المصدر' : 'Open Source Repository'}</span>
                       </div>
                       <div className="setting-desc">
                         {isRTL
                           ? 'كود البرنامج بالكامل مفتوح المصدر ومتاح مجاناً على منصة GitHub للجميع.'
-                          : 'Full source code is publicly available under the open-source MIT License on GitHub.'}
+                          : 'Full source code is publicly available under the MIT License on GitHub.'}
                         <div style={{ marginTop: '4px', fontFamily: 'monospace', color: 'var(--accent-light)', fontSize: '12px' }}>
                           github.com/dahakabdellah12/BrawlCraft
                         </div>
                       </div>
                     </div>
+                    {/* Icon-only GitHub button */}
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="github-icon-btn"
                       onClick={() => api.openExternalUrl('https://github.com/dahakabdellah12/BrawlCraft')}
-                      style={{ minWidth: '135px', fontWeight: 600, padding: '8px 16px' }}
+                      title={isRTL ? 'عرض على GitHub' : 'View on GitHub'}
+                      aria-label={isRTL ? 'عرض على GitHub' : 'View on GitHub'}
                     >
-                      {isRTL ? 'عرض على GitHub ↗' : 'View on GitHub ↗'}
+                      <GitHubIcon size={18} />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* TAB: UPDATES */}
+            {activeTab === 'updates' && (
+              <section className="settings-page" style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                <div className="card-group">
+
+                  {/* Auto-update toggle */}
+                  <div className="setting" style={{ alignItems: 'center' }}>
+                    <div className="setting-info" style={{ flex: 1 }}>
+                      <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/>
+                        </svg>
+                        <span>{isRTL ? 'إشعارات التحديث التلقائية' : 'Automatic Update Notifications'}</span>
+                      </div>
+                      <div className="setting-desc">
+                        {isRTL
+                          ? 'عند تفعيل هذا الخيار، يتحقق BrawlCraft تلقائياً من وجود إصدار جديد على GitHub عند كل تشغيل ويُعلمك بذلك.'
+                          : 'When enabled, BrawlCraft silently checks GitHub for a new release on every launch and notifies you if one is found.'}
+                      </div>
+                    </div>
+                    {/* Toggle switch */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={autoUpdateEnabled}
+                      onClick={() => handleToggleAutoUpdate(!autoUpdateEnabled)}
+                      className={`toggle-switch ${autoUpdateEnabled ? 'on' : 'off'}`}
+                      title={autoUpdateEnabled
+                        ? (isRTL ? 'انقر لتعطيل الإشعارات التلقائية' : 'Click to disable auto-notifications')
+                        : (isRTL ? 'انقر لتفعيل الإشعارات التلقائية' : 'Click to enable auto-notifications')}
+                    >
+                      <span className="toggle-thumb" />
                     </button>
                   </div>
 
-                  {/* REAL GITHUB RELEASES UPDATE CHECKER */}
+                  {/* Manual check row */}
                   <div className="setting" style={{ alignItems: 'flex-start', padding: '14px 0' }}>
                     <div className="setting-info" style={{ flex: 1 }}>
                       <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>🚀</span>
-                        <span>{isRTL ? 'تحديثات البرنامج (GitHub Releases)' : 'Software Updates (GitHub Releases)'}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6a5.87 5.87 0 0 1-2.8-.7l-1.46 1.46A7.93 7.93 0 0 0 12 20c4.42 0 8-3.58 8-8h3zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46A7.93 7.93 0 0 0 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4z"/>
+                        </svg>
+                        <span>{isRTL ? 'التحقق اليدوي من التحديثات' : 'Manual Update Check'}</span>
                       </div>
                       <div className="setting-desc" style={{ marginTop: '4px' }}>
                         {updateState.loading ? (
@@ -652,10 +740,10 @@ export default function SettingsModal({
                         ) : updateState.checked ? (
                           updateState.hasUpdate ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ color: 'var(--gold, #F5C542)', fontWeight: 700 }}>
+                              <span style={{ color: 'var(--warning, #F59E0B)', fontWeight: 700 }}>
                                 {isRTL
                                   ? `يتوفر إصدار جديد مفتوح المصدر: v${updateState.latestVersion}!`
-                                  : `A new open-source release is available: v${updateState.latestVersion}!`}
+                                  : `New release available: v${updateState.latestVersion}!`}
                               </span>
                               {updateState.releaseTitle && (
                                 <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
@@ -669,15 +757,15 @@ export default function SettingsModal({
                               )}
                             </div>
                           ) : updateState.error ? (
-                            <span style={{ color: 'var(--danger, #EF4444)' }}>
+                            <span style={{ color: 'var(--error, #EF4444)' }}>
                               {updateState.error}
                             </span>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ color: 'var(--success, #10B981)', fontWeight: 600 }}>
+                              <span style={{ color: 'var(--success, #22C55E)', fontWeight: 600 }}>
                                 {isRTL
                                   ? `أنت تستخدم أحدث إصدار مستقر من GitHub v${updateState.currentVersion} ✓`
-                                  : `You are running the latest GitHub release v${updateState.currentVersion} ✓`}
+                                  : `You are on the latest GitHub release v${updateState.currentVersion} ✓`}
                               </span>
                               <span style={{ fontSize: '11px', opacity: 0.75 }}>
                                 ({isRTL ? 'تم الفحص من GitHub:' : 'Checked via GitHub:'} {updateState.checkedAt})
@@ -687,14 +775,14 @@ export default function SettingsModal({
                         ) : (
                           <span>
                             {isRTL
-                              ? 'فحص أحدث الإصدارات المنشورة مباشرة على مستودع GitHub الرسمي (GitHub Releases API).'
-                              : 'Automatically check for official releases published on GitHub Releases.'}
+                              ? 'فحص أحدث الإصدارات المنشورة مباشرة على مستودع GitHub الرسمي.'
+                              : 'Check the official GitHub repository for the latest published release.'}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '2px' }}>
                       {updateState.checked && updateState.hasUpdate && (
                         <button
                           type="button"
@@ -705,7 +793,7 @@ export default function SettingsModal({
                             fontWeight: 700,
                             padding: '8px 16px',
                             backgroundColor: 'var(--accent)',
-                            boxShadow: '0 4px 14px rgba(0, 150, 255, 0.4)'
+                            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)'
                           }}
                         >
                           {isRTL ? 'تحميل التحديث 📥' : 'Download 📥'}
@@ -717,7 +805,7 @@ export default function SettingsModal({
                           type="button"
                           className="btn btn-secondary"
                           onClick={() => api.openExternalUrl(updateState.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases')}
-                          style={{ minWidth: '110px', fontWeight: 600, padding: '8px 14px' }}
+                          style={{ fontWeight: 600, padding: '8px 14px' }}
                         >
                           {isRTL ? 'سجل الإصدارات ↗' : 'Releases ↗'}
                         </button>
@@ -732,18 +820,19 @@ export default function SettingsModal({
                           minWidth: '115px',
                           fontWeight: 600,
                           padding: '8px 16px',
-                          color: updateState.checked && !updateState.hasUpdate && !updateState.error ? 'var(--success, #10B981)' : 'inherit',
-                          borderColor: updateState.checked && !updateState.hasUpdate && !updateState.error ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-primary)'
+                          color: updateState.checked && !updateState.hasUpdate && !updateState.error ? 'var(--success, #22C55E)' : 'inherit',
+                          borderColor: updateState.checked && !updateState.hasUpdate && !updateState.error ? 'rgba(34, 197, 94, 0.4)' : 'var(--border-primary)'
                         }}
                       >
                         {updateState.loading
                           ? (isRTL ? 'جاري الفحص...' : 'Checking...')
                           : updateState.checked
                             ? (isRTL ? 'إعادة الفحص' : 'Check Again')
-                            : (isRTL ? 'فحص من GitHub 🚀' : 'Check GitHub 🚀')}
+                            : (isRTL ? 'فحص الآن' : 'Check Now')}
                       </button>
                     </div>
                   </div>
+
                 </div>
               </section>
             )}
@@ -1001,6 +1090,75 @@ export default function SettingsModal({
 
         .btn-primary:hover:not(:disabled) {
           background: var(--accent-hover);
+        }
+
+        /* GitHub icon-only button */
+        .github-icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          border-radius: 8px;
+          border: 1px solid var(--border-primary);
+          background: var(--button-secondary);
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+          padding: 0;
+        }
+
+        .github-icon-btn:hover {
+          background: var(--bg-hover);
+          color: var(--text-primary);
+          border-color: var(--border-secondary);
+        }
+
+        /* Toggle switch */
+        .toggle-switch {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          width: 44px;
+          height: 24px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background 0.2s ease;
+          padding: 0;
+        }
+
+        .toggle-switch.on {
+          background: var(--accent);
+        }
+
+        .toggle-switch.off {
+          background: var(--bg-active, #363636);
+        }
+
+        .toggle-switch:focus-visible {
+          outline: 2px solid var(--focus-ring);
+          outline-offset: 2px;
+        }
+
+        .toggle-thumb {
+          position: absolute;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #fff;
+          transition: left 0.2s ease;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+        }
+
+        .toggle-switch.on .toggle-thumb {
+          left: calc(100% - 21px);
+        }
+
+        .toggle-switch.off .toggle-thumb {
+          left: 3px;
         }
 
         @media (max-width: 720px) {
