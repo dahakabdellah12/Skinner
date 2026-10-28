@@ -53,6 +53,9 @@ export default function SettingsModal({
   const [cacheLoading, setCacheLoading] = useState(false);
   const [cacheResult, setCacheResult] = useState(null);
 
+  // Auto-Installing State
+  const [installingUpdate, setInstallingUpdate] = useState(false);
+
   // Real Software Update State
   const [updateState, setUpdateState] = useState({
     loading: false,
@@ -219,9 +222,31 @@ export default function SettingsModal({
     }
   };
 
-  const handleDownloadUpdate = () => {
-    if (updateState.downloadUrl) {
-      api.openExternalUrl(updateState.downloadUrl);
+  const handleDownloadUpdate = async () => {
+    if (!updateState.downloadUrl || installingUpdate) return;
+    setInstallingUpdate(true);
+    showToast?.(
+      isRTL
+        ? `جاري تحميل وتثبيت التحديث v${updateState.latestVersion} تلقائياً...`
+        : `Downloading and automatically installing v${updateState.latestVersion}...`,
+      'info'
+    );
+
+    try {
+      await api.installUpdate(updateState.downloadUrl, updateState.latestVersion);
+      showToast?.(
+        isRTL
+          ? 'تم التحميل بنجاح! سيتم إعادة تشغيل البرنامج بالنسخة الجديدة الآن...'
+          : 'Update downloaded! Restarting with latest version now...',
+        'success'
+      );
+    } catch (err) {
+      console.error('Auto-update failed:', err);
+      setInstallingUpdate(false);
+      showToast?.(
+        (isRTL ? 'فشل التثبيت التلقائي: ' : 'Automatic install failed: ') + err.message,
+        'error'
+      );
     }
   };
 
@@ -714,12 +739,12 @@ export default function SettingsModal({
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/>
                         </svg>
-                        <span>{isRTL ? 'إشعارات التحديث التلقائية' : 'Automatic Update Notifications'}</span>
+                        <span>{isRTL ? 'تحديثات البرنامج التلقائية' : 'Automatic In-App Updates'}</span>
                       </div>
                       <div className="setting-desc">
                         {isRTL
-                          ? 'عند تفعيل هذا الخيار، يتحقق BrawlCraft تلقائياً من وجود إصدار جديد على GitHub عند كل تشغيل ويُعلمك بذلك.'
-                          : 'When enabled, BrawlCraft silently checks GitHub for a new release on every launch and notifies you if one is found.'}
+                          ? 'عند تفعيل هذا الخيار، يقوم BrawlCraft بالتحقق وتثبيت التحديثات تلقائياً في الخلفية تماماً مثل تحديثات Steam.'
+                          : 'When enabled, BrawlCraft checks and automatically updates seamlessly in the background just like Steam game updates.'}
                       </div>
                     </div>
                     {/* Toggle switch */}
@@ -802,15 +827,18 @@ export default function SettingsModal({
                           type="button"
                           className="btn btn-primary"
                           onClick={handleDownloadUpdate}
+                          disabled={installingUpdate}
                           style={{
-                            minWidth: '120px',
+                            minWidth: '150px',
                             fontWeight: 700,
-                            padding: '8px 16px',
+                            padding: '8px 18px',
                             backgroundColor: 'var(--accent)',
                             boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)'
                           }}
                         >
-                          {isRTL ? 'تحميل التحديث 📥' : 'Download 📥'}
+                          {installingUpdate
+                            ? (isRTL ? 'جاري التحديث التلقائي...' : 'Updating Automatically...')
+                            : (isRTL ? 'تثبيت التحديث الآن ⚡' : 'Install Update Now ⚡')}
                         </button>
                       )}
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -134,6 +135,7 @@ public class WebViewBridge
             "clearAssetCache" => ClearAssetCache(),
             "repairGameInstallation" => RepairGameInstallation(),
             "checkForUpdates" => await CheckForUpdatesAsync(payload),
+            "installUpdate" => await InstallUpdateAsync(payload),
             "setGitHubRepo" => SetGitHubRepo(payload),
             "getGitHubRepo" => GetGitHubRepo(),
             "openExternalUrl" => OpenExternalUrl(payload),
@@ -1106,23 +1108,52 @@ public class WebViewBridge
                 string releaseNotes = root.TryGetProperty("body", out var bProp) ? bProp.GetString() ?? "" : "";
                 string publishedAt = root.TryGetProperty("published_at", out var pubProp) ? pubProp.GetString() ?? "" : "";
 
-                // Look for direct .exe installer asset in the release
+                // Look for direct .zip or .exe installer asset in the release
                 string downloadUrl = htmlUrl;
                 string? assetName = null;
                 long assetSize = 0;
+                string? zipDownloadUrl = null;
+                string? exeDownloadUrl = null;
+                string? zipAssetName = null;
+                string? exeAssetName = null;
+                long zipAssetSize = 0;
+                long exeAssetSize = 0;
+
                 if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var asset in assetsProp.EnumerateArray())
                     {
                         string aName = asset.TryGetProperty("name", out var anProp) ? anProp.GetString() ?? "" : "";
-                        if (aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        string bUrl = asset.TryGetProperty("browser_download_url", out var dProp) ? dProp.GetString() ?? "" : "";
+                        long sVal = asset.TryGetProperty("size", out var sProp) ? sProp.GetInt64() : 0;
+
+                        if (aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                         {
-                            assetName = aName;
-                            downloadUrl = asset.TryGetProperty("browser_download_url", out var dProp) ? dProp.GetString() ?? htmlUrl : htmlUrl;
-                            assetSize = asset.TryGetProperty("size", out var sProp) ? sProp.GetInt64() : 0;
-                            break;
+                            zipAssetName = aName;
+                            zipDownloadUrl = bUrl;
+                            zipAssetSize = sVal;
+                        }
+                        else if (aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        {
+                            exeAssetName = aName;
+                            exeDownloadUrl = bUrl;
+                            exeAssetSize = sVal;
                         }
                     }
+                }
+
+                // Prefer portable zip for seamless silent background in-place updates, fallback to setup exe
+                if (!string.IsNullOrEmpty(zipDownloadUrl))
+                {
+                    downloadUrl = zipDownloadUrl;
+                    assetName = zipAssetName;
+                    assetSize = zipAssetSize;
+                }
+                else if (!string.IsNullOrEmpty(exeDownloadUrl))
+                {
+                    downloadUrl = exeDownloadUrl;
+                    assetName = exeAssetName;
+                    assetSize = exeAssetSize;
                 }
 
                 string latestVerClean = tagName.TrimStart('v', 'V');
@@ -1187,6 +1218,119 @@ public class WebViewBridge
                 checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
         }
+    }
+
+    private async Task<object> InstallUpdateAsync(JsonElement payload)
+    {
+        string? downloadUrl = payload.TryGetProperty("downloadUrl", out var dProp) ? dProp.GetString() : null;
+        string? targetVersion = payload.TryGetProperty("version", out var vProp) ? vProp.GetString() : "latest";
+
+        if (string.IsNullOrWhiteSpace(downloadUrl))
+        {
+            throw new ArgumentException("Download URL cannot be empty.");
+        }
+
+        App.SafeLog("bridge.log", $"[AUTO_UPDATE] Starting automated download and install from: {downloadUrl}");
+
+        string tempFolder = Path.Combine(Path.GetTempPath(), "BrawlCraftUpdate_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempFolder);
+
+        string fileName = Path.GetFileName(new Uri(downloadUrl).AbsolutePath);
+        if (string.IsNullOrEmpty(fileName)) fileName = "update.bin";
+        string downloadedFile = Path.Combine(tempFolder, fileName);
+
+        // Download asset from GitHub
+        using (var client = new HttpClient())
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater");
+
+            using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            using var fs = new FileStream(downloadedFile, FileMode.Create, FileAccess.Write, FileShare.None);
+            await response.Content.CopyToAsync(fs);
+        }
+
+        App.SafeLog("bridge.log", $"[AUTO_UPDATE] Successfully downloaded update payload to {downloadedFile}");
+
+        string appDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
+        string appExe = Process.GetCurrentProcess().MainModule?.FileName ?? Path.Combine(appDir, "BrawlCraft.exe");
+        int currentPid = Environment.ProcessId;
+
+        // If it's a Zip package, perform seamless in-place update using a helper batch script
+        if (downloadedFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            string extractDir = Path.Combine(tempFolder, "extracted");
+            Directory.CreateDirectory(extractDir);
+            ZipFile.ExtractToDirectory(downloadedFile, extractDir, overwriteFiles: true);
+
+            // Handle potential nested folder inside the zip
+            string contentDir = extractDir;
+            var subDirs = Directory.GetDirectories(extractDir);
+            if (subDirs.Length == 1 && !File.Exists(Path.Combine(extractDir, "BrawlCraft.exe")) && File.Exists(Path.Combine(subDirs[0], "BrawlCraft.exe")))
+            {
+                contentDir = subDirs[0];
+            }
+
+            string updaterScript = Path.Combine(tempFolder, "apply_update.bat");
+            string scriptContent = $@"@echo off
+chcp 65001 > nul
+echo Updating BrawlCraft to version {targetVersion}...
+echo Waiting for application (PID {currentPid}) to exit...
+:wait_loop
+tasklist /fi ""PID eq {currentPid}"" 2>nul | find ""{currentPid}"" >nul
+if not errorlevel 1 (
+    timeout /t 1 /nobreak >nul
+    goto wait_loop
+)
+
+timeout /t 1 /nobreak >nul
+echo Applying new files...
+xcopy ""{contentDir}\*"" ""{appDir}\"" /E /H /Y /Q >nul
+
+echo Relaunching BrawlCraft...
+start """" ""{appExe}""
+
+timeout /t 2 /nobreak >nul
+(goto) 2>nul & rd /s /q ""{tempFolder}""
+exit
+";
+            File.WriteAllText(updaterScript, scriptContent);
+
+            App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching silent in-place updater script and exiting current instance.");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = updaterScript,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            Process.Start(psi);
+
+            // Close the current application to free up locked binaries
+            _onClose?.Invoke();
+
+            return new { success = true, mode = "in-place", restarting = true };
+        }
+        else if (downloadedFile.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            // Execute setup installer silently, which updates the install and relaunches the app
+            App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching setup installer silently...");
+            var psi = new ProcessStartInfo
+            {
+                FileName = downloadedFile,
+                Arguments = "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+
+            _onClose?.Invoke();
+            return new { success = true, mode = "installer", restarting = true };
+        }
+
+        return new { success = false, message = "Unsupported update archive format." };
     }
 
     private bool OpenExternalUrl(JsonElement payload)

@@ -113,6 +113,7 @@ export const api = {
   clearAssetCache: () => invoke('clearAssetCache'),
   repairGameInstallation: () => invoke('repairGameInstallation', null, 60000),
   checkForUpdates: (repo) => invoke('checkForUpdates', { repo }, 15000),
+  installUpdate: (downloadUrl, version) => invoke('installUpdate', { downloadUrl, version }, 300000),
   setGitHubRepo: (repo) => invoke('setGitHubRepo', { repo }),
   getGitHubRepo: () => invoke('getGitHubRepo'),
   openExternalUrl: (url) => invoke('openExternalUrl', { url })

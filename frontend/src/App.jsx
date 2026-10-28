@@ -85,7 +85,7 @@ export default function App() {
     init();
   }, [showToast, isRTL]);
 
-  // Startup auto-update check — runs once after initial load, only if the user has it enabled
+  // Startup auto-update check & seamless background install (Steam-like)
   useEffect(() => {
     const autoUpdateEnabled = (() => {
       try { return localStorage.getItem('brawlcraft_auto_update') !== 'false'; } catch { return true; }
@@ -93,25 +93,29 @@ export default function App() {
 
     if (!autoUpdateEnabled) return;
 
-    // Delay slightly so the UI is fully ready before the network call
+    // Delay slightly so the UI is fully ready before the network check
     const timer = setTimeout(async () => {
       try {
         const res = await api.checkForUpdates();
-        if (res && res.hasUpdate) {
+        if (res && res.hasUpdate && res.downloadUrl) {
           showToast(
             isRTL
-              ? `يتوفر إصدار جديد من BrawlCraft: v${res.latestVersion}! افتح الإعدادات ← التحديثات.`
-              : `BrawlCraft v${res.latestVersion} is available! Open Settings → Updates to download.`,
+              ? `تم اكتشاف إصدار جديد (v${res.latestVersion})! جاري التحديث التلقائي وإعادة التشغيل...`
+              : `New version (v${res.latestVersion}) detected! Updating automatically and restarting...`,
             'info'
           );
+
+          // Perform automatic download and in-place silent update (Steam style)
+          await api.installUpdate(res.downloadUrl, res.latestVersion);
         }
-      } catch {
-        // Silent — startup auto-check failures are not shown to the user
+      } catch (err) {
+        // Silent — startup auto-check failures do not disrupt the user
+        console.warn('Auto-update check encountered:', err);
       }
     }, 3500);
 
     return () => clearTimeout(timer);
-  // Run only once on mount — intentionally no deps (we use the closure value of showToast/isRTL at mount time)
+  // Run only once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
