@@ -357,6 +357,185 @@ export const translations = {
     settings_close: 'Fermer'
   },
 
+  zh: {
+    // Brand & Navigation
+    app_title: '皮肤工坊',
+    app_subtitle: 'Brawlhalla 模组引擎',
+    tab_studio: '自定义工坊',
+    tab_legends: '可选传奇',
+    tab_costumes: '皮肤目录',
+    tab_weapons: '武器外观',
+
+    // Titles & Subtitles
+    title_studio: '自定义工坊',
+    subtitle_studio: '视觉皮肤与武器工作台',
+    title_legends: '可选传奇',
+    subtitle_legends: '浏览官方游戏传奇及默认武器配置',
+    title_costumes: '皮肤目录',
+    subtitle_costumes: '从 794+ 款官方与联动皮肤中自由挑选',
+    title_weapons: '武器外观',
+    subtitle_weapons: '独立自定义 14 种武器类型的外观',
+
+    // Header & Global Buttons
+    btn_restore_pristine: '恢复原版',
+    btn_restore_pristine_tooltip: '将所有修改过的文件还原为官方纯净状态',
+    btn_launch_game: '启动游戏',
+    btn_restart_game: '重启游戏（即时加载）',
+    btn_restart_game_tooltip: '立即重启 Brawlhalla 以重新加载所有修改的 SWF 资源',
+    btn_focus_game: '聚焦游戏',
+    btn_focus_brawlhalla: '聚焦 Brawlhalla',
+    btn_launch_brawlhalla: '启动 Brawlhalla',
+    badge_game_running: '游戏运行中（实时模式）',
+    badge_game_ready: '游戏就绪',
+    badge_not_detected: '未检测到游戏',
+    badge_process_running: '进程运行中（实时）',
+    badge_game_idle: '游戏未运行',
+    label_active_mods: '当前激活模组：',
+    opt_auto_restart: '应用视觉修改后自动重启游戏',
+    store_view_title: '外观展示',
+    store_equipped_badge: '模组已装备',
+    store_target_badge: '库存目标',
+    store_repl_badge: '已应用外观',
+    store_legend_card: '选定传奇',
+
+    // Language
+    lang_toggle: '中文',
+    lang_name: '简体中文',
+
+    // Studio Page - Live Banner
+    live_banner_title: 'Brawlhalla 当前正在运行！',
+    live_banner_body: '实时模组模式已激活。点击“应用修改至游戏”时，变更将安全写入游戏资源。只需在选人界面切换至其他传奇再切换回来（或重新进入训练模式），即可无需重启直接预览新外观。',
+
+    // Studio Page - Pane 1
+    pane1_legend_title: '1. 玩法传奇（宿主）',
+    pane1_legend_desc: '动作帧、物理属性和碰撞判定保持 100% 原始未动。',
+    pane1_target_costume_title: '2. 待修改的目标皮肤',
+    pane1_target_costume_desc: '您库存中需要被替换视觉外观的皮肤。',
+    pane1_repl_costume_title: '3. 视觉替换皮肤',
+    pane1_repl_costume_desc: '您在游戏中实际希望呈现的视觉外观。',
+    pane1_costume_unchanged: '保持不变（维持目标外观）',
+    pane1_group_same_legend: '同传奇皮肤 ({legend}) — 完美拟真',
+    pane1_group_cross_legend: '跨传奇皮肤（实验性 SWF 移植）',
+    pane1_weapons_title: '4. 武器外观（独立设置）',
+    pane1_weapons_desc: '独立于角色皮肤装备武器外观。',
+    pane1_weapon1_label: '武器 1 ({weapon})：',
+    pane1_weapon2_label: '武器 2 ({weapon})：',
+    pane1_weapon_unchanged: '保持不变（默认 {weapon}）',
+    pane1_color_title: '5. 配色方案与色板',
+    pane1_color_desc: '将官方调色直接烘焙入矢量形状填充中。',
+    pane1_color_default: '默认基础颜色',
+    opt_default_suffix: '（默认）',
+
+    // Studio Page - Pane 2
+    pane2_title: '替换清单',
+    pane2_desc: '即将应用至本地游戏安装目录的精确修改。',
+    pane2_host_costume: '宿主皮肤（游戏中）',
+    pane2_visual_repl: '视觉替换',
+    pane2_host_weapon: '宿主 {slot} ({weapon})',
+    pane2_visual_weapon: '视觉武器外观',
+    pane2_palette_trans: '调色转换',
+    pane2_palette_bakes: '烘焙配色方案矢量定义',
+    pane2_preview_title: '矢量资源预览（源自真实 SWF）',
+    pane2_rendering: '正在渲染矢量图形...',
+    pane2_preview_placeholder: '选择武器外观或皮肤以预览真实矢量图',
+
+    // Studio Page - Pane 3
+    pane3_title: '兼容性引擎',
+    pane3_desc: '实时验证符号链接及动画骨骼结构完整性。',
+    status_label: '状态：',
+    status_validating: '正在验证...',
+    status_compatible: '兼容',
+    status_incompatible: '不兼容',
+    status_cross_experimental: '跨传奇实验性兼容',
+    status_ready: '就绪',
+    pane3_analysis_title: '资源分析与骨骼完整性：',
+    pane3_select_prompt: '选择目标与替换资源以执行兼容性验证。',
+    pane3_target_pkg: '目标包：',
+    pane3_target_suffix: '目标符号后缀：',
+    pane3_cross_port: '跨 SWF 移植：',
+    pane3_cross_yes: '是（将注入矢量形状）',
+    pane3_cross_no: '否（内部包）',
+
+    // Studio Page - Bottom Bar
+    btn_restore_target: '恢复目标原版',
+    btn_apply_mod: '应用修改至游戏',
+
+    // Legends Page
+    legends_search_placeholder: '按名称、武器或内部 ID 搜索传奇...',
+    all_weapons: '所有武器',
+    legend_internal: '内部名称：',
+    legend_costumes_count: '{count} 款可用皮肤',
+    btn_customize_studio: '在工坊中自定义',
+    no_legends_match: '未找到符合条件的传奇。',
+
+    // Costumes Page
+    costumes_search_placeholder: '按名称、英雄或包名搜索 794+ 款皮肤...',
+    all_legends: '所有传奇',
+    badge_default: '默认',
+    badge_crossover: '联动',
+    badge_metadev: 'Metadev',
+    btn_select_for_studio: '选入工坊',
+    no_costumes_match: '未找到符合条件的皮肤。',
+
+    // Weapon Skins Page
+    weapons_search_placeholder: '按名称或类型搜索 2,130+ 款武器外观...',
+    all_types: '全部',
+    origin_label: '来源：',
+    universal_label: '通用',
+    btn_equip_w1: '装备武器 1',
+    btn_equip_w2: '装备武器 2',
+    no_weapons_match: '未找到符合条件的武器外观。',
+
+    // Toasts & Messages
+    toast_restarted: 'Brawlhalla 已即时重启并加载最新外观！',
+    toast_mod_applied_restarted: '修改已应用，Brawlhalla 已自动重启！新皮肤已激活。',
+    toast_mod_applied_live: '外观修改已应用！游戏运行中：在选人界面切换传奇即可立即看到变化。',
+    toast_mod_applied: '外观修改已成功写入游戏！',
+    toast_restore_file_success: '“{file}”已恢复为纯净原版状态。',
+    toast_restore_all_success: '原版还原完成！共还原 {count} 个文件。',
+    toast_focus_success: '已将 Brawlhalla 窗口移至前台！',
+    toast_launch_success: '已通过 Steam 成功启动 Brawlhalla！',
+    toast_connection_failed: '无法建立与 Brawlhalla 引擎的连接：',
+    loading_engine: '正在连接 Brawlhalla 引擎并解密 Game.swz...',
+
+    // Weapons Names
+    weapon_Hammer: '巨锤',
+    weapon_Sword: '宝剑',
+    weapon_Pistol: '双枪',
+    weapon_Blasters: '双枪',
+    weapon_RocketLance: '火箭枪',
+    weapon_Lance: '火箭枪',
+    weapon_Spear: '长矛',
+    weapon_Katar: '拳刃',
+    weapon_Katars: '拳刃',
+    weapon_Axe: '利斧',
+    weapon_Bow: '战弓',
+    weapon_Fists: '拳套',
+    weapon_Gauntlets: '拳套',
+    weapon_Scythe: '巨镰',
+    weapon_Cannon: '火炮',
+    weapon_Orb: '秘球',
+    weapon_Greatsword: '大剑',
+    weapon_Boots: '战靴',
+    weapon_BattleBoots: '战靴',
+    weapon_Chakram: '飞轮',
+
+    // Settings
+    settings_title: '全局设置',
+    settings_language_section: '界面语言',
+    settings_language_desc: '选择软件显示语言。',
+    settings_reset_section: '恢复出厂与全部重置',
+    settings_reset_desc: '还原所有原始游戏文件、撤销当前活动模组、清除保存的传奇自定义配置，并将所有筛选和下拉菜单恢复初始状态。',
+    settings_reset_button: '全部恢复为原版',
+    settings_reset_confirm_title: '确定要重置吗？',
+    settings_reset_confirm_desc: '将还原所有原始未修改的游戏文件，撤销所有皮肤，并将所有下拉选项和筛选器恢复为默认值。',
+    settings_reset_confirm_yes: '是，恢复所有原版',
+    settings_reset_confirm_cancel: '取消',
+    settings_reset_success: '所有游戏文件已恢复原版，所有菜单已重置！',
+    settings_reset_already_pristine: '所有游戏文件已处于纯净状态，所有菜单已重置！',
+    settings_close: '关闭'
+  },
+
   ar: {
     // Brand & Navigation
     app_title: 'استوديو المظاهر',

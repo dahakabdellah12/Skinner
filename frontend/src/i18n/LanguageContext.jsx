@@ -9,7 +9,7 @@ export function LanguageProvider({ children }) {
   const [lang, setLangState] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'ar' || saved === 'en' || saved === 'fr') return saved;
+      if (saved === 'ar' || saved === 'en' || saved === 'fr' || saved === 'zh') return saved;
     } catch { }
     // Default to 'ar' if user asked for Arabic, or 'en'
     return 'ar';
@@ -29,7 +29,7 @@ export function LanguageProvider({ children }) {
   }, [lang]);
 
   const setLang = useCallback((newLang) => {
-    if (newLang === 'ar' || newLang === 'en' || newLang === 'fr') {
+    if (newLang === 'ar' || newLang === 'en' || newLang === 'fr' || newLang === 'zh') {
       setLangState(newLang);
     }
   }, []);

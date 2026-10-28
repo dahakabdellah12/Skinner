@@ -1080,7 +1080,7 @@ public class WebViewBridge
 
     private async Task<object> CheckForUpdatesAsync(JsonElement payload)
     {
-        const string currentVersion = "2.0.1";
+        const string currentVersion = "2.0.2";
         string targetRepo = payload.TryGetProperty("repo", out var rProp) && !string.IsNullOrWhiteSpace(rProp.GetString())
             ? rProp.GetString()!.Trim()
             : GetGitHubRepo();
@@ -1093,7 +1093,7 @@ public class WebViewBridge
         {
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(8);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.0.1");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.0.2");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);
@@ -1190,7 +1190,7 @@ public class WebViewBridge
                     hasUpdate = false,
                     currentVersion,
                     latestVersion = currentVersion,
-                    releaseTitle = "BrawlCraft v2.0.1 (Official Open Source)",
+                    releaseTitle = "BrawlCraft v2.0.2 (Official Open Source)",
                     releaseNotes = "أنت تستخدم أحدث إصدار مستقر للمشروع المفتوح المصدر على GitHub.",
                     htmlUrl = releasesUrl,
                     downloadUrl = releasesUrl,
