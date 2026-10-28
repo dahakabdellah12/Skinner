@@ -893,25 +893,28 @@
 /* --- Toast Banners --- */
 .toast-banner {
   position: fixed;
-  bottom: 48px;
-  right: 28px;
-  z-index: 9999;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100050;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 18px;
+  padding: 12px 20px;
   border-radius: var(--radius-md);
   font-size: 13px;
-  font-weight: 500;
-  box-shadow: var(--shadow-lg);
-  animation: slideInToast 0.25s ease-out;
-  max-width: 440px;
+  font-weight: 600;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  animation: slideDownToast 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 560px;
+  pointer-events: auto;
 }
 
 [dir="rtl"] .toast-banner {
   right: auto;
-  left: 24px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .toast-success {
@@ -933,13 +936,13 @@
   border: 1px solid #DC2626;
 }
 
-@keyframes slideInToast {
+@keyframes slideDownToast {
   from {
-    transform: translateY(20px);
+    transform: translate(-50%, -20px);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translate(-50%, 0);
     opacity: 1;
   }
 }

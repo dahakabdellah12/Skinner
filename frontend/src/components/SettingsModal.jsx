@@ -491,22 +491,6 @@ export default function SettingsModal({
                             ? 'خيار ذكي لحل أي مشاكل في اختفاء الشخصيات، البطاقات الفارغة، تلف الكاش، أو خطأ قراءة ملفات SWF، مع إعادة تهيئة ومزامنة كافة أصول اللعبة تلقائياً.'
                             : 'Smart diagnostic tool that fixes missing character portraits, empty cards, corrupted cache, and SWF read issues by resynchronizing all game assets.'}
                         </div>
-                        {repairResult && (
-                          <div
-                            style={{
-                              marginTop: '10px',
-                              padding: '10px 14px',
-                              borderRadius: '8px',
-                              backgroundColor: repairResult.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                              border: `1px solid ${repairResult.success ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
-                              fontSize: '12px',
-                              color: repairResult.success ? 'var(--success, #10B981)' : 'var(--danger, #EF4444)'
-                            }}
-                          >
-                            <div style={{ fontWeight: 700 }}>{repairResult.message}</div>
-                            {repairResult.details && <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>{repairResult.details}</div>}
-                          </div>
-                        )}
                       </div>
 
                       <button
@@ -532,22 +516,6 @@ export default function SettingsModal({
                             ? 'مسح التخزين المؤقت لرسوم الشخصيات والأسلحة في الذاكرة لإعادة توليد صور البطاقات بأعلى دقة متوفرة.'
                             : 'Purges all in-memory character, costume, and weapon vector previews to trigger crisp, high-res rendering.'}
                         </div>
-                        {cacheResult && (
-                          <div
-                            style={{
-                              marginTop: '10px',
-                              padding: '8px 12px',
-                              borderRadius: '8px',
-                              backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                              border: '1px solid rgba(16, 185, 129, 0.35)',
-                              fontSize: '12px',
-                              color: 'var(--success, #10B981)',
-                              fontWeight: 600
-                            }}
-                          >
-                            {cacheResult.message}
-                          </div>
-                        )}
                       </div>
 
                       <button
