@@ -58,8 +58,8 @@ export default function SettingsModal({
     loading: false,
     checked: false,
     hasUpdate: false,
-    currentVersion: '2.0.0',
-    latestVersion: '2.0.0',
+    currentVersion: '2.0.1',
+    latestVersion: '2.0.1',
     downloadUrl: '',
     releaseNotes: '',
     checkedAt: '',
@@ -204,7 +204,7 @@ export default function SettingsModal({
           );
         } else if (!res.networkError) {
           showToast?.(
-            isRTL ? 'أنت تستخدم أحدث إصدار v2.0.0 من GitHub ✓' : 'You are running the latest v2.0.0 release from GitHub ✓',
+            isRTL ? 'أنت تستخدم أحدث إصدار v2.0.1 من GitHub ✓' : 'You are running the latest v2.0.1 release from GitHub ✓',
             'success'
           );
         }
@@ -431,7 +431,9 @@ export default function SettingsModal({
                         aria-expanded={isLangDropdownOpen}
                         onClick={() => setIsLangDropdownOpen((prev) => !prev)}
                       >
-                        <span id="selected-label">{lang === 'ar' ? 'العربية' : 'English'}</span>
+                        <span id="selected-label">
+                          {lang === 'ar' ? 'العربية' : lang === 'fr' ? 'Français' : 'English'}
+                        </span>
                         <span className="arrow" />
                       </button>
 
@@ -457,6 +459,18 @@ export default function SettingsModal({
                           onClick={() => handleSelectLanguage('en')}
                         >
                           <span>English</span>
+                          <span className="check">✓</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`option ${lang === 'fr' ? 'selected' : ''}`}
+                          role="option"
+                          aria-selected={lang === 'fr'}
+                          data-value="fr"
+                          onClick={() => handleSelectLanguage('fr')}
+                        >
+                          <span>Français</span>
                           <span className="check">✓</span>
                         </button>
                       </div>
@@ -646,7 +660,7 @@ export default function SettingsModal({
                       <div className="setting-name">{isRTL ? 'رقم الإصدار' : 'Application Version'}</div>
                       <div className="setting-desc">{isRTL ? 'الإصدار المكتبي المستقر مفتوح المصدر.' : 'Installed open-source desktop release.'}</div>
                     </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v2.0.0</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v2.0.1</span>
                   </div>
 
                   <div className="setting">

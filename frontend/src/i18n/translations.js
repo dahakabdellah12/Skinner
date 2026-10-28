@@ -178,6 +178,185 @@ export const translations = {
     settings_close: 'Close'
   },
 
+  fr: {
+    // Brand & Navigation
+    app_title: 'Studio de Skins',
+    app_subtitle: 'Moteur de Mods Brawlhalla',
+    tab_studio: 'Studio de Personnalisation',
+    tab_legends: 'Légendes Jouables',
+    tab_costumes: 'Catalogue de Costumes',
+    tab_weapons: 'Skins d\'Armes',
+
+    // Titles & Subtitles
+    title_studio: 'Studio de Personnalisation',
+    subtitle_studio: 'Atelier visuel pour skins et armes',
+    title_legends: 'Légendes Jouables',
+    subtitle_legends: 'Parcourez les légendes authentiques du jeu et leurs armes de base',
+    title_costumes: 'Catalogue de Costumes',
+    subtitle_costumes: 'Choisissez parmi plus de 794 costumes officiels et crossovers',
+    title_weapons: 'Cosmétiques d\'Armes',
+    subtitle_weapons: 'Personnalisez indépendamment les apparences d\'armes sur 14 types d\'armes',
+
+    // Header & Global Buttons
+    btn_restore_pristine: 'Restaurer d\'Origine',
+    btn_restore_pristine_tooltip: 'Restaurer tous les fichiers modifiés à l\'état d\'origine',
+    btn_launch_game: 'Lancer le Jeu',
+    btn_restart_game: 'Redémarrer le Jeu (Instantané)',
+    btn_restart_game_tooltip: 'Redémarre Brawlhalla pour recharger tous les fichiers SWF modifiés',
+    btn_focus_game: 'Mettre au Premier Plan',
+    btn_focus_brawlhalla: 'Afficher Brawlhalla',
+    btn_launch_brawlhalla: 'Lancer Brawlhalla',
+    badge_game_running: 'Jeu en Cours (Mode Direct)',
+    badge_game_ready: 'Jeu Prêt',
+    badge_not_detected: 'Jeu Non Détecté',
+    badge_process_running: 'Processus en Cours (Direct)',
+    badge_game_idle: 'Jeu Inactif',
+    label_active_mods: 'Mods Actifs :',
+    opt_auto_restart: 'Relancer automatiquement le jeu pour appliquer le changement visuel',
+    store_view_title: 'Galerie Cosmétique',
+    store_equipped_badge: 'Équipé dans le Mod',
+    store_target_badge: 'Cible dans l\'Inventaire',
+    store_repl_badge: 'Visuel Appliqué',
+    store_legend_card: 'Légende Sélectionnée',
+
+    // Language
+    lang_toggle: 'Français',
+    lang_name: 'Français',
+
+    // Studio Page - Live Banner
+    live_banner_title: 'Brawlhalla est actuellement en cours d\'exécution !',
+    live_banner_body: 'Le modding en temps réel est actif. Lorsque vous cliquez sur "Appliquer la Modification au Jeu", les changements sont appliqués en toute sécurité. Changez simplement de Légende dans l\'écran de sélection ou réentrez en mode Entraînement pour voir immédiatement votre nouveau skin sans relancer le jeu.',
+
+    // Studio Page - Pane 1
+    pane1_legend_title: '1. Légende de Jeu (Hôte)',
+    pane1_legend_desc: 'Mouvements, physique et hitboxes restent 100% inchangés.',
+    pane1_target_costume_title: '2. Costume Cible à Modifier',
+    pane1_target_costume_desc: 'Costume de votre inventaire dont l\'apparence visuelle sera transformée.',
+    pane1_repl_costume_title: '3. Costume Visuel de Remplacement',
+    pane1_repl_costume_desc: 'L\'apparence visuelle souhaitée en jeu.',
+    pane1_costume_unchanged: 'Inchangé (Conserver l\'apparence cible)',
+    pane1_group_same_legend: 'Même Légende ({legend}) — Fidélité Parfaite',
+    pane1_group_cross_legend: 'Costumes d\'autres Légendes (Portage SWF Expérimental)',
+    pane1_weapons_title: '4. Cosmétiques d\'Armes (Indépendants)',
+    pane1_weapons_desc: 'Équipez les armes séparément du costume.',
+    pane1_weapon1_label: 'Arme 1 ({weapon}) :',
+    pane1_weapon2_label: 'Arme 2 ({weapon}) :',
+    pane1_weapon_unchanged: 'Inchangé ({weapon} d\'origine)',
+    pane1_color_title: '5. Palette et Thème de Couleurs',
+    pane1_color_desc: 'Intègre les couleurs officielles directement dans les vecteurs.',
+    pane1_color_default: 'Couleurs de Base par Défaut',
+    opt_default_suffix: '(Par défaut)',
+
+    // Studio Page - Pane 2
+    pane2_title: 'Manifeste des Transformations',
+    pane2_desc: 'Modifications exactes qui seront appliquées à votre installation locale du jeu.',
+    pane2_host_costume: 'Costume Hôte (En Jeu)',
+    pane2_visual_repl: 'Remplacement Visuel',
+    pane2_host_weapon: 'Arme Hôte {slot} ({weapon})',
+    pane2_visual_weapon: 'Skin d\'Arme Visuel',
+    pane2_palette_trans: 'Transformation de Palette',
+    pane2_palette_bakes: 'Intègre les vecteurs de couleurs officielles',
+    pane2_preview_title: 'Aperçu Vectoriel (Fichier SWF Réel du Jeu)',
+    pane2_rendering: 'Rendu vectoriel en cours...',
+    pane2_preview_placeholder: 'Sélectionnez un skin d\'arme ou un costume pour prévisualiser le vecteur authentique',
+
+    // Studio Page - Pane 3
+    pane3_title: 'Moteur de Compatibilité',
+    pane3_desc: 'Validation en temps réel des liaisons de symboles et du squelette d\'animation.',
+    status_label: 'Statut :',
+    status_validating: 'Validation...',
+    status_compatible: 'Compatible',
+    status_incompatible: 'Incompatible',
+    status_cross_experimental: 'CrossLegendExpérimental',
+    status_ready: 'Prêt',
+    pane3_analysis_title: 'Analyse d\'Actifs et Intégrité du Squelette :',
+    pane3_select_prompt: 'Sélectionnez les actifs cibles et de remplacement pour valider la compatibilité.',
+    pane3_target_pkg: 'Paquet Cible :',
+    pane3_target_suffix: 'Suffixe de Symbole Cible :',
+    pane3_cross_port: 'Portage Inter-SWF :',
+    pane3_cross_yes: 'Oui (Les formes vectorielles seront injectées)',
+    pane3_cross_no: 'Non (Intra-SWF)',
+
+    // Studio Page - Bottom Bar
+    btn_restore_target: 'Restaurer l\'Original de la Cible',
+    btn_apply_mod: 'Appliquer la Modification au Jeu',
+
+    // Legends Page
+    legends_search_placeholder: 'Rechercher des légendes par nom, armes ou identifiant...',
+    all_weapons: 'Toutes les Armes',
+    legend_internal: 'Nom interne :',
+    legend_costumes_count: '{count} Costumes Disponibles',
+    btn_customize_studio: 'Personnaliser dans le Studio',
+    no_legends_match: 'Aucune légende ne correspond à votre recherche.',
+
+    // Costumes Page
+    costumes_search_placeholder: 'Rechercher parmi 794+ costumes par nom, héros ou paquet...',
+    all_legends: 'Toutes les Légendes',
+    badge_default: 'Défaut',
+    badge_crossover: 'Crossover',
+    badge_metadev: 'Metadev',
+    btn_select_for_studio: 'Sélectionner pour le Studio',
+    no_costumes_match: 'Aucun costume ne correspond à votre recherche.',
+
+    // Weapon Skins Page
+    weapons_search_placeholder: 'Rechercher parmi 2 130+ skins d\'armes...',
+    all_types: 'Tous',
+    origin_label: 'Origine :',
+    universal_label: 'Universel',
+    btn_equip_w1: 'Équiper Arme 1',
+    btn_equip_w2: 'Équiper Arme 2',
+    no_weapons_match: 'Aucun skin d\'arme ne correspond à votre recherche.',
+
+    // Toasts & Messages
+    toast_restarted: 'Brawlhalla a été redémarré avec succès avec les nouveaux fichiers !',
+    toast_mod_applied_restarted: 'Modification appliquée et jeu redémarré ! Votre nouveau skin est actif.',
+    toast_mod_applied_live: 'Modification appliquée ! Brawlhalla est ouvert : changez de Légende dans l\'écran de sélection pour afficher vos changements.',
+    toast_mod_applied: 'Modification cosmétique appliquée avec succès au jeu !',
+    toast_restore_file_success: '"{file}" a été restauré à son état d\'origine propre.',
+    toast_restore_all_success: 'Restauration complète terminée ! {count} fichier(s) restauré(s).',
+    toast_focus_success: 'Fenêtre de Brawlhalla mise au premier plan !',
+    toast_launch_success: 'Brawlhalla a été lancé avec succès via Steam !',
+    toast_connection_failed: 'Échec de l\'initialisation de la connexion avec le moteur de Brawlhalla : ',
+    loading_engine: 'Connexion au moteur Brawlhalla et déchiffrement de Game.swz...',
+
+    // Weapons Names
+    weapon_Hammer: 'Marteau',
+    weapon_Sword: 'Épée',
+    weapon_Pistol: 'Pistolets',
+    weapon_Blasters: 'Pistolets',
+    weapon_RocketLance: 'Lance Fusée',
+    weapon_Lance: 'Lance Fusée',
+    weapon_Spear: 'Lance',
+    weapon_Katar: 'Katars',
+    weapon_Katars: 'Katars',
+    weapon_Axe: 'Hache',
+    weapon_Bow: 'Arc',
+    weapon_Fists: 'Gantelets',
+    weapon_Gauntlets: 'Gantelets',
+    weapon_Scythe: 'Faux',
+    weapon_Cannon: 'Canon',
+    weapon_Orb: 'Orbe',
+    weapon_Greatsword: 'Espadon',
+    weapon_Boots: 'Bottes de Combat',
+    weapon_BattleBoots: 'Bottes de Combat',
+    weapon_Chakram: 'Chakram',
+
+    // Settings
+    settings_title: 'Paramètres Généraux',
+    settings_language_section: 'Langue de l\'Application',
+    settings_language_desc: 'Sélectionnez la langue d\'affichage de l\'interface.',
+    settings_reset_section: 'Réinitialisation d\'Usine et Restauration Complète',
+    settings_reset_desc: 'Restaure tous les fichiers d\'origine, annule les mods actifs et remet à zéro tous les filtres et menus.',
+    settings_reset_button: 'Tout Remettre à Zéro',
+    settings_reset_confirm_title: 'Êtes-vous sûr ?',
+    settings_reset_confirm_desc: 'Tous les fichiers originaux seront restaurés et toutes les personnalisations seront réinitialisées.',
+    settings_reset_confirm_yes: 'Oui, Tout Restaurer',
+    settings_reset_confirm_cancel: 'Annuler',
+    settings_reset_success: 'Tous les fichiers du jeu ont été restaurés et les menus réinitialisés !',
+    settings_reset_already_pristine: 'Tous les fichiers du jeu sont déjà dans leur état d\'origine !',
+    settings_close: 'Fermer'
+  },
+
   ar: {
     // Brand & Navigation
     app_title: 'استوديو المظاهر',
