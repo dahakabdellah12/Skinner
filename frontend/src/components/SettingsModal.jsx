@@ -22,6 +22,7 @@ export default function SettingsModal({
   onClose,
   onRestoreEverything,
   onReloadCatalog,
+  onTriggerUpdate,
   showToast,
   isBusy
 }) {
@@ -222,31 +223,10 @@ export default function SettingsModal({
     }
   };
 
-  const handleDownloadUpdate = async () => {
-    if (!updateState.downloadUrl || installingUpdate) return;
-    setInstallingUpdate(true);
-    showToast?.(
-      isRTL
-        ? `جاري تحميل وتثبيت التحديث v${updateState.latestVersion} تلقائياً...`
-        : `Downloading and automatically installing v${updateState.latestVersion}...`,
-      'info'
-    );
-
-    try {
-      await api.installUpdate(updateState.downloadUrl, updateState.latestVersion);
-      showToast?.(
-        isRTL
-          ? 'تم التحميل بنجاح! سيتم إعادة تشغيل البرنامج بالنسخة الجديدة الآن...'
-          : 'Update downloaded! Restarting with latest version now...',
-        'success'
-      );
-    } catch (err) {
-      console.error('Auto-update failed:', err);
-      setInstallingUpdate(false);
-      showToast?.(
-        (isRTL ? 'فشل التثبيت التلقائي: ' : 'Automatic install failed: ') + err.message,
-        'error'
-      );
+  const handleDownloadUpdate = () => {
+    if (!updateState.downloadUrl) return;
+    if (onTriggerUpdate) {
+      onTriggerUpdate(updateState);
     }
   };
 

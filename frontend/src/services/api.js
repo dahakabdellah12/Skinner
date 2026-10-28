@@ -5,6 +5,7 @@
 
 let seq = 0;
 const pendingRequests = new Map();
+const eventListeners = new Set();
 let isInitialized = false;
 
 function initBridge() {
@@ -13,6 +14,15 @@ function initBridge() {
     window.chrome.webview.addEventListener('message', (event) => {
       try {
         const raw = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        
+        // Handle broadcast events
+        if (raw.type === 'event') {
+          eventListeners.forEach((listener) => {
+            try { listener(raw.event, raw.data); } catch (err) { console.error(err); }
+          });
+          return;
+        }
+
         const { id, success, data, error } = raw;
         if (id && pendingRequests.has(id)) {
           const { resolve, reject, timeoutId } = pendingRequests.get(id);
@@ -81,6 +91,10 @@ export async function invoke(action, payload = null, timeoutMs = 45000) {
 // Convenient Named API Wrappers
 export const api = {
   invoke,
+  onEvent: (listener) => {
+    eventListeners.add(listener);
+    return () => eventListeners.delete(listener);
+  },
   getSystemInfo: () => invoke('getSystemInfo'),
   getCatalog: () => invoke('getCatalog'),
   validateModification: (req) => invoke('validateModification', req),
@@ -113,7 +127,10 @@ export const api = {
   clearAssetCache: () => invoke('clearAssetCache'),
   repairGameInstallation: () => invoke('repairGameInstallation', null, 60000),
   checkForUpdates: (repo) => invoke('checkForUpdates', { repo }, 15000),
-  installUpdate: (downloadUrl, version) => invoke('installUpdate', { downloadUrl, version }, 300000),
+  installUpdate: (downloadUrl, version) => invoke('installUpdate', { downloadUrl, version }, 600000),
+  pauseUpdate: () => invoke('pauseUpdate'),
+  resumeUpdate: () => invoke('resumeUpdate'),
+  cancelUpdate: () => invoke('cancelUpdate'),
   setGitHubRepo: (repo) => invoke('setGitHubRepo', { repo }),
   getGitHubRepo: () => invoke('getGitHubRepo'),
   openExternalUrl: (url) => invoke('openExternalUrl', { url })

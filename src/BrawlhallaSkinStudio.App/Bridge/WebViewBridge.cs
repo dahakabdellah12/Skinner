@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using BrawlhallaSkinStudio.Core.Engine;
 using BrawlhallaSkinStudio.Core.Models;
@@ -28,6 +29,11 @@ public class WebViewBridge
     private readonly Action? _onClose;
     private readonly Action? _onDrag;
     private readonly Func<bool>? _isWindowMaximized;
+
+    // Update download state controls
+    private static CancellationTokenSource? _updateCts;
+    private static ManualResetEventSlim _updatePauseEvent = new(true);
+    private static bool _isUpdatePaused = false;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -136,6 +142,9 @@ public class WebViewBridge
             "repairGameInstallation" => RepairGameInstallation(),
             "checkForUpdates" => await CheckForUpdatesAsync(payload),
             "installUpdate" => await InstallUpdateAsync(payload),
+            "pauseUpdate" => PauseUpdate(),
+            "resumeUpdate" => ResumeUpdate(),
+            "cancelUpdate" => CancelUpdate(),
             "setGitHubRepo" => SetGitHubRepo(payload),
             "getGitHubRepo" => GetGitHubRepo(),
             "openExternalUrl" => OpenExternalUrl(payload),
@@ -1220,6 +1229,53 @@ public class WebViewBridge
         }
     }
 
+    private bool PauseUpdate()
+    {
+        _isUpdatePaused = true;
+        _updatePauseEvent.Reset();
+        SendEvent("updateProgress", new { status = "paused", isPaused = true });
+        App.SafeLog("bridge.log", "[AUTO_UPDATE] Update download paused.");
+        return true;
+    }
+
+    private bool ResumeUpdate()
+    {
+        _isUpdatePaused = false;
+        _updatePauseEvent.Set();
+        SendEvent("updateProgress", new { status = "downloading", isPaused = false });
+        App.SafeLog("bridge.log", "[AUTO_UPDATE] Update download resumed.");
+        return true;
+    }
+
+    private bool CancelUpdate()
+    {
+        _isUpdatePaused = false;
+        _updatePauseEvent.Set();
+        _updateCts?.Cancel();
+        SendEvent("updateProgress", new { status = "cancelled", isPaused = false });
+        App.SafeLog("bridge.log", "[AUTO_UPDATE] Update download cancelled.");
+        return true;
+    }
+
+    private void SendEvent(string eventName, object? data)
+    {
+        try
+        {
+            var evt = new
+            {
+                type = "event",
+                @event = eventName,
+                data
+            };
+            string json = JsonSerializer.Serialize(evt, _jsonOptions);
+            _webView.PostWebMessageAsJson(json);
+        }
+        catch (Exception ex)
+        {
+            App.SafeLog("bridge.log", $"[EVENT_ERROR] Failed to send event {eventName}: {ex.Message}");
+        }
+    }
+
     private async Task<object> InstallUpdateAsync(JsonElement payload)
     {
         string? downloadUrl = payload.TryGetProperty("downloadUrl", out var dProp) ? dProp.GetString() : null;
@@ -1230,7 +1286,14 @@ public class WebViewBridge
             throw new ArgumentException("Download URL cannot be empty.");
         }
 
-        App.SafeLog("bridge.log", $"[AUTO_UPDATE] Starting automated download and install from: {downloadUrl}");
+        App.SafeLog("bridge.log", $"[AUTO_UPDATE] Starting download for version {targetVersion} from: {downloadUrl}");
+
+        _updateCts?.Dispose();
+        _updateCts = new CancellationTokenSource();
+        var ct = _updateCts.Token;
+
+        _updatePauseEvent.Set();
+        _isUpdatePaused = false;
 
         string tempFolder = Path.Combine(Path.GetTempPath(), "BrawlCraftUpdate_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempFolder);
@@ -1239,20 +1302,58 @@ public class WebViewBridge
         if (string.IsNullOrEmpty(fileName)) fileName = "update.bin";
         string downloadedFile = Path.Combine(tempFolder, fileName);
 
-        // Download asset from GitHub
+        SendEvent("updateProgress", new { status = "starting", progress = 0, isPaused = false, version = targetVersion });
+
+        // Download asset from GitHub with stream progress tracking and pause support
         using (var client = new HttpClient())
         {
-            client.Timeout = TimeSpan.FromMinutes(5);
+            client.Timeout = TimeSpan.FromMinutes(10);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater");
 
-            using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
 
+            long totalBytes = response.Content.Headers.ContentLength ?? -1;
+
+            using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var fs = new FileStream(downloadedFile, FileMode.Create, FileAccess.Write, FileShare.None);
-            await response.Content.CopyToAsync(fs);
+
+            byte[] buffer = new byte[81920]; // 80 KB
+            long totalRead = 0;
+            int bytesRead;
+            DateTime lastReportTime = DateTime.MinValue;
+
+            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+            {
+                // If paused, wait here until resumed or cancelled
+                while (_isUpdatePaused && !ct.IsCancellationRequested)
+                {
+                    _updatePauseEvent.Wait(200);
+                }
+                ct.ThrowIfCancellationRequested();
+
+                await fs.WriteAsync(buffer, 0, bytesRead, ct);
+                totalRead += bytesRead;
+
+                if ((DateTime.Now - lastReportTime).TotalMilliseconds > 120 || totalRead == totalBytes)
+                {
+                    lastReportTime = DateTime.Now;
+                    int percent = totalBytes > 0 ? (int)((totalRead * 100) / totalBytes) : 0;
+                    SendEvent("updateProgress", new
+                    {
+                        status = "downloading",
+                        progress = percent,
+                        bytesDownloaded = totalRead,
+                        totalBytes = totalBytes,
+                        isPaused = _isUpdatePaused,
+                        version = targetVersion
+                    });
+                }
+            }
         }
 
         App.SafeLog("bridge.log", $"[AUTO_UPDATE] Successfully downloaded update payload to {downloadedFile}");
+        SendEvent("updateProgress", new { status = "installing", progress = 100, isPaused = false, version = targetVersion });
 
         string appDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
         string appExe = Process.GetCurrentProcess().MainModule?.FileName ?? Path.Combine(appDir, "BrawlCraft.exe");
@@ -1316,7 +1417,7 @@ exit
         }
         else if (downloadedFile.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
         {
-            // Execute setup installer silently, which updates the install and relaunches the app
+            // Execute setup installer silently
             App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching setup installer silently...");
             var psi = new ProcessStartInfo
             {

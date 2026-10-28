@@ -4,6 +4,7 @@ import LegendsPage from './pages/LegendsPage';
 import LegendCustomizer from './components/LegendCustomizer';
 import ErrorBoundary from './components/ErrorBoundary';
 import SettingsModal from './components/SettingsModal';
+import UpdateModal from './components/UpdateModal';
 import Toast from './components/Toast';
 import { api } from './services/api';
 import { useLanguage } from './i18n/LanguageContext';
@@ -21,6 +22,12 @@ export default function App() {
   const [rosterSearch, setRosterSearch] = useState('');
   const pageContainerRef = useRef(null);
   const rosterScrollPos = useRef(0);
+
+  // Update Modal & Progress State
+  const [pendingUpdate, setPendingUpdate] = useState(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(null);
+  const [isUpdatePaused, setIsUpdatePaused] = useState(false);
 
   // Persistent customizations map per legend
   const [customizations, setCustomizations] = useState(() => {
@@ -85,7 +92,28 @@ export default function App() {
     init();
   }, [showToast, isRTL]);
 
-  // Startup auto-update check & seamless background install (Steam-like)
+  // Listen for background update progress events from WebView bridge
+  useEffect(() => {
+    const unsubscribe = api.onEvent((event, data) => {
+      if (event === 'updateProgress') {
+        if (data.status === 'paused') {
+          setIsUpdatePaused(true);
+        } else if (data.status === 'downloading') {
+          setIsUpdatePaused(false);
+          setUpdateProgress(data);
+        } else if (data.status === 'installing') {
+          setIsUpdatePaused(false);
+          setUpdateProgress({ ...data, progress: 100 });
+        } else if (data.status === 'cancelled') {
+          setUpdateProgress(null);
+          setIsUpdatePaused(false);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Startup auto-update check — asks user first via UpdateModal
   useEffect(() => {
     const autoUpdateEnabled = (() => {
       try { return localStorage.getItem('brawlcraft_auto_update') !== 'false'; } catch { return true; }
@@ -98,25 +126,54 @@ export default function App() {
       try {
         const res = await api.checkForUpdates();
         if (res && res.hasUpdate && res.downloadUrl) {
-          showToast(
-            isRTL
-              ? `تم اكتشاف إصدار جديد (v${res.latestVersion})! جاري التحديث التلقائي وإعادة التشغيل...`
-              : `New version (v${res.latestVersion}) detected! Updating automatically and restarting...`,
-            'info'
-          );
-
-          // Perform automatic download and in-place silent update (Steam style)
-          await api.installUpdate(res.downloadUrl, res.latestVersion);
+          setPendingUpdate(res);
+          setIsUpdateModalOpen(true);
         }
       } catch (err) {
-        // Silent — startup auto-check failures do not disrupt the user
         console.warn('Auto-update check encountered:', err);
       }
     }, 3500);
 
     return () => clearTimeout(timer);
-  // Run only once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleProceedUpdate = useCallback(async () => {
+    if (!pendingUpdate || !pendingUpdate.downloadUrl) return;
+    setUpdateProgress({ progress: 0, status: 'starting' });
+    setIsUpdatePaused(false);
+
+    try {
+      await api.installUpdate(pendingUpdate.downloadUrl, pendingUpdate.latestVersion);
+    } catch (err) {
+      console.error('Install update failed:', err);
+      showToast(
+        (isRTL ? 'فشل تثبيت التحديث: ' : 'Update installation failed: ') + err.message,
+        'error'
+      );
+      setUpdateProgress(null);
+    }
+  }, [pendingUpdate, isRTL, showToast]);
+
+  const handlePauseUpdate = useCallback(async () => {
+    try {
+      await api.pauseUpdate();
+      setIsUpdatePaused(true);
+    } catch (err) {
+      console.warn(err);
+    }
+  }, []);
+
+  const handleResumeUpdate = useCallback(async () => {
+    try {
+      await api.resumeUpdate();
+      setIsUpdatePaused(false);
+    } catch (err) {
+      console.warn(err);
+    }
+  }, []);
+
+  const handleCloseUpdateModal = useCallback(() => {
+    setIsUpdateModalOpen(false);
   }, []);
 
   const reloadCatalog = useCallback(async () => {
@@ -406,8 +463,25 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         onRestoreEverything={handleRestoreEverything}
         onReloadCatalog={reloadCatalog}
+        onTriggerUpdate={(updateData) => {
+          setPendingUpdate(updateData);
+          setIsSettingsOpen(false);
+          setIsUpdateModalOpen(true);
+        }}
         showToast={showToast}
         isBusy={isBusy}
+      />
+
+      {/* Interactive Update Modal with Question, Progress Bar & Pause Option */}
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        updateInfo={pendingUpdate}
+        updateProgress={updateProgress}
+        isPaused={isUpdatePaused}
+        onProceed={handleProceedUpdate}
+        onPause={handlePauseUpdate}
+        onResume={handleResumeUpdate}
+        onClose={handleCloseUpdateModal}
       />
 
       {/* Toast Notification */}
