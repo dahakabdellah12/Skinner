@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import AssetImage from './AssetImage';
+import { Dices } from 'lucide-react';
 
 function uintToHex(val, fallback = '#6b7280') {
   if (val == null || val === undefined) return fallback;
@@ -209,7 +210,7 @@ export default function CardPickerModal({
                       <div className="card-image" style={{ width: '100%', height: '100%' }}>
                         {item.isRandomRoll ? (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', color: 'var(--gold, #F5C542)' }}>
-                            <span style={{ fontSize: '38px', filter: 'drop-shadow(0 4px 12px rgba(245,197,66,0.35))' }}>🎲</span>
+                            <Dices size={38} style={{ filter: 'drop-shadow(0 4px 12px rgba(245,197,66,0.35))' }} />
                             <span style={{ fontSize: '12px', fontWeight: 800 }}>
                               {isRTL ? 'عشوائي' : 'Random'}
                             </span>
@@ -318,7 +319,7 @@ export default function CardPickerModal({
                         </div>
                       ) : item.isRandomRoll ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', color: 'var(--gold, #F5C542)' }}>
-                          <span style={{ fontSize: '36px', filter: 'drop-shadow(0 4px 12px rgba(245,197,66,0.35))' }}>🎲</span>
+                          <Dices size={36} style={{ filter: 'drop-shadow(0 4px 12px rgba(245,197,66,0.35))' }} />
                           <span style={{ fontSize: '12px', fontWeight: 800 }}>
                             {isRTL ? 'سكن عشوائي' : 'Random Skin'}
                           </span>

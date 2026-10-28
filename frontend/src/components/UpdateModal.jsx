@@ -12,7 +12,7 @@ export default function UpdateModal({
   onResume,
   onClose
 }) {
-  const { isRTL, lang } = useLanguage();
+  const { isRTL } = useLanguage();
 
   if (!isOpen || !updateInfo) return null;
 
@@ -81,20 +81,12 @@ export default function UpdateModal({
               <h2 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                 {isRTL
                   ? `يتوفر تحديث جديد: v${updateInfo.latestVersion}`
-                  : lang === 'fr'
-                    ? `Mise à jour disponible : v${updateInfo.latestVersion}`
-                    : lang === 'zh'
-                      ? `发现新版本更新：v${updateInfo.latestVersion}`
-                      : `Software Update Available: v${updateInfo.latestVersion}`}
+                  : `Software Update Available: v${updateInfo.latestVersion}`}
               </h2>
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {isRTL
                   ? `الإصدار الحالي: v${updateInfo.currentVersion}`
-                  : lang === 'fr'
-                    ? `Version actuelle : v${updateInfo.currentVersion}`
-                    : lang === 'zh'
-                      ? `当前版本：v${updateInfo.currentVersion}`
-                      : `Current installed version: v${updateInfo.currentVersion}`}
+                  : `Current installed version: v${updateInfo.currentVersion}`}
               </span>
             </div>
           </div>
@@ -123,11 +115,7 @@ export default function UpdateModal({
             <p style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 14px 0' }}>
               {isRTL
                 ? `هل ترغب في متابعة تثبيت التحديث الآن؟ سيتم تحميل وتحديث BrawlCraft تلقائياً بالكامل دون الحاجة لإعدادات يدوية.`
-                : lang === 'fr'
-                  ? `Voulez-vous procéder à l'installation de la mise à jour ? BrawlCraft sera téléchargé et mis à jour automatiquement.`
-                  : lang === 'zh'
-                    ? `您是否希望立即继续安装更新？BrawlCraft 将自动下载并就地完成更新，无需手动配置。`
-                    : `Would you like to proceed with the update now? BrawlCraft will be downloaded and updated automatically in-place.`}
+                : `Would you like to proceed with the update now? BrawlCraft will be downloaded and updated automatically in-place.`}
             </p>
 
             {updateInfo.releaseTitle && (
@@ -160,7 +148,7 @@ export default function UpdateModal({
                 {isInstalling
                   ? (isRTL ? 'جاري استخراج الملفات وتطبيق التحديث...' : 'Applying update and restarting...')
                   : isPaused
-                    ? (isRTL ? 'تم إيقاف التنزيل مؤقتاً ⏸️' : 'Download Paused ⏸️')
+                    ? (isRTL ? 'تم إيقاف التنزيل مؤقتاً' : 'Download Paused')
                     : (isRTL ? 'جاري التحميل...' : 'Downloading update...')}
               </span>
               <span style={{ fontWeight: 700, color: 'var(--accent, #3B82F6)' }}>
@@ -210,7 +198,7 @@ export default function UpdateModal({
                 onClick={onClose}
                 style={{ padding: '9px 18px', fontSize: '13px' }}
               >
-                {isRTL ? 'لاحقاً' : lang === 'fr' ? 'Plus tard' : lang === 'zh' ? '稍后' : 'Later'}
+                {isRTL ? 'لاحقاً' : 'Later'}
               </button>
               <button
                 type="button"
@@ -220,7 +208,7 @@ export default function UpdateModal({
               >
                 <Download size={15} />
                 <span>
-                  {isRTL ? 'تحديث الآن' : lang === 'fr' ? 'Mettre à jour' : lang === 'zh' ? '立即更新' : 'Update Now'}
+                  {isRTL ? 'تحديث الآن' : 'Update Now'}
                 </span>
               </button>
             </>
@@ -240,7 +228,7 @@ export default function UpdateModal({
                       style={{ padding: '7px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Play size={14} />
-                      <span>{isRTL ? 'استئناف' : lang === 'fr' ? 'Reprendre' : lang === 'zh' ? '继续' : 'Resume'}</span>
+                      <span>{isRTL ? 'استئناف' : 'Resume'}</span>
                     </button>
                   ) : (
                     <button
@@ -250,7 +238,7 @@ export default function UpdateModal({
                       style={{ padding: '7px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Pause size={14} />
-                      <span>{isRTL ? 'إيقاف مؤقت' : lang === 'fr' ? 'Pause' : lang === 'zh' ? '暂停' : 'Pause'}</span>
+                      <span>{isRTL ? 'إيقاف مؤقت' : 'Pause'}</span>
                     </button>
                   )}
                 </div>

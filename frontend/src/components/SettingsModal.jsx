@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
 import { clearAssetImageCache } from './AssetImage';
+import { Wrench, Sparkles, RotateCcw, Download } from 'lucide-react';
 
 // ─── GitHub icon (Octicons-style filled mark) ────────────────────────────────
 const GitHubIcon = ({ size = 18 }) => (
@@ -62,8 +63,8 @@ export default function SettingsModal({
     loading: false,
     checked: false,
     hasUpdate: false,
-    currentVersion: '2.0.3',
-    latestVersion: '2.0.3',
+    currentVersion: '2.1.3',
+    latestVersion: '2.1.3',
     downloadUrl: '',
     releaseNotes: '',
     checkedAt: '',
@@ -123,17 +124,15 @@ export default function SettingsModal({
       const res = await api.repairGameInstallation();
       if (res && res.success) {
         if (onReloadCatalog) await onReloadCatalog();
+        const successMsg = isRTL
+          ? 'تم الفحص الشامل وإصلاح كافة المشاكل وتحديث أصول اللعبة بنجاح!'
+          : 'Diagnostic & auto-repair completed successfully! Assets refreshed and cache cleared.';
         setRepairResult({
           success: true,
-          message: isRTL
-            ? 'تم الفحص الشامل وإصلاح كافة المشاكل بنجاح! تم تنظيف الكاش وإعادة ربط أصول اللعبة.'
-            : 'Diagnostic & auto-repair completed successfully! Assets refreshed and cache cleared.',
+          message: successMsg,
           details: `${isRTL ? 'الأساطير' : 'Legends'}: ${res.legendCount || 70} | ${isRTL ? 'المظاهر' : 'Costumes'}: ${res.costumeCount || 795} | ${isRTL ? 'الملفات المفحوصة' : 'Files Checked'}: ${res.swfCount || 564}`
         });
-        showToast?.(
-          isRTL ? 'تم إصلاح المشكلات وتحديث أصول اللعبة بنجاح ✓' : 'Troubleshooting complete: Assets & paths repaired! ✓',
-          'success'
-        );
+        showToast?.(successMsg, 'success');
       } else {
         setRepairResult({
           success: false,
@@ -159,18 +158,20 @@ export default function SettingsModal({
     try {
       clearAssetImageCache();
       await api.clearAssetCache();
+      const successMsg = isRTL
+        ? 'تم تفريغ ذاكرة التخزين المؤقت للصور وتحديث كافة الرسوم بنجاح!'
+        : 'Image preview cache cleared! All visuals will refresh fresh.';
       setCacheResult({
         success: true,
-        message: isRTL
-          ? 'تم تفريغ ذاكرة التخزين المؤقت للصور بنجاح! ستتم إعادة توليد الرسوم بأحدث دقة.'
-          : 'Image preview cache cleared! All visuals will refresh fresh.'
+        message: successMsg
       });
-      showToast?.(isRTL ? 'تم تفريغ كاش الصور بنجاح ✓' : 'Visual cache cleared! ✓', 'success');
+      showToast?.(successMsg, 'success');
     } catch (err) {
       setCacheResult({
         success: false,
         message: err.message
       });
+      showToast?.(err.message, 'error');
     } finally {
       setCacheLoading(false);
     }
@@ -208,7 +209,7 @@ export default function SettingsModal({
           );
         } else if (!res.networkError) {
           showToast?.(
-            isRTL ? 'أنت تستخدم أحدث إصدار v2.0.3 من GitHub ✓' : 'You are running the latest v2.0.3 release from GitHub ✓',
+            isRTL ? `أنت تستخدم أحدث إصدار v${res.currentVersion || '2.1.3'} من GitHub ✓` : `You are running the latest v${res.currentVersion || '2.1.3'} release from GitHub ✓`,
             'success'
           );
         }
@@ -437,7 +438,7 @@ export default function SettingsModal({
                         onClick={() => setIsLangDropdownOpen((prev) => !prev)}
                       >
                         <span id="selected-label">
-                          {lang === 'ar' ? 'العربية' : lang === 'fr' ? 'Français' : lang === 'zh' ? '简体中文' : lang === 'ru' ? 'Русский' : 'English'}
+                          {lang === 'ar' ? 'العربية' : 'English'}
                         </span>
                         <span className="arrow" />
                       </button>
@@ -466,42 +467,6 @@ export default function SettingsModal({
                           <span>English</span>
                           <span className="check">✓</span>
                         </button>
-
-                        <button
-                          type="button"
-                          className={`option ${lang === 'fr' ? 'selected' : ''}`}
-                          role="option"
-                          aria-selected={lang === 'fr'}
-                          data-value="fr"
-                          onClick={() => handleSelectLanguage('fr')}
-                        >
-                          <span>Français</span>
-                          <span className="check">✓</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`option ${lang === 'zh' ? 'selected' : ''}`}
-                          role="option"
-                          aria-selected={lang === 'zh'}
-                          data-value="zh"
-                          onClick={() => handleSelectLanguage('zh')}
-                        >
-                          <span>简体中文</span>
-                          <span className="check">✓</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`option ${lang === 'ru' ? 'selected' : ''}`}
-                          role="option"
-                          aria-selected={lang === 'ru'}
-                          data-value="ru"
-                          onClick={() => handleSelectLanguage('ru')}
-                        >
-                          <span>Русский</span>
-                          <span className="check">✓</span>
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -518,7 +483,7 @@ export default function SettingsModal({
                     <div className="setting" style={{ alignItems: 'flex-start' }}>
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🔧</span>
+                          <Wrench size={16} style={{ color: 'var(--accent)' }} />
                           <span>{isRTL ? 'إصلاح وتشخيص شامل وحل المشاكل (Auto-Repair)' : 'Diagnostic & Auto-Repair'}</span>
                         </div>
                         <div className="setting-desc" style={{ marginTop: '4px' }}>
@@ -559,7 +524,7 @@ export default function SettingsModal({
                     <div className="setting" style={{ alignItems: 'flex-start' }}>
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🧹</span>
+                          <Sparkles size={16} style={{ color: 'var(--accent)' }} />
                           <span>{isRTL ? 'تفريغ كاش الصور وتحديث الرسوم' : 'Clear Visual Cache & Refresh'}</span>
                         </div>
                         <div className="setting-desc" style={{ marginTop: '4px' }}>
@@ -600,7 +565,7 @@ export default function SettingsModal({
                     <div className="setting" style={{ alignItems: 'flex-start' }}>
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🔄</span>
+                          <RotateCcw size={16} style={{ color: 'var(--accent)' }} />
                           <span>{isRTL ? 'استعادة ملفات اللعبة الأصلية (Stock Restore)' : 'Restore Original Game Files'}</span>
                         </div>
                         <div className="setting-desc" style={{ marginTop: '4px' }}>
@@ -689,7 +654,7 @@ export default function SettingsModal({
                       <div className="setting-name">{isRTL ? 'رقم الإصدار' : 'Application Version'}</div>
                       <div className="setting-desc">{isRTL ? 'الإصدار المكتبي المستقر مفتوح المصدر.' : 'Installed open-source desktop release.'}</div>
                     </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v2.0.3</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v2.1.3</span>
                   </div>
 
                   <div className="setting">
@@ -840,9 +805,14 @@ export default function SettingsModal({
                             boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)'
                           }}
                         >
-                          {installingUpdate
-                            ? (isRTL ? 'جاري التحديث التلقائي...' : 'Updating Automatically...')
-                            : (isRTL ? 'تثبيت التحديث الآن ⚡' : 'Install Update Now ⚡')}
+                          {installingUpdate ? (
+                            isRTL ? 'جاري التحديث التلقائي...' : 'Updating Automatically...'
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <Download size={14} />
+                              <span>{isRTL ? 'تثبيت التحديث الآن' : 'Install Update Now'}</span>
+                            </span>
+                          )}
                         </button>
                       )}
 

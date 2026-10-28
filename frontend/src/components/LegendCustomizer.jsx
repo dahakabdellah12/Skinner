@@ -3,6 +3,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import AssetImage from './AssetImage';
 import CardPickerModal, { ColorEmblem } from './CardPickerModal';
 import { api } from '../services/api';
+import { Dices } from 'lucide-react';
 
 export default function LegendCustomizer({
   legend,
@@ -255,7 +256,7 @@ export default function LegendCustomizer({
   const heroCards = useMemo(() => {
     const randomCard = {
       id: 'Random',
-      title: isRTL ? '🎲 Random (عشوائي)' : '🎲 Random (Shuffle)',
+      title: isRTL ? 'Random (عشوائي)' : 'Random (Shuffle)',
       subtitle: isRTL ? 'سكن عشوائي من أي أسطورة' : 'Picks a random skin from any legend',
       badge: 'Random',
       isRandomRoll: true,
@@ -487,7 +488,7 @@ export default function LegendCustomizer({
 
     const randomCard = {
       id: '__RANDOM_ROLL__',
-      title: isRTL ? '🎲 اختيار مظهر عشوائي' : '🎲 Roll Random Skin',
+      title: isRTL ? 'اختيار مظهر عشوائي' : 'Roll Random Skin',
       subtitle: isRTL ? 'يختار سكن عشوائي فوراً' : 'Instantly pick a random skin',
       isRandomRoll: true,
       badge: 'Random'
@@ -824,7 +825,7 @@ export default function LegendCustomizer({
             </div>
             <span className="product-badge">
               {selectedReplacementHero === 'Random'
-                ? (isRTL ? `🎲 عشوائي (${displayedReplacementCostume?.ownerHero || ''})` : `🎲 Random (${displayedReplacementCostume?.ownerHero || ''})`)
+                ? (isRTL ? `عشوائي (${displayedReplacementCostume?.ownerHero || ''})` : `Random (${displayedReplacementCostume?.ownerHero || ''})`)
                 : displayedReplacementCostume?.ownerHero && displayedReplacementCostume.ownerHero.toLowerCase() !== (legend?.heroName || '').toLowerCase()
                 ? (isRTL ? `مظهر من ${displayedReplacementCostume.ownerHero}` : `From ${displayedReplacementCostume.ownerHero}`)
                 : (isRTL ? 'المظهر الجديد' : 'New Visual')}
@@ -993,7 +994,7 @@ export default function LegendCustomizer({
                     style={{ padding: '3px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     title={isRTL ? 'اختيار مظهر عشوائي آخر' : 'Roll another random skin'}
                   >
-                    <span>🎲</span>
+                    <Dices size={13} />
                     <span>{isRTL ? 'عشوائي آخر' : 'Re-roll'}</span>
                   </button>
                 )}
@@ -1007,8 +1008,8 @@ export default function LegendCustomizer({
               >
                 <div className="card-selector-trigger-thumb">
                   {selectedReplacementHero === 'Random' ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', fontSize: '24px' }}>
-                      🎲
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: 'var(--gold, #F5C542)' }}>
+                      <Dices size={24} />
                     </div>
                   ) : (
                     <AssetImage
@@ -1021,7 +1022,10 @@ export default function LegendCustomizer({
                 <div className="card-selector-trigger-info">
                   <div className="card-selector-trigger-title">
                     {selectedReplacementHero === 'Random' ? (
-                      <span style={{ color: 'var(--gold, #F5C542)', fontWeight: 800 }}>🎲 Random (عشوائي)</span>
+                      <span style={{ color: 'var(--gold, #F5C542)', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Dices size={14} />
+                        <span>Random ({isRTL ? 'عشوائي' : 'Shuffle'})</span>
+                      </span>
                     ) : (
                       currentSelectedHeroDisplayName
                     )}

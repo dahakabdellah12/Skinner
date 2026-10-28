@@ -405,6 +405,8 @@ export default function App() {
       {/* Windows Custom Title Bar */}
       <TitleBar
         onOpenSettings={() => setIsSettingsOpen(true)}
+        hasPendingUpdate={Boolean(pendingUpdate && !isUpdateModalOpen)}
+        onOpenUpdate={() => setIsUpdateModalOpen(true)}
       />
 
       {/* Main Content Area */}
