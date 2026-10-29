@@ -1127,7 +1127,7 @@ public class WebViewBridge
 
     private async Task<object> CheckForUpdatesAsync(JsonElement payload)
     {
-        const string currentVersion = "2.2.4";
+        const string currentVersion = "2.2.5";
         string targetRepo = payload.TryGetProperty("repo", out var rProp) && !string.IsNullOrWhiteSpace(rProp.GetString())
             ? rProp.GetString()!.Trim()
             : GetGitHubRepo();
@@ -1140,7 +1140,7 @@ public class WebViewBridge
         {
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(8);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.2.4");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.2.5");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);
