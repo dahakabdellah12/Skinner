@@ -63,8 +63,8 @@ export default function SettingsModal({
     loading: false,
     checked: false,
     hasUpdate: false,
-    currentVersion: '2.2.6',
-    latestVersion: '2.2.6',
+    currentVersion: '2.2.7',
+    latestVersion: '2.2.7',
     downloadUrl: '',
     releaseNotes: '',
     checkedAt: '',
@@ -210,7 +210,7 @@ export default function SettingsModal({
           );
         } else if (!res.networkError) {
           showToast?.(
-            isRTL ? `أنت تستخدم أحدث إصدار v${res.currentVersion || '2.2.6'} من GitHub ✓` : `You are running the latest v${res.currentVersion || '2.2.6'} release from GitHub ✓`,
+            isRTL ? `أنت تستخدم أحدث إصدار v${res.currentVersion || '2.2.7'} من GitHub ✓` : `You are running the latest v${res.currentVersion || '2.2.7'} release from GitHub ✓`,
             'success'
           );
         }
@@ -623,7 +623,7 @@ export default function SettingsModal({
                       <div className="setting-name">{isRTL ? 'رقم الإصدار' : 'Application Version'}</div>
                       <div className="setting-desc">{isRTL ? 'الإصدار المكتبي المستقر مفتوح المصدر.' : 'Installed open-source desktop release.'}</div>
                     </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v2.2.6</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v2.2.7</span>
                   </div>
 
                   <div className="setting">

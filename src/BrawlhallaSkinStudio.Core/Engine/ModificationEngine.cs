@@ -226,6 +226,16 @@ public class ModificationEngine
                         if (File.Exists(targetBnk) && File.Exists(replBnk))
                         {
                             ApplyWeaponAudioModification(request.TargetWeapon1, replW1, targetBnk, replBnk, result);
+                            result.ModifiedFiles.Add(targetBnk);
+                        }
+                    }
+                    else
+                    {
+                        string baseBnkRel = Path.Combine("audio", "pc", $"WEP_{request.TargetWeapon1.BaseWeapon}.bnk");
+                        if (_backupManager.IsFileModified(baseBnkRel))
+                        {
+                            _backupManager.RestoreFile(baseBnkRel);
+                            result.OperationLog.Add($"Restored clean official audio for WEP_{request.TargetWeapon1.BaseWeapon}.bnk.");
                         }
                     }
                 }
@@ -247,6 +257,16 @@ public class ModificationEngine
                         if (File.Exists(targetBnk) && File.Exists(replBnk))
                         {
                             ApplyWeaponAudioModification(request.TargetWeapon2, replW2, targetBnk, replBnk, result);
+                            result.ModifiedFiles.Add(targetBnk);
+                        }
+                    }
+                    else
+                    {
+                        string baseBnkRel = Path.Combine("audio", "pc", $"WEP_{request.TargetWeapon2.BaseWeapon}.bnk");
+                        if (_backupManager.IsFileModified(baseBnkRel))
+                        {
+                            _backupManager.RestoreFile(baseBnkRel);
+                            result.OperationLog.Add($"Restored clean official audio for WEP_{request.TargetWeapon2.BaseWeapon}.bnk.");
                         }
                     }
                 }
@@ -1260,17 +1280,56 @@ public class ModificationEngine
         return true;
     }
 
+    private static readonly HashSet<string> AllowedVaderTargetSwords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "SwordEzio",        // Brotherhood Sword (ID 1446)
+        "SwordAhsoka",      // Sword Ahsoka (ID 2028)
+        "SwordAnakin",      // Sword Anakin (ID 2026)
+        "SwordAsgardSaber", // Sword Asgard Saber (ID 2046)
+        "SwordObiWan"       // Sword Obi Wan (ID 2021)
+    };
+
+    public static bool IsAllowedVaderTargetSword(WeaponSkinInfo target)
+    {
+        if (AllowedVaderTargetSwords.Contains(target.WeaponSkinName)) return true;
+        if (!string.IsNullOrWhiteSpace(target.DisplayName))
+        {
+            string d = target.DisplayName.ToLowerInvariant();
+            if (d.Contains("brotherhood") || d.Contains("ahsoka") || d.Contains("anakin") || d.Contains("obi wan") || d.Contains("obiwan") || d.Contains("asgard saber"))
+                return true;
+        }
+        return false;
+    }
+
+    public static bool IsSaberWeapon(WeaponSkinInfo weapon)
+    {
+        if (weapon.WeaponSkinName.Contains("DarthVader", StringComparison.OrdinalIgnoreCase) ||
+            weapon.WeaponSkinName.Contains("Saber", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (!string.IsNullOrWhiteSpace(weapon.SoundBank) && weapon.SoundBank.StartsWith("WEP_Saber_", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
     private static bool ShouldApplyWeaponAudio(WeaponSkinInfo? replacement, WeaponSkinInfo? target)
     {
         if (replacement == null || target == null) return false;
         if (!HasCustomWeaponSound(replacement)) return false;
 
-        // CRITICAL FIX: Only apply custom sound effects if the target weapon has its OWN
-        // dedicated custom sound bank (e.g. WEP_Saber_07, WEP_Saber_01, WEP_Pistol_02, etc.).
-        // We NEVER overwrite shared base sound banks (WEP_Sword.bnk, WEP_Hammer.bnk, etc.)
-        // because those banks are globally shared by all regular/normal weapons of that type across all legends.
-        // Overwriting a base sound bank causes all normal weapons in the game to play the special sound effects.
-        return HasDedicatedSoundBank(target);
+        // If replacement is a lightsaber / saber weapon (like SwordDarthVader):
+        // Authentic routing: Darth Vader lightsaber sound effects apply to:
+        // Brotherhood sword (SwordEzio), Sword Ahsoka, Sword Anakin, Sword Asgard Saber, Sword Obi Wan,
+        // or any weapon that has its own dedicated saber sound bank.
+        // Other standard swords (Bödvar, Hattori, Sir Roland, Jhala, etc.) keep their natural sound!
+        if (IsSaberWeapon(replacement))
+        {
+            return IsAllowedVaderTargetSword(target) || HasDedicatedSoundBank(target);
+        }
+
+        // For all other crossover / special weapons (Megaman blasters, Shrek cannon, Fiona boots/fists,
+        // Mythic Minotaur, Mythic Wu Shang, Mythic Nix, etc.):
+        // Allow transferring audio so their unique sound effects work in game!
+        return true;
     }
 
     private static bool HasCustomWeaponSound(WeaponSkinInfo weapon)

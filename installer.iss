@@ -1,5 +1,5 @@
 #define MyAppName "BrawlCraft"
-#define MyAppVersion "2.2.6"
+#define MyAppVersion "2.2.7"
 #define MyAppPublisher "dahakabdellah12"
 #define MyAppURL "https://github.com/dahakabdellah12/BrawlCraft"
 #define MyAppExeName "BrawlCraft.exe"
@@ -16,7 +16,7 @@ DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableProgramGroupPage=yes
 OutputDir=C:\Users\Dahak Abdellah\Downloads\Project\BrawlCraft\release
-OutputBaseFilename=BrawlCraft-v2.2.6-Setup
+OutputBaseFilename=BrawlCraft-v2.2.7-Setup
 SetupIconFile=C:\Users\Dahak Abdellah\Downloads\Project\BrawlCraft\src\BrawlhallaSkinStudio.App\app.ico
 Compression=lzma2/ultra64
 SolidCompression=yes

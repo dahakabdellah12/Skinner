@@ -381,7 +381,7 @@ public class ModificationTests : IDisposable
         // Verify audio was NOT modified (normal swords must remain 100% untouched)
         Assert.DoesNotContain(resultNormal.ModifiedFiles, f => f.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase));
 
-        // 2. Ezio sword (SwordEzio) -> Has no dedicated sound bank, so base audio must NOT be modified!
+        // 2. Ezio sword (SwordEzio / Brotherhood Sword) -> Allowed target sword, audio IS modified!
         var ezioSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordEzio", StringComparison.OrdinalIgnoreCase));
         var ezioLegend = catalog.Legends.First(l => l.HeroName.Equals("Ezio", StringComparison.OrdinalIgnoreCase));
         var ezioCostume = ezioLegend.Costumes.First(c => c.IsDefault);
@@ -396,9 +396,14 @@ public class ModificationTests : IDisposable
 
         var resultEzio = engine.ApplyModification(reqEzio);
         Assert.True(resultEzio.Success, string.Join("; ", resultEzio.OperationLog));
-        Assert.DoesNotContain(resultEzio.ModifiedFiles, f => f.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(resultEzio.ModifiedFiles, f => f.EndsWith("WEP_Sword.bnk", StringComparison.OrdinalIgnoreCase));
 
-        // 3. Dedicated saber sword (SwordAsgardSaber) -> Dedicated bank WEP_Saber_01.bnk is modified, WEP_Sword.bnk untouched!
+        // 3. Switching back to normal sword -> Base sound bank WEP_Sword.bnk is automatically restored to clean state!
+        var resultRestore = engine.ApplyModification(reqNormal);
+        Assert.True(resultRestore.Success, string.Join("; ", resultRestore.OperationLog));
+        Assert.False(_backupManager.IsFileModified("audio/pc/WEP_Sword.bnk"), "WEP_Sword.bnk should be restored when normal sword is applied!");
+
+        // 4. Dedicated saber sword (SwordAsgardSaber) -> Dedicated bank WEP_Saber_01.bnk is modified, WEP_Sword.bnk untouched!
         var asgardSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordAsgardSaber", StringComparison.OrdinalIgnoreCase));
         var reqAsgard = new ModificationRequest
         {
