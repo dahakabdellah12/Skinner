@@ -511,8 +511,7 @@ public class WebViewBridge
         ["Ransom"] = "a_Roster_Pose_Cybervirus",
         ["CyberVirus"] = "a_Roster_Pose_Cybervirus",
         ["Aurus"] = "a_Roster_Pose_Gladiator",
-        ["ActualGladiator"] = "a_Roster_Pose_Gladiator",
-        ["Random"] = "a_Roster_Pose_Random"
+        ["ActualGladiator"] = "a_Roster_Pose_Gladiator"
     };
 
     private string? ResolveLegendPoseSvg(string uiIconsPath, string? name, string? hero)

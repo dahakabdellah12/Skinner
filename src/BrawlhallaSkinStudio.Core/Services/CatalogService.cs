@@ -149,7 +149,8 @@ public class CatalogService
             string heroName = elem.Attribute("HeroName")?.Value ?? string.Empty;
             if (string.IsNullOrWhiteSpace(heroName) ||
                 heroName.Equals("Template", StringComparison.OrdinalIgnoreCase) ||
-                heroName.Equals("DEFAULT_CHARACTER", StringComparison.OrdinalIgnoreCase))
+                heroName.Equals("DEFAULT_CHARACTER", StringComparison.OrdinalIgnoreCase) ||
+                heroName.Equals("Random", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             int heroId = 0;
@@ -159,8 +160,6 @@ public class CatalogService
             string displayName = !string.IsNullOrWhiteSpace(bio) ? bio : (elem.Element("HeroDisplayName")?.Value ?? heroName);
             if (displayName == "---" || string.IsNullOrWhiteSpace(displayName))
                 displayName = heroName;
-            if (heroName.Equals("Random", StringComparison.OrdinalIgnoreCase))
-                displayName = "Random";
             string weapon1 = elem.Element("BaseWeapon1")?.Value ?? elem.Element("Weapon1")?.Value ?? string.Empty;
             string weapon2 = elem.Element("BaseWeapon2")?.Value ?? elem.Element("Weapon2")?.Value ?? string.Empty;
             string icon = elem.Element("IconName")?.Value ?? string.Empty;
@@ -178,13 +177,8 @@ public class CatalogService
             });
         }
 
-        // Sort by ID, placing Random at the end of the roster list
-        Legends.Sort((a, b) =>
-        {
-            if (a.HeroName.Equals("Random", StringComparison.OrdinalIgnoreCase)) return 1;
-            if (b.HeroName.Equals("Random", StringComparison.OrdinalIgnoreCase)) return -1;
-            return a.HeroId.CompareTo(b.HeroId);
-        });
+        // Sort by ID
+        Legends.Sort((a, b) => a.HeroId.CompareTo(b.HeroId));
     }
 
     private void ParseCostumes(string csv, string gamePath)
@@ -209,6 +203,8 @@ public class CatalogService
             string owner = GetCol(cols, colMap, "OwnerHero");
             if (string.IsNullOrWhiteSpace(name) ||
                 name.Equals("Template", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Random", StringComparison.OrdinalIgnoreCase) ||
+                owner.Equals("Random", StringComparison.OrdinalIgnoreCase) ||
                 (name.Equals("Default", StringComparison.OrdinalIgnoreCase) && owner.Equals("DEFAULT_CHARACTER", StringComparison.OrdinalIgnoreCase)))
                 continue;
 
@@ -333,8 +329,7 @@ public class CatalogService
                 CostumeName = name,
                 OwnerHero = owner,
                 DisplayName = friendlyName,
-                IsDefault = (defaultUnlocked && (name.Equals(owner, StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(dispKey)))
-                    || (owner.Equals("Random", StringComparison.OrdinalIgnoreCase) && name.Equals("Random", StringComparison.OrdinalIgnoreCase)),
+                IsDefault = defaultUnlocked && (name.Equals(owner, StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(dispKey)),
                 SwfFile = swf,
                 SymbolSuffix = symbol,
                 WeaponSet = weaponSet,
@@ -766,7 +761,6 @@ public class CatalogService
         if (swf.Equals("Gfx_Player.swf", StringComparison.OrdinalIgnoreCase))
         {
             if (sym.StartsWith("No", StringComparison.OrdinalIgnoreCase)) return false;
-            if (owner.Equals("Random", StringComparison.OrdinalIgnoreCase)) return true;
         }
 
         // Reject All... accessory layer (CustomArt8)

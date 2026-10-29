@@ -240,12 +240,12 @@ export default function LegendCustomizer({
     return savedCustomization?.autoRestart !== undefined ? savedCustomization.autoRestart : true;
   });
 
-  // Character/legend selected as source for replacement visual skin ('Random' | heroName)
+  // Character/legend selected as source for replacement visual skin (heroName)
   const [selectedReplacementHero, setSelectedReplacementHero] = useState(() => {
-    if (savedCustomization?.replacementHero) {
+    if (savedCustomization?.replacementHero && savedCustomization.replacementHero !== 'Random') {
       return savedCustomization.replacementHero;
     }
-    if (initialReplacementCostume?.ownerHero) {
+    if (initialReplacementCostume?.ownerHero && initialReplacementCostume.ownerHero !== 'Random') {
       return initialReplacementCostume.ownerHero;
     }
     return legend?.heroName || (catalog?.legends?.[0]?.heroName || '');
@@ -299,7 +299,7 @@ export default function LegendCustomizer({
   const handleSelectHeroFilter = useCallback((hero) => {
     setSelectedReplacementHero(hero);
 
-    // A specific hero was selected (e.g. Cassidy, Bodvar, Random, etc.)
+    // A specific hero was selected (e.g. Cassidy, Bodvar, etc.)
     const heroCostumes = (allCatalogCostumes || []).filter(
       (c) => (c.ownerHero || '').trim().toLowerCase() === hero.trim().toLowerCase()
     );
@@ -584,16 +584,12 @@ export default function LegendCustomizer({
       setSelectedReplacementCostume(null);
       return;
     }
-    if (val === '__RANDOM_ROLL__') {
-      handleRollRandom();
-      return;
-    }
     const found = allCatalogCostumes.find((c) => matchCostume(c, val))
       || legendCostumes.find((c) => matchCostume(c, val));
     setSelectedReplacementCostume(found || null);
 
     if (found) {
-      if (found.ownerHero && selectedReplacementHero !== 'Random' && selectedReplacementHero !== 'all') {
+      if (found.ownerHero && selectedReplacementHero !== 'all') {
         setSelectedReplacementHero(found.ownerHero);
       }
       const w1 = findMatchingWeaponSkin(weapon1Skins, found);
@@ -1191,7 +1187,7 @@ export default function LegendCustomizer({
           isOpen={true}
           onClose={() => setActivePicker(null)}
           title={isArabic ? 'اختيار شخصية السكن' : 'Select Skin Character'}
-          subtitle={isArabic ? `اختر أسطورة لاستعارة سكناتها أو اختر Random (${heroCards.length} خيار متاح)` : `Pick a character to borrow skins from or choose Random (${heroCards.length} options)`}
+          subtitle={isArabic ? `اختر أسطورة لاستعارة سكناتها (${heroCards.length} خيار متاح)` : `Pick a character to borrow skins from (${heroCards.length} options)`}
           items={heroCards}
           selectedId={selectedReplacementHero}
           onSelect={handleSelectHeroFilter}
@@ -1217,11 +1213,7 @@ export default function LegendCustomizer({
           isOpen={true}
           onClose={() => setActivePicker(null)}
           title={isArabic ? 'اختيار زي ومظهر الاستبدال' : 'Select Visual Replacement Skin'}
-          subtitle={
-            selectedReplacementHero === 'Random'
-              ? (isArabic ? 'مظاهر عشوائية من جميع الأساطير' : 'Random skins across all legends')
-              : (isArabic ? `مظاهر أسطورة ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} مظهر متاح)` : `Skins for ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} skins)`)
-          }
+          subtitle={isArabic ? `مظاهر أسطورة ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} مظهر متاح)` : `Skins for ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} skins)`}
           items={replacementCostumeCards}
           selectedId={selectedReplacementCostume ? (selectedReplacementCostume.costumeId != null && selectedReplacementCostume.costumeId !== 0 ? selectedReplacementCostume.costumeId : selectedReplacementCostume.costumeName) : '__NONE__'}
           onSelect={handleSelectReplacementCostume}
