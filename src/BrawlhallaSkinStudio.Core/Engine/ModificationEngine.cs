@@ -138,22 +138,44 @@ public class ModificationEngine
             targetFilesToModify.Add(targetCostumeSwf);
         }
 
+        var replW1 = ResolveFullWeaponSkin(request.ReplacementWeapon1);
         if (request.TargetWeapon1 != null && !string.IsNullOrWhiteSpace(request.TargetWeapon1.SwfFile))
         {
-            bool needsW1 = hasColorScheme || (request.ReplacementWeapon1 != null &&
-                !string.Equals(request.TargetWeapon1.WeaponSkinName, request.ReplacementWeapon1.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
+            bool needsW1 = hasColorScheme || (replW1 != null &&
+                !string.Equals(request.TargetWeapon1.WeaponSkinName, replW1.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
             if (needsW1)
             {
                 targetFilesToModify.Add(Path.Combine(_gamePath, request.TargetWeapon1.SwfFile));
+
+                if (replW1 != null && HasCustomWeaponSound(replW1))
+                {
+                    string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon1);
+                    string replBnk = GetWeaponSoundBankPath(replW1);
+                    if (File.Exists(targetBnk) && File.Exists(replBnk))
+                    {
+                        targetFilesToModify.Add(targetBnk);
+                    }
+                }
             }
         }
+        var replW2 = ResolveFullWeaponSkin(request.ReplacementWeapon2);
         if (request.TargetWeapon2 != null && !string.IsNullOrWhiteSpace(request.TargetWeapon2.SwfFile))
         {
-            bool needsW2 = hasColorScheme || (request.ReplacementWeapon2 != null &&
-                !string.Equals(request.TargetWeapon2.WeaponSkinName, request.ReplacementWeapon2.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
+            bool needsW2 = hasColorScheme || (replW2 != null &&
+                !string.Equals(request.TargetWeapon2.WeaponSkinName, replW2.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
             if (needsW2)
             {
                 targetFilesToModify.Add(Path.Combine(_gamePath, request.TargetWeapon2.SwfFile));
+
+                if (replW2 != null && HasCustomWeaponSound(replW2))
+                {
+                    string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon2);
+                    string replBnk = GetWeaponSoundBankPath(replW2);
+                    if (File.Exists(targetBnk) && File.Exists(replBnk))
+                    {
+                        targetFilesToModify.Add(targetBnk);
+                    }
+                }
             }
         }
 
@@ -181,22 +203,42 @@ public class ModificationEngine
             // Process Weapon 1 Modification
             if (request.TargetWeapon1 != null)
             {
-                bool needsW1 = hasColorScheme || (request.ReplacementWeapon1 != null &&
-                    !string.Equals(request.TargetWeapon1.WeaponSkinName, request.ReplacementWeapon1.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
+                bool needsW1 = hasColorScheme || (replW1 != null &&
+                    !string.Equals(request.TargetWeapon1.WeaponSkinName, replW1.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
                 if (needsW1)
                 {
-                    ApplyWeaponModification(request.TargetWeapon1, request.ReplacementWeapon1 ?? request.TargetWeapon1, request, result);
+                    ApplyWeaponModification(request.TargetWeapon1, replW1 ?? request.TargetWeapon1, request, result);
+
+                    if (replW1 != null && HasCustomWeaponSound(replW1))
+                    {
+                        string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon1);
+                        string replBnk = GetWeaponSoundBankPath(replW1);
+                        if (File.Exists(targetBnk) && File.Exists(replBnk))
+                        {
+                            ApplyWeaponAudioModification(request.TargetWeapon1, replW1, targetBnk, replBnk, result);
+                        }
+                    }
                 }
             }
 
             // Process Weapon 2 Modification
             if (request.TargetWeapon2 != null)
             {
-                bool needsW2 = hasColorScheme || (request.ReplacementWeapon2 != null &&
-                    !string.Equals(request.TargetWeapon2.WeaponSkinName, request.ReplacementWeapon2.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
+                bool needsW2 = hasColorScheme || (replW2 != null &&
+                    !string.Equals(request.TargetWeapon2.WeaponSkinName, replW2.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
                 if (needsW2)
                 {
-                    ApplyWeaponModification(request.TargetWeapon2, request.ReplacementWeapon2 ?? request.TargetWeapon2, request, result);
+                    ApplyWeaponModification(request.TargetWeapon2, replW2 ?? request.TargetWeapon2, request, result);
+
+                    if (replW2 != null && HasCustomWeaponSound(replW2))
+                    {
+                        string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon2);
+                        string replBnk = GetWeaponSoundBankPath(replW2);
+                        if (File.Exists(targetBnk) && File.Exists(replBnk))
+                        {
+                            ApplyWeaponAudioModification(request.TargetWeapon2, replW2, targetBnk, replBnk, result);
+                        }
+                    }
                 }
             }
 
@@ -205,13 +247,26 @@ public class ModificationEngine
             {
                 if (File.Exists(file))
                 {
-                    // Re-read SWF to verify validity
-                    using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    if (file.EndsWith(".swf", StringComparison.OrdinalIgnoreCase))
                     {
-                        var verifiedSwf = SwfFile.ReadFrom(fs);
-                        if (verifiedSwf == null || verifiedSwf.Tags.Count == 0)
+                        using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
-                            throw new InvalidDataException($"Integrity verification failed for '{Path.GetFileName(file)}'.");
+                            var verifiedSwf = SwfFile.ReadFrom(fs);
+                            if (verifiedSwf == null || verifiedSwf.Tags.Count == 0)
+                            {
+                                throw new InvalidDataException($"Integrity verification failed for '{Path.GetFileName(file)}'.");
+                            }
+                        }
+                    }
+                    else if (file.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase))
+                    {
+                        byte[] header = new byte[4];
+                        using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            if (fs.Read(header, 0, 4) < 4 || System.Text.Encoding.ASCII.GetString(header) != "BKHD")
+                            {
+                                throw new InvalidDataException($"Integrity verification failed for sound bank '{Path.GetFileName(file)}'.");
+                            }
                         }
                     }
 
@@ -690,13 +745,24 @@ public class ModificationEngine
 
         if (_catalog != null)
         {
-            string? ownerHero = activeWeapon?.OwnerHero ?? target?.OwnerHero;
-            if (!string.IsNullOrEmpty(ownerHero) && !ownerHero.Equals("--", StringComparison.OrdinalIgnoreCase))
+            var heroesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(activeWeapon?.OwnerHero) && !activeWeapon.OwnerHero.Equals("--", StringComparison.OrdinalIgnoreCase))
+                heroesToCheck.Add(activeWeapon.OwnerHero);
+            if (!string.IsNullOrEmpty(target?.OwnerHero) && !target.OwnerHero.Equals("--", StringComparison.OrdinalIgnoreCase))
+                heroesToCheck.Add(target.OwnerHero);
+
+            // InheritCostumeDefines check
+            if (!string.IsNullOrEmpty(activeWeapon?.InheritCostumeDefines))
+                heroesToCheck.Add(activeWeapon.InheritCostumeDefines);
+            if (!string.IsNullOrEmpty(target?.InheritCostumeDefines))
+                heroesToCheck.Add(target.InheritCostumeDefines);
+
+            foreach (var h in heroesToCheck)
             {
-                var ownerCostumes = _catalog.Costumes
-                    .Where(c => c.OwnerHero.Equals(ownerHero, StringComparison.OrdinalIgnoreCase))
+                var costumes = _catalog.Costumes
+                    .Where(c => c.OwnerHero.Equals(h, StringComparison.OrdinalIgnoreCase) || c.CostumeName.Equals(h, StringComparison.OrdinalIgnoreCase))
                     .ToList();
-                foreach (var oc in ownerCostumes)
+                foreach (var oc in costumes)
                 {
                     if (oc.BaseColors != null && oc.BaseColors.Count > 0)
                         baseColorSources.Add(oc.BaseColors);
@@ -1135,5 +1201,137 @@ public class ModificationEngine
         }
 
         SaveSwfAtomically(dstSwf, targetSfxPath);
+    }
+
+    private WeaponSkinInfo? ResolveFullWeaponSkin(WeaponSkinInfo? weapon)
+    {
+        if (weapon == null) return null;
+        if (weapon.AttackSoundOverrides.Count > 0 && !string.IsNullOrWhiteSpace(weapon.SoundBank))
+        {
+            return weapon;
+        }
+        if (_catalog != null)
+        {
+            var found = _catalog.WeaponSkins.FirstOrDefault(w =>
+                w.WeaponSkinId == weapon.WeaponSkinId ||
+                w.WeaponSkinName.Equals(weapon.WeaponSkinName, StringComparison.OrdinalIgnoreCase));
+            if (found != null) return found;
+        }
+        return weapon;
+    }
+
+    private static bool HasCustomWeaponSound(WeaponSkinInfo weapon)
+    {
+        return !string.IsNullOrWhiteSpace(weapon.SoundBank) && weapon.AttackSoundOverrides.Count > 0;
+    }
+
+    private string GetWeaponSoundBankPath(WeaponSkinInfo weapon)
+    {
+        string bankName = !string.IsNullOrWhiteSpace(weapon.SoundBank)
+            ? weapon.SoundBank
+            : $"WEP_{weapon.BaseWeapon}";
+        return Path.Combine(_gamePath, "audio", "pc", $"{bankName}.bnk");
+    }
+
+    public static uint FnvHash(string name)
+    {
+        byte[] bytes = System.Text.Encoding.ASCII.GetBytes(name.ToLowerInvariant());
+        uint hash = 2166136261;
+        foreach (byte b in bytes)
+        {
+            hash *= 16777619;
+            hash ^= b;
+        }
+        return hash;
+    }
+
+    private static void ApplyWeaponAudioModification(
+        WeaponSkinInfo target,
+        WeaponSkinInfo replacement,
+        string targetBnkPath,
+        string replBnkPath,
+        ModificationResult result)
+    {
+        if (!File.Exists(replBnkPath))
+        {
+            result.OperationLog.Add($"Warning: Source sound bank '{Path.GetFileName(replBnkPath)}' not found. Audio SFX was not applied.");
+            return;
+        }
+
+        byte[] bytes = File.ReadAllBytes(replBnkPath);
+        if (bytes.Length < 16)
+        {
+            throw new InvalidDataException($"Source sound bank '{replBnkPath}' is invalid or corrupted.");
+        }
+
+        string targetBankName = !string.IsNullOrWhiteSpace(target.SoundBank)
+            ? target.SoundBank
+            : $"WEP_{target.BaseWeapon}";
+        uint targetBankId = FnvHash(targetBankName);
+        Array.Copy(BitConverter.GetBytes(targetBankId), 0, bytes, 12, 4);
+
+        var eventMap = new Dictionary<uint, uint>();
+        foreach (var ovr in replacement.AttackSoundOverrides)
+        {
+            var parts = ovr.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                uint origId = FnvHash(parts[0]);
+                uint replId = FnvHash(parts[1]);
+                eventMap[replId] = origId;
+            }
+        }
+
+        int remappedCount = 0;
+        int pos = 0;
+        while (pos < bytes.Length - 8)
+        {
+            string tag = System.Text.Encoding.ASCII.GetString(bytes, pos, 4);
+            uint size = BitConverter.ToUInt32(bytes, pos + 4);
+            pos += 8;
+
+            if (tag == "HIRC")
+            {
+                int hircEnd = pos + (int)size;
+                uint count = BitConverter.ToUInt32(bytes, pos);
+                int objPos = pos + 4;
+                for (int i = 0; i < count && objPos < hircEnd; i++)
+                {
+                    byte type = bytes[objPos];
+                    uint objSize = BitConverter.ToUInt32(bytes, objPos + 1);
+                    if (type == 4) // Event
+                    {
+                        uint eventId = BitConverter.ToUInt32(bytes, objPos + 5);
+                        if (eventMap.TryGetValue(eventId, out uint mappedId))
+                        {
+                            Array.Copy(BitConverter.GetBytes(mappedId), 0, bytes, objPos + 5, 4);
+                            remappedCount++;
+                        }
+                    }
+                    objPos += 5 + (int)objSize;
+                }
+                break;
+            }
+            pos += (int)size;
+        }
+
+        string tmpPath = targetBnkPath + ".tmp";
+        File.WriteAllBytes(tmpPath, bytes);
+        try
+        {
+            File.Move(tmpPath, targetBnkPath, overwrite: true);
+        }
+        catch
+        {
+            using (var src = new FileStream(tmpPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var dst = new FileStream(targetBnkPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+            {
+                src.CopyTo(dst);
+                dst.Flush(true);
+            }
+            try { File.Delete(tmpPath); } catch { }
+        }
+
+        result.OperationLog.Add($"Applied custom weapon SFX sound bank '{replacement.SoundBank}' onto '{Path.GetFileName(targetBnkPath)}' with {remappedCount} remapped events.");
     }
 }

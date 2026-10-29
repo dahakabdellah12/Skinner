@@ -316,4 +316,67 @@ public class ModificationTests : IDisposable
         Assert.True(deleted);
         Assert.Equal(2, manager.Presets.Count);
     }
+
+    [Fact]
+    public void TestDarthVaderSwordAudioModification()
+    {
+        string audioDir = Path.Combine(_testDir, "audio", "pc");
+        Directory.CreateDirectory(audioDir);
+
+        string srcSwordBnk = Path.Combine(_realGameDir, "audio", "pc", "WEP_Sword.bnk");
+        string srcSaberBnk = Path.Combine(_realGameDir, "audio", "pc", "WEP_Saber_06.bnk");
+        string testSwordBnk = Path.Combine(audioDir, "WEP_Sword.bnk");
+        string testSaberBnk = Path.Combine(audioDir, "WEP_Saber_06.bnk");
+
+        File.Copy(srcSwordBnk, testSwordBnk);
+        File.Copy(srcSaberBnk, testSaberBnk);
+
+        // Also copy Gfx_Weapons.swf or Gfx_DarthVader_Sword.swf if available
+        string srcVaderSwf = Path.Combine(_realGameDir, "Gfx_DarthVader_Sword.swf");
+        if (File.Exists(srcVaderSwf))
+        {
+            File.Copy(srcVaderSwf, Path.Combine(_testDir, "Gfx_DarthVader_Sword.swf"));
+        }
+        string srcWeaponsSwf = Path.Combine(_realGameDir, "Gfx_Weapons.swf");
+        if (File.Exists(srcWeaponsSwf))
+        {
+            File.Copy(srcWeaponsSwf, Path.Combine(_testDir, "Gfx_Weapons.swf"));
+        }
+
+        var inst = GameDetector.DetectGameInstallation();
+        var catalog = new CatalogService();
+        catalog.LoadFromInstallation(inst!);
+
+        var engine = new ModificationEngine(_testDir, _backupManager, catalog);
+
+        var vaderSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordDarthVader", StringComparison.OrdinalIgnoreCase));
+        var targetSword = catalog.WeaponSkins.First(w => w.BaseWeapon.Equals("Sword", StringComparison.OrdinalIgnoreCase) && w.IsDefault);
+
+        var viking = catalog.Legends.First(l => l.HeroName.Equals("Viking", StringComparison.OrdinalIgnoreCase));
+        var vikingCostume = viking.Costumes.First(c => c.IsDefault);
+
+        var req = new ModificationRequest
+        {
+            TargetLegend = viking,
+            TargetCostume = vikingCostume,
+            TargetWeapon1 = targetSword,
+            ReplacementWeapon1 = vaderSword
+        };
+
+        var result = engine.ApplyModification(req);
+        Assert.True(result.Success, string.Join("; ", result.OperationLog));
+
+        // Verify that audio/pc/WEP_Sword.bnk was modified
+        Assert.Contains(result.ModifiedFiles, f => f.EndsWith("WEP_Sword.bnk", StringComparison.OrdinalIgnoreCase));
+
+        // Verify that WEP_Sword.bnk now has WEP_Sword bank ID and lightsaber events mapped
+        byte[] bytes = File.ReadAllBytes(testSwordBnk);
+        Assert.Equal("BKHD", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
+        uint bankId = BitConverter.ToUInt32(bytes, 12);
+        Assert.Equal(ModificationEngine.FnvHash("WEP_Sword"), bankId);
+
+        // Verify backup was made
+        Assert.NotEmpty(result.BackupId);
+        Assert.True(File.Exists(Path.Combine(_testDir, ".studio_backups", result.BackupId, "audio", "pc", "WEP_Sword.bnk")));
+    }
 }

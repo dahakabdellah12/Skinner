@@ -62,6 +62,9 @@ public class WeaponSkinInfo
     public string SwfFile { get; set; } = string.Empty;
     public string SymbolSuffix { get; set; } = string.Empty;
     public string WeaponIcon { get; set; } = string.Empty;
+    public string InheritCostumeDefines { get; set; } = string.Empty;
+    public string SoundBank { get; set; } = string.Empty;
+    public List<string> AttackSoundOverrides { get; set; } = [];
     public bool IsDefault { get; set; }
     public Dictionary<string, uint> BaseColors { get; set; } = [];
 

@@ -379,6 +379,20 @@ public class CatalogService
             string friendlyName = FormatDisplayName(name, dispKey);
             string weaponIcon = GetCol(cols, colMap, "WeaponIcon");
             if (weaponIcon == "--") weaponIcon = "";
+            string inheritCostume = GetCol(cols, colMap, "InheritCostumeDefines");
+            if (inheritCostume == "--") inheritCostume = "";
+            string soundBank = GetCol(cols, colMap, "SoundBank");
+            if (soundBank == "--") soundBank = "";
+
+            var soundOverrides = new List<string>();
+            for (int so = 1; so <= 20; so++)
+            {
+                string ovr = GetCol(cols, colMap, $"AttackSoundOverride{so}");
+                if (!string.IsNullOrWhiteSpace(ovr) && ovr != "--")
+                {
+                    soundOverrides.Add(ovr);
+                }
+            }
 
             var weapon = new WeaponSkinInfo
             {
@@ -390,6 +404,9 @@ public class CatalogService
                 SwfFile = swf,
                 SymbolSuffix = symbol,
                 WeaponIcon = weaponIcon,
+                InheritCostumeDefines = inheritCostume,
+                SoundBank = soundBank,
+                AttackSoundOverrides = soundOverrides,
                 IsDefault = name.EndsWith(owner, StringComparison.OrdinalIgnoreCase) || id <= 15
             };
 

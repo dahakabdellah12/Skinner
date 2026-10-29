@@ -435,22 +435,48 @@ public class WebViewBridge
     {
         ["Lord Vraxx"] = "a_Roster_Pose_Vraxx",
         ["Alien"] = "a_Roster_Pose_Vraxx",
+        ["Orion"] = "a_Roster_Pose_Volst",
+        ["Valkyrie"] = "a_Roster_Pose_Volst",
         ["Gnash"] = "a_Roster_Pose_Thrulk",
         ["Caveman"] = "a_Roster_Pose_Thrulk",
         ["Sir Roland"] = "a_Roster_Pose_Hotspur",
         ["Knight"] = "a_Roster_Pose_Hotspur",
-        ["Scarlet"] = "a_Roster_Pose_Roboengineer",
-        ["Steampunk"] = "a_Roster_Pose_Roboengineer",
+        ["Scarlet"] = "a_SkinIcon_Scarlet_Classic",
+        ["Steampunk"] = "a_SkinIcon_Scarlet_Classic",
+        ["Seven"] = "a_Roster_Pose_Roboengineer",
+        ["Roboengineer"] = "a_Roster_Pose_Roboengineer",
         ["Brynn"] = "a_Roster_Pose_Valkyrie",
         ["ActualValk"] = "a_Roster_Pose_Valkyrie",
         ["Diana"] = "a_Roster_Pose_MonsterHunter",
         ["Marksman"] = "a_Roster_Pose_MonsterHunter",
-        ["Mirage"] = "a_Roster_Pose_EgyptianShoujo",
-        ["Egyptian"] = "a_Roster_Pose_EgyptianShoujo",
+        ["Mirage"] = "a_Roster_Pose_Assassin",
+        ["Egyptian"] = "a_Roster_Pose_Assassin",
+        ["Vivi"] = "a_Roster_Pose_AssassinVivi",
+        ["Assassin"] = "a_Roster_Pose_AssassinVivi",
         ["Yumiko"] = "a_Roster_Pose_Kitsune",
         ["Ninetails"] = "a_Roster_Pose_Kitsune",
-        ["Artemis"] = "a_Roster_Pose_SpaceHunter",
-        ["Spacehunter"] = "a_Roster_Pose_SpaceHunter",
+        ["Teros"] = "a_SkinIcon_Minotaur_Classic",
+        ["Minotaur"] = "a_SkinIcon_Minotaur_Classic",
+        ["Jhala"] = "a_SkinIcon_Barbarian_Classic",
+        ["Barbarian"] = "a_SkinIcon_Barbarian_Classic",
+        ["Wu Shang"] = "a_SkinIcon_Monk_Classic",
+        ["Monk"] = "a_SkinIcon_Monk_Classic",
+        ["Ragnir"] = "a_SkinIcon_Dragon_Classic",
+        ["Dragon"] = "a_SkinIcon_Dragon_Classic",
+        ["Nix"] = "a_SkinIcon_Reaper_Classic",
+        ["Reaper"] = "a_SkinIcon_Reaper_Classic",
+        ["Artemis"] = "a_SkinIcon_SpaceHunter_Classic",
+        ["Spacehunter"] = "a_SkinIcon_SpaceHunter_Classic",
+        ["SpaceHunter"] = "a_SkinIcon_SpaceHunter_Classic",
+        ["Isaiah"] = "a_SkinIcon_Soldier_Classic",
+        ["Soldier"] = "a_SkinIcon_Soldier_Classic",
+        ["Thor"] = "a_SkinIcon_Thor_Classic",
+        ["Magyar"] = "a_SkinIcon_GhostArmor_Classic",
+        ["GhostArmor"] = "a_SkinIcon_GhostArmor_Classic",
+        ["Arcadia"] = "a_SkinIcon_FairyQueen_Classic",
+        ["FairyQueen"] = "a_SkinIcon_FairyQueen_Classic",
+        ["Zariel"] = "a_SkinIcon_Celestial_Classic",
+        ["Celestial"] = "a_SkinIcon_Celestial_Classic",
         ["Petra"] = "a_Roster_Pose_Ragefighter",
         ["RageFighter"] = "a_Roster_Pose_Ragefighter",
         ["Thea"] = "a_Roster_Pose_Speedster",
@@ -531,15 +557,6 @@ public class WebViewBridge
                 ? (csProp.ValueKind == JsonValueKind.Number ? csProp.GetInt64().ToString() : csProp.GetString())
                 : null;
 
-            // In Brawlhalla UI_Icons.swf, a_SkinIcon_*_Classic is solely a tiny corner badge ribbon!
-            // When classic/default costume is requested, render the canonical roster pose.
-            if ((!string.IsNullOrEmpty(icon) && icon.EndsWith("_Classic", StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(costumeName) && costumeName.Equals("Classic", StringComparison.OrdinalIgnoreCase)))
-            {
-                var poseSvg = ResolveLegendPoseSvg(uiIcons, ownerHero ?? costumeName, ownerHero);
-                if (poseSvg != null) return poseSvg;
-            }
-
             Dictionary<uint, uint>? colorMap = null;
             if (!string.IsNullOrEmpty(colorSchemeId) && !colorSchemeId.Equals("__NONE__", StringComparison.OrdinalIgnoreCase))
             {
@@ -566,6 +583,21 @@ public class WebViewBridge
                             }
                         }
                     }
+                }
+            }
+
+            // In Brawlhalla UI_Icons.swf, classic/default costumes can use either canonical roster pose or full classic skin icon.
+            // If the costume is classic/default, first try resolving the canonical legend pose.
+            if ((!string.IsNullOrEmpty(icon) && icon.EndsWith("_Classic", StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(costumeName) && costumeName.Equals("Classic", StringComparison.OrdinalIgnoreCase)))
+            {
+                var poseSvg = ResolveLegendPoseSvg(uiIcons, ownerHero ?? costumeName, ownerHero);
+                if (poseSvg != null) return poseSvg;
+
+                if (!string.IsNullOrEmpty(icon))
+                {
+                    var classicIconSvg = PreviewRenderer.RenderSymbolToSvg(uiIcons, icon, null, colorMap);
+                    if (classicIconSvg != null) return classicIconSvg;
                 }
             }
 
@@ -634,12 +666,18 @@ public class WebViewBridge
                     if (wep?.BaseColors != null && wep.BaseColors.Count > 0)
                         baseColorSources.Add(wep.BaseColors);
 
+                    var heroesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     if (!string.IsNullOrEmpty(heroToLookUp) && !heroToLookUp.Equals("--", StringComparison.OrdinalIgnoreCase))
+                        heroesToCheck.Add(heroToLookUp);
+                    if (!string.IsNullOrEmpty(wep?.InheritCostumeDefines))
+                        heroesToCheck.Add(wep.InheritCostumeDefines);
+
+                    foreach (var h in heroesToCheck)
                     {
-                        var heroCostumes = _catalog.Costumes
-                            .Where(c => c.OwnerHero.Equals(heroToLookUp, StringComparison.OrdinalIgnoreCase))
+                        var costumes = _catalog.Costumes
+                            .Where(c => c.OwnerHero.Equals(h, StringComparison.OrdinalIgnoreCase) || c.CostumeName.Equals(h, StringComparison.OrdinalIgnoreCase))
                             .ToList();
-                        foreach (var hc in heroCostumes)
+                        foreach (var hc in costumes)
                         {
                             if (hc.BaseColors != null && hc.BaseColors.Count > 0)
                                 baseColorSources.Add(hc.BaseColors);
@@ -1089,7 +1127,7 @@ public class WebViewBridge
 
     private async Task<object> CheckForUpdatesAsync(JsonElement payload)
     {
-        const string currentVersion = "2.1.3";
+        const string currentVersion = "2.2.3";
         string targetRepo = payload.TryGetProperty("repo", out var rProp) && !string.IsNullOrWhiteSpace(rProp.GetString())
             ? rProp.GetString()!.Trim()
             : GetGitHubRepo();
@@ -1102,7 +1140,7 @@ public class WebViewBridge
         {
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(8);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.1.3");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.2.3");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);
