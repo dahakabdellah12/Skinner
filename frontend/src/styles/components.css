@@ -320,6 +320,8 @@
   justify-content: center;
   overflow: hidden;
   border-bottom: 1px solid var(--border-primary);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .card-image {
@@ -329,18 +331,39 @@
   align-items: center;
   justify-content: center;
   padding: 8px;
-  transition: transform 0.4s ease;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .card-image svg, .card-image img {
   max-width: 90%;
   max-height: 90%;
   object-fit: contain;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  shape-rendering: geometricPrecision;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.asset-image-container {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.asset-image-container svg {
+  shape-rendering: geometricPrecision;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .store-card:hover .card-image {
-  transform: scale(1.06);
+  /* Avoid non-integer scaling that causes subpixel blurring in high-DPI Chromium/WebView2 */
+  transform: scale(1.04) translateZ(0);
 }
 
 .product-badge {

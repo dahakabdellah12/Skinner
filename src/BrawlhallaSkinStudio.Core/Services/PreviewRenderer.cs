@@ -459,7 +459,9 @@ public static class PreviewRenderer
             new XAttribute("width", "100%"),
             new XAttribute("height", "100%"),
             new XAttribute("preserveAspectRatio", "xMidYMid meet"),
-            new XAttribute("shape-rendering", "geometricPrecision"));
+            new XAttribute("shape-rendering", "geometricPrecision"),
+            new XAttribute("text-rendering", "geometricPrecision"),
+            new XAttribute("image-rendering", "crisp-edges"));
 
         foreach (var (sh, a, b, c, d, tx, ty) in placedShapes)
         {

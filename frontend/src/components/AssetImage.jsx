@@ -2,9 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 
 const memoryCache = new Map();
+let globalCacheEpoch = 0;
+const subscribers = new Set();
 
 export function clearAssetImageCache() {
   memoryCache.clear();
+  globalCacheEpoch++;
+  subscribers.forEach((notify) => notify());
 }
 
 export default function AssetImage({
@@ -61,7 +65,19 @@ export default function AssetImage({
   }, [type, item, colorScheme]);
 
   const { cacheKey, queryParams } = assetInfo;
+  const [, setEpochTick] = useState(0);
   const [svg, setSvg] = useState(() => (cacheKey && memoryCache.has(cacheKey) ? memoryCache.get(cacheKey) : ''));
+
+  useEffect(() => {
+    const onCacheInvalidated = () => {
+      setSvg('');
+      setEpochTick((prev) => prev + 1);
+    };
+    subscribers.add(onCacheInvalidated);
+    return () => {
+      subscribers.delete(onCacheInvalidated);
+    };
+  }, []);
 
   useEffect(() => {
     if (!cacheKey || !queryParams) {
@@ -92,7 +108,7 @@ export default function AssetImage({
     return () => {
       isCancelled = true;
     };
-  }, [cacheKey, queryParams]);
+  }, [cacheKey, queryParams, globalCacheEpoch]);
 
   const currentSvg = (cacheKey && memoryCache.has(cacheKey)) ? memoryCache.get(cacheKey) : svg;
   const isSvgValid = typeof currentSvg === 'string' && currentSvg.trim().startsWith('<svg');
