@@ -331,17 +331,11 @@ public class WebViewBridge
             PreviewRenderer.InvalidateCache();
         }
 
-        bool autoRestart = payload.TryGetProperty("autoRestart", out var arProp) && arProp.GetBoolean();
+        bool autoRestart = payload.TryGetProperty("autoRestart", out var arProp) ? arProp.GetBoolean() : true;
         if (result.Success && autoRestart && GameLauncher.IsGameRunning())
         {
             GameLauncher.RestartGame(_installation.ExePath, preferSteam: true);
             result.OperationLog.Add("Auto-restarted Brawlhalla to load modifications live.");
-        }
-        else if (result.Success && GameLauncher.IsGameRunning())
-        {
-            GameLauncher.BringGameToFront();
-            result.OperationLog.Add("⚡ Live Hot-Swap applied! Changes are active in running game without restarting.");
-            result.Message += " (⚡ تم تطبيق التعديل فورياً في اللعبة الشغالة - Live Hot-Swap!)";
         }
 
         return result;
@@ -1150,7 +1144,7 @@ public class WebViewBridge
 
     private async Task<object> CheckForUpdatesAsync(JsonElement payload)
     {
-        const string currentVersion = "2.2.9";
+        const string currentVersion = "3.0.0";
         string targetRepo = payload.TryGetProperty("repo", out var rProp) && !string.IsNullOrWhiteSpace(rProp.GetString())
             ? rProp.GetString()!.Trim()
             : GetGitHubRepo();
@@ -1163,7 +1157,7 @@ public class WebViewBridge
         {
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(8);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.2.9");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/3.0.0");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);
