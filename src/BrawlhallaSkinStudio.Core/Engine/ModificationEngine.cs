@@ -389,6 +389,18 @@ public class ModificationEngine
                         tr.SymbolID = replacementId;
                         remappedCount++;
                     }
+                    else if (AnimationFallbacks.TryGetValue(prefix, out var fallbacks))
+                    {
+                        foreach (var fb in fallbacks)
+                        {
+                            if (replMap.TryGetValue(fb, out ushort fallbackId))
+                            {
+                                tr.SymbolID = fallbackId;
+                                remappedCount++;
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 // Also add any replacement symbols that target was missing
@@ -403,6 +415,41 @@ public class ModificationEngine
                             SymbolName = expectedTargetSym
                         });
                         remappedCount++;
+                    }
+                }
+
+                // Ensure all animation/jump fallbacks exist for targetSuffix so the game engine does not fall back to Gfx_Player.swf
+                foreach (var kvp in AnimationFallbacks)
+                {
+                    string expectedTargetSym = $"{kvp.Key}_{targetSuffix}";
+                    if (!targetSymClass.References.Any(r => r.SymbolName.Equals(expectedTargetSym, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        ushort symId = 0;
+                        if (replMap.TryGetValue(kvp.Key, out ushort directId))
+                        {
+                            symId = directId;
+                        }
+                        else
+                        {
+                            foreach (var fb in kvp.Value)
+                            {
+                                if (replMap.TryGetValue(fb, out ushort fbId))
+                                {
+                                    symId = fbId;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (symId != 0)
+                        {
+                            targetSymClass.References.Add(new SwfSymbolReference
+                            {
+                                SymbolID = symId,
+                                SymbolName = expectedTargetSym
+                            });
+                            remappedCount++;
+                        }
                     }
                 }
 
@@ -612,11 +659,13 @@ public class ModificationEngine
 
         // Map symbols
         int portedCount = 0;
+        var portedPrefixMap = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
         foreach (var sr in sourceRefs)
         {
             string prefix = sr.SymbolName[..sr.SymbolName.LastIndexOf('_')];
             string targetSymName = $"{prefix}_{targetSuffix}";
             ushort newSpriteId = idMap[sr.SymbolID];
+            portedPrefixMap[prefix] = newSpriteId;
 
             var existingTarget = targetSymClass.References.FirstOrDefault(r => r.SymbolName.Equals(targetSymName, StringComparison.OrdinalIgnoreCase));
             if (existingTarget != null)
@@ -632,6 +681,63 @@ public class ModificationEngine
                 });
             }
             portedCount++;
+        }
+
+        // Remap target symbols that source was missing (e.g. jump/animation bones like a_Foot1Bent, a_ShinSideBend)
+        var targetRefs = targetSymClass.References
+            .Where(r => r.SymbolName.EndsWith("_" + targetSuffix, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var tr in targetRefs)
+        {
+            string prefix = tr.SymbolName[..tr.SymbolName.LastIndexOf('_')];
+            if (!portedPrefixMap.ContainsKey(prefix) && AnimationFallbacks.TryGetValue(prefix, out var fallbacks))
+            {
+                foreach (var fb in fallbacks)
+                {
+                    if (portedPrefixMap.TryGetValue(fb, out ushort fbId))
+                    {
+                        tr.SymbolID = fbId;
+                        portedCount++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Ensure all animation/jump fallbacks exist for targetSuffix so the game does not fall back to Gfx_Player.swf
+        foreach (var kvp in AnimationFallbacks)
+        {
+            string expectedTargetSym = $"{kvp.Key}_{targetSuffix}";
+            if (!targetSymClass.References.Any(r => r.SymbolName.Equals(expectedTargetSym, StringComparison.OrdinalIgnoreCase)))
+            {
+                ushort symId = 0;
+                if (portedPrefixMap.TryGetValue(kvp.Key, out ushort directId))
+                {
+                    symId = directId;
+                }
+                else
+                {
+                    foreach (var fb in kvp.Value)
+                    {
+                        if (portedPrefixMap.TryGetValue(fb, out ushort fbId))
+                        {
+                            symId = fbId;
+                            break;
+                        }
+                    }
+                }
+
+                if (symId != 0)
+                {
+                    targetSymClass.References.Add(new SwfSymbolReference
+                    {
+                        SymbolID = symId,
+                        SymbolName = expectedTargetSym
+                    });
+                    portedCount++;
+                }
+            }
         }
 
         result.OperationLog.Add($"Ported {newShapeTags.Count} shapes and {newSpriteTags.Count} sprites ({portedCount} symbol linkages).");
@@ -1269,6 +1375,27 @@ public class ModificationEngine
         "WEP_Fists",
         "WEP_Unarmed",
         "WEP_Explosion"
+    };
+
+    public static readonly Dictionary<string, string[]> AnimationFallbacks = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["a_Foot1Bent"] = new[] { "a_Foot1", "a_Foot1Side" },
+        ["a_Foot1Side"] = new[] { "a_Foot1", "a_Foot1Bent" },
+        ["a_Foot1"] = new[] { "a_Foot1Side", "a_Foot1Bent" },
+        ["a_ShinSideBend"] = new[] { "a_ShinSide", "a_Shin", "a_ShinSideStraight", "a_ShinFrontAngle" },
+        ["a_ShinFrontAngle"] = new[] { "a_Shin", "a_ShinSide", "a_ShinSideStraight", "a_ShinSideBend" },
+        ["a_ShinSideStraight"] = new[] { "a_ShinSide", "a_Shin", "a_ShinSideBend", "a_ShinFrontAngle" },
+        ["a_ShinSide"] = new[] { "a_Shin", "a_ShinSideStraight", "a_ShinSideBend" },
+        ["a_ShinBack"] = new[] { "a_Shin", "a_ShinSide" },
+        ["a_Shin"] = new[] { "a_ShinSide", "a_ShinSideStraight" },
+        ["a_Torso1Back"] = new[] { "a_Torso1", "a_Torso2Back", "a_Torso2" },
+        ["a_Torso2Back"] = new[] { "a_Torso2", "a_Torso1Back", "a_Torso1" },
+        ["a_Torso1"] = new[] { "a_Torso1Back", "a_Torso2" },
+        ["a_Torso2"] = new[] { "a_Torso2Back", "a_Torso1" },
+        ["a_Waist1Back"] = new[] { "a_Waist1" },
+        ["a_Waist1"] = new[] { "a_Waist1Back" },
+        ["a_Leg1Back"] = new[] { "a_Leg1" },
+        ["a_Leg1"] = new[] { "a_Leg1Back" },
     };
 
     public static bool HasDedicatedSoundBank(WeaponSkinInfo? weapon)

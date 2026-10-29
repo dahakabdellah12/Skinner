@@ -234,14 +234,31 @@ public class CatalogService
             string swf = "";
             string symbol = "";
 
-            // Primary artwork is in CustomArt2 (or CustomArt8 or CustomArt if not Player accent)
-            string artToUse = "";
-            if (!string.IsNullOrEmpty(customArt2) && customArt2 != "--")
-                artToUse = customArt2;
-            else if (!string.IsNullOrEmpty(customArt8) && customArt8 != "--")
-                artToUse = customArt8;
-            else if (!string.IsNullOrEmpty(customArt) && customArt != "--" && (!customArt.StartsWith("Gfx_Player.swf", StringComparison.OrdinalIgnoreCase) || owner.Equals("Random", StringComparison.OrdinalIgnoreCase)))
-                artToUse = customArt;
+            // Primary artwork candidate selection (avoiding hand-only SWFs and Gfx_Player hide masks)
+            var customArtCandidates = new List<string>();
+            foreach (var colName in new[]
+            {
+                "GfxType.CustomArt2", "GfxType.CustomArt", "GfxType.CustomArt3", "GfxType.CustomArt4",
+                "GfxType.CustomArt5", "GfxType.CustomArt6", "GfxType.CustomArt7", "GfxType.CustomArt9",
+                "GfxType.CustomArt10", "GfxType.CustomArt8",
+                "CustomArt2", "CustomArt", "CustomArt3", "CustomArt4",
+                "CustomArt5", "CustomArt6", "CustomArt7", "CustomArt9",
+                "CustomArt10", "CustomArt8"
+            })
+            {
+                string val = GetCol(cols, colMap, colName);
+                if (!string.IsNullOrEmpty(val) && val != "--" && val.Contains('/') && !customArtCandidates.Contains(val))
+                {
+                    customArtCandidates.Add(val);
+                }
+            }
+
+            string artToUse = customArtCandidates.FirstOrDefault(c => IsValidCostumeArt(c, owner)) ?? "";
+            if (string.IsNullOrEmpty(artToUse))
+            {
+                artToUse = customArtCandidates.FirstOrDefault(c => !c.Contains("Gfx_Hands.swf") && !c.Contains("/No"))
+                    ?? customArtCandidates.FirstOrDefault() ?? "";
+            }
 
             if (!string.IsNullOrEmpty(artToUse) && artToUse.Contains('/'))
             {
@@ -693,5 +710,28 @@ public class CatalogService
                 DisplayName = Regex.Replace(charName, "([a-z])([A-Z])", "$1 $2")
             });
         }
+    }
+
+    private static bool IsValidCostumeArt(string art, string owner)
+    {
+        if (string.IsNullOrWhiteSpace(art) || art == "--" || !art.Contains('/')) return false;
+        var parts = art.Split('/');
+        string swf = parts[0];
+        string sym = parts[1];
+
+        // Reject hands-only accessory layer
+        if (swf.Equals("Gfx_Hands.swf", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // Reject Gfx_Player hide masks (NoAccent, NoEyes, NoNose, NoMouth, NoJaw, NoFoot)
+        if (swf.Equals("Gfx_Player.swf", StringComparison.OrdinalIgnoreCase))
+        {
+            if (sym.StartsWith("No", StringComparison.OrdinalIgnoreCase)) return false;
+            if (owner.Equals("Random", StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        // Reject All... accessory layer (CustomArt8)
+        if (sym.StartsWith("All", StringComparison.OrdinalIgnoreCase)) return false;
+
+        return true;
     }
 }

@@ -122,6 +122,15 @@ public class ModificationTests : IDisposable
 
             // Torso of Viking should now point to Torso of Bear's character ID!
             Assert.Equal(torsoBear.SymbolID, torsoViking.SymbolID);
+
+            // Jump / movement symbols must also be remapped so jumping doesn't revert colors/skin
+            var footBentViking = symClass.References.First(r => r.SymbolName == "a_Foot1Bent_Viking");
+            var footBentBear = symClass.References.First(r => r.SymbolName == "a_Foot1Bent_Bear");
+            Assert.Equal(footBentBear.SymbolID, footBentViking.SymbolID);
+
+            var shinBendViking = symClass.References.First(r => r.SymbolName == "a_ShinSideBend_Viking");
+            var shinBendBear = symClass.References.First(r => r.SymbolName == "a_ShinSideBend_Bear");
+            Assert.Equal(shinBendBear.SymbolID, shinBendViking.SymbolID);
         }
 
         // Test restoring original
