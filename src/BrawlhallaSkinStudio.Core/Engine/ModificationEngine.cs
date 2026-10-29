@@ -148,6 +148,25 @@ public class ModificationEngine
             targetFilesToModify.Add(targetCostumeSwf);
         }
 
+        string handsSwfPath = Path.Combine(_gamePath, "Gfx_Hands.swf");
+        string targetHands = GetEffectiveHandsSuffix(request.TargetCostume);
+        string replHands = GetEffectiveHandsSuffix(request.ReplacementCostume ?? request.TargetCostume);
+        bool needsHands = File.Exists(handsSwfPath) &&
+            (!string.Equals(targetHands, replHands, StringComparison.OrdinalIgnoreCase) || hasColorScheme);
+        if (needsHands)
+        {
+            targetFilesToModify.Add(handsSwfPath);
+        }
+
+        var crossoverSfxFiles = GetCrossoverSfxFiles(request.TargetCostume, request.ReplacementCostume);
+        foreach (var sfxFile in crossoverSfxFiles)
+        {
+            if (File.Exists(sfxFile))
+            {
+                targetFilesToModify.Add(sfxFile);
+            }
+        }
+
         var replW1 = ResolveFullWeaponSkin(request.ReplacementWeapon1);
         if (request.TargetWeapon1 != null && !string.IsNullOrWhiteSpace(request.TargetWeapon1.SwfFile))
         {
@@ -204,10 +223,22 @@ public class ModificationEngine
 
         try
         {
-            // Process Costume Modification
+            // Process Costume Modification (Full body, cape, head, accessories, blanking missing parts)
             if (request.ReplacementCostume != null || hasColorScheme)
             {
                 ApplyCostumeModification(request, result);
+            }
+
+            // Process Hands Modification (Gfx_Hands.swf - all 107 hand poses & color swap)
+            if (needsHands)
+            {
+                ApplyHandsModification(targetHands, replHands, BuildColorSwapMap(request), result);
+            }
+
+            // Process Crossover SFX & Attack Specials
+            if (request.ReplacementCostume != null)
+            {
+                ApplyCrossoverVisualEffects(request.TargetCostume, request.ReplacementCostume, result);
             }
 
             // Process Weapon 1 Modification
@@ -376,6 +407,36 @@ public class ModificationEngine
                     replMap[prefix] = r.SymbolID;
                 }
 
+                // Also include any All{Costume} or cape/head symbols in same SWF
+                foreach (var r in targetSymClass.References)
+                {
+                    if (r.SymbolName.EndsWith("_All" + replSuffix, StringComparison.OrdinalIgnoreCase) ||
+                        r.SymbolName.EndsWith("_All" + replCostume.CostumeName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        string prefix = r.SymbolName[..r.SymbolName.LastIndexOf('_')];
+                        replMap[prefix] = r.SymbolID;
+                    }
+                    if (!string.IsNullOrEmpty(replCostume.DefaultCape) && replCostume.DefaultCape.Contains('/'))
+                    {
+                        string capeSuf = replCostume.DefaultCape.Split('/')[1];
+                        if (r.SymbolName.EndsWith("_" + capeSuf, StringComparison.OrdinalIgnoreCase))
+                        {
+                            string prefix = r.SymbolName[..r.SymbolName.LastIndexOf('_')];
+                            replMap[prefix] = r.SymbolID;
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(replCostume.HeadGfxCustomArt) && replCostume.HeadGfxCustomArt.Contains('/'))
+                    {
+                        string headSuf = replCostume.HeadGfxCustomArt.Split('/')[1];
+                        if (r.SymbolName.EndsWith("_" + headSuf, StringComparison.OrdinalIgnoreCase))
+                        {
+                            string prefix = r.SymbolName[..r.SymbolName.LastIndexOf('_')];
+                            replMap[prefix] = r.SymbolID;
+                        }
+                    }
+                }
+
+                ushort emptySpriteId = GetOrCreateEmptySprite(targetSwf);
                 int remappedCount = 0;
                 var targetRefs = targetSymClass.References
                     .Where(r => r.SymbolName.EndsWith("_" + targetSuffix, StringComparison.OrdinalIgnoreCase))
@@ -400,6 +461,12 @@ public class ModificationEngine
                                 break;
                             }
                         }
+                    }
+                    else if (IsCosmeticPartEligibleForBlanking(prefix))
+                    {
+                        // Blank out missing cosmetic part (old nose, old beard, old hair, old hat, old cape)
+                        tr.SymbolID = emptySpriteId;
+                        remappedCount++;
                     }
                 }
 
@@ -453,7 +520,7 @@ public class ModificationEngine
                     }
                 }
 
-                result.OperationLog.Add($"Remapped {remappedCount} symbols for costume '{targetCostume.CostumeName}' -> '{replCostume.CostumeName}'.");
+                result.OperationLog.Add($"Remapped {remappedCount} symbols for costume '{targetCostume.CostumeName}' -> '{replCostume.CostumeName}' (full body replacement).");
             }
         }
         else
@@ -469,11 +536,68 @@ public class ModificationEngine
             if (replSymClass == null)
                 throw new InvalidDataException($"SymbolClassTag not found in source '{replCostume.SwfFile}'.");
 
+            string capeSuffix = "";
+            if (!string.IsNullOrEmpty(replCostume.DefaultCape) && replCostume.DefaultCape.Contains('/'))
+            {
+                capeSuffix = replCostume.DefaultCape.Split('/')[1];
+            }
+            string headSuffix = "";
+            if (!string.IsNullOrEmpty(replCostume.HeadGfxCustomArt) && replCostume.HeadGfxCustomArt.Contains('/'))
+            {
+                headSuffix = replCostume.HeadGfxCustomArt.Split('/')[1];
+            }
+
             var sourceRefs = replSymClass.References
-                .Where(r => r.SymbolName.EndsWith("_" + replSuffix, StringComparison.OrdinalIgnoreCase))
+                .Where(r => r.SymbolName.EndsWith("_" + replSuffix, StringComparison.OrdinalIgnoreCase) ||
+                            r.SymbolName.EndsWith("_All" + replSuffix, StringComparison.OrdinalIgnoreCase) ||
+                            r.SymbolName.EndsWith("_All" + replCostume.CostumeName, StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrEmpty(capeSuffix) && r.SymbolName.EndsWith("_" + capeSuffix, StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrEmpty(headSuffix) && r.SymbolName.EndsWith("_" + headSuffix, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             PortAndRemapSymbols(replSwf, targetSwf, sourceRefs, targetSuffix, colorMap, result);
+
+            // Also check if DefaultCape is in a separate external SWF (e.g. Gfx_WarRolandBP9.swf)
+            if (!string.IsNullOrEmpty(replCostume.DefaultCape) && replCostume.DefaultCape.Contains('/'))
+            {
+                string capeSwfFile = replCostume.DefaultCape.Split('/')[0];
+                string capeSwfPath = Path.Combine(_gamePath, capeSwfFile);
+                if (File.Exists(capeSwfPath) && !string.Equals(capeSwfPath, replSwfPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    using var cfs = new FileStream(capeSwfPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    var cSwf = SwfFile.ReadFrom(cfs);
+                    var cSymClass = cSwf.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+                    if (cSymClass != null)
+                    {
+                        var capeRefs = cSymClass.References.Where(r => r.SymbolName.EndsWith("_" + capeSuffix, StringComparison.OrdinalIgnoreCase)).ToList();
+                        if (capeRefs.Count > 0)
+                        {
+                            PortAndRemapSymbols(cSwf, targetSwf, capeRefs, targetSuffix, colorMap, result);
+                        }
+                    }
+                }
+            }
+
+            // Also check if HeadGfxCustomArt is in a separate external SWF
+            if (!string.IsNullOrEmpty(replCostume.HeadGfxCustomArt) && replCostume.HeadGfxCustomArt.Contains('/'))
+            {
+                string headSwfFile = replCostume.HeadGfxCustomArt.Split('/')[0];
+                string headSwfPath = Path.Combine(_gamePath, headSwfFile);
+                if (File.Exists(headSwfPath) && !string.Equals(headSwfPath, replSwfPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    using var hfs = new FileStream(headSwfPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    var hSwf = SwfFile.ReadFrom(hfs);
+                    var hSymClass = hSwf.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+                    if (hSymClass != null)
+                    {
+                        var headRefs = hSymClass.References.Where(r => r.SymbolName.EndsWith("_" + headSuffix, StringComparison.OrdinalIgnoreCase)).ToList();
+                        if (headRefs.Count > 0)
+                        {
+                            PortAndRemapSymbols(hSwf, targetSwf, headRefs, targetSuffix, colorMap, result);
+                        }
+                    }
+                }
+            }
         }
 
         // Apply Color Scheme palette modifications to shapes if requested
@@ -680,10 +804,22 @@ public class ModificationEngine
                     SymbolName = targetSymName
                 });
             }
+
+            // Also register original symbol name if it's a cape, head, or special accessory
+            if (!targetSymClass.References.Any(r => r.SymbolName.Equals(sr.SymbolName, StringComparison.OrdinalIgnoreCase)))
+            {
+                targetSymClass.References.Add(new SwfSymbolReference
+                {
+                    SymbolID = newSpriteId,
+                    SymbolName = sr.SymbolName
+                });
+            }
+
             portedCount++;
         }
 
-        // Remap target symbols that source was missing (e.g. jump/animation bones like a_Foot1Bent, a_ShinSideBend)
+        // Remap target symbols that source was missing (e.g. jump/animation bones or missing cosmetic parts to blank)
+        ushort emptySpriteId = GetOrCreateEmptySprite(targetSwf);
         var targetRefs = targetSymClass.References
             .Where(r => r.SymbolName.EndsWith("_" + targetSuffix, StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -691,16 +827,25 @@ public class ModificationEngine
         foreach (var tr in targetRefs)
         {
             string prefix = tr.SymbolName[..tr.SymbolName.LastIndexOf('_')];
-            if (!portedPrefixMap.ContainsKey(prefix) && AnimationFallbacks.TryGetValue(prefix, out var fallbacks))
+            if (!portedPrefixMap.ContainsKey(prefix))
             {
-                foreach (var fb in fallbacks)
+                if (AnimationFallbacks.TryGetValue(prefix, out var fallbacks))
                 {
-                    if (portedPrefixMap.TryGetValue(fb, out ushort fbId))
+                    foreach (var fb in fallbacks)
                     {
-                        tr.SymbolID = fbId;
-                        portedCount++;
-                        break;
+                        if (portedPrefixMap.TryGetValue(fb, out ushort fbId))
+                        {
+                            tr.SymbolID = fbId;
+                            portedCount++;
+                            break;
+                        }
                     }
+                }
+                else if (IsCosmeticPartEligibleForBlanking(prefix))
+                {
+                    // Blank out missing cosmetic part (old nose, old beard, old hair, old hat, old cape)
+                    tr.SymbolID = emptySpriteId;
+                    portedCount++;
                 }
             }
         }
@@ -1601,5 +1746,393 @@ public class ModificationEngine
         }
 
         result.OperationLog.Add($"Applied custom weapon SFX sound bank '{replacement.SoundBank}' onto '{Path.GetFileName(targetBnkPath)}' with {remappedCount} remapped events.");
+    }
+
+    public string GetEffectiveHandsSuffix(CostumeInfo? costume)
+    {
+        if (costume == null) return "BaseHand";
+        if (!string.IsNullOrEmpty(costume.HandsSuffix)) return costume.HandsSuffix;
+        if (_catalog != null && !string.IsNullOrEmpty(costume.OwnerHero))
+        {
+            var def = _catalog.Costumes.FirstOrDefault(c => c.OwnerHero.Equals(costume.OwnerHero, StringComparison.OrdinalIgnoreCase) && c.IsDefault);
+            if (def != null && !string.IsNullOrEmpty(def.HandsSuffix))
+                return def.HandsSuffix;
+        }
+        return "BaseHand";
+    }
+
+    private static readonly string[] CosmeticPrefixesToBlank =
+    [
+        "a_nose", "a_beard", "a_mustache", "a_hair", "a_hairback", "a_hat",
+        "a_helmet", "a_accent", "a_eyebrows", "a_belt", "a_cape", "a_ears",
+        "a_horn", "a_horns", "a_tail", "a_glasses", "a_mask", "a_waistback",
+        "a_skirt", "a_collar", "a_hood"
+    ];
+
+    private static bool IsCosmeticPartEligibleForBlanking(string prefix)
+    {
+        string pLower = prefix.ToLowerInvariant();
+        return CosmeticPrefixesToBlank.Any(cp => pLower.StartsWith(cp));
+    }
+
+    private static ushort GetOrCreateEmptySprite(SwfFile swf)
+    {
+        var symClass = swf.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+        var existingEmpty = symClass?.References.FirstOrDefault(r => r.SymbolName == "bc_EmptySprite");
+        if (existingEmpty != null) return existingEmpty.SymbolID;
+
+        ushort maxId = 0;
+        foreach (var tag in swf.Tags)
+        {
+            if (tag is DefineSpriteTag s) maxId = Math.Max(maxId, s.SpriteID);
+            else if (tag is ShapeBaseTag sh) maxId = Math.Max(maxId, sh.ShapeID);
+        }
+        ushort emptyId = (ushort)(maxId + 1);
+
+        var emptySprite = new DefineSpriteTag
+        {
+            SpriteID = emptyId,
+            FramesCount = 1
+        };
+        emptySprite.Tags.Add(new ShowFrameTag());
+        emptySprite.Tags.Add(new EndTag());
+
+        int insertIdx = symClass != null ? swf.Tags.IndexOf(symClass) : swf.Tags.Count;
+        if (insertIdx < 0) insertIdx = swf.Tags.Count;
+        swf.Tags.Insert(insertIdx, emptySprite);
+
+        if (symClass != null)
+        {
+            symClass.References.Add(new SwfSymbolReference
+            {
+                SymbolID = emptyId,
+                SymbolName = "bc_EmptySprite"
+            });
+        }
+
+        return emptyId;
+    }
+
+    private List<string> GetCrossoverSfxFiles(CostumeInfo? targetCostume, CostumeInfo? replCostume)
+    {
+        var list = new List<string>();
+        if (replCostume == null) return list;
+
+        // 1. SwapCustomArts
+        foreach (var swap in replCostume.SwapCustomArts)
+        {
+            if (swap.StartsWith("SFX_", StringComparison.OrdinalIgnoreCase) && swap.Contains('/'))
+            {
+                string sfxName = swap.Split('/')[0];
+                string sfxPath = Path.Combine(_gamePath, sfxName);
+                if (File.Exists(sfxPath) && !list.Contains(sfxPath, StringComparer.OrdinalIgnoreCase))
+                {
+                    list.Add(sfxPath);
+                }
+            }
+        }
+
+        // 2. Dedicated Crossover SFX (e.g. SFX_DarthVader.swf, SFX_MasterChief.swf)
+        string dedicatedSfx = Path.Combine(_gamePath, $"SFX_{replCostume.CostumeName}.swf");
+        if (File.Exists(dedicatedSfx))
+        {
+            var candidateWeaponSfx = new[]
+            {
+                "SFX_Sword.swf", "SFX_Hammer.swf", "SFX_Pistols.swf", "SFX_Spear.swf",
+                "SFX_Axe.swf", "SFX_Katar.swf", "SFX_Lance.swf", "SFX_Bow.swf",
+                "SFX_Fists.swf", "SFX_Scythe.swf", "SFX_Cannon.swf", "SFX_Orb.swf",
+                "SFX_GreatSword.swf", "SFX_HitReacts.swf"
+            };
+
+            foreach (var wsfx in candidateWeaponSfx)
+            {
+                string p = Path.Combine(_gamePath, wsfx);
+                if (File.Exists(p) && !list.Contains(p, StringComparer.OrdinalIgnoreCase))
+                {
+                    list.Add(p);
+                }
+            }
+        }
+
+        return list;
+    }
+
+    private static bool IsSymbolRelevantToSfx(string symbolName, string sfxFileName)
+    {
+        string symLower = symbolName.ToLowerInvariant();
+        string fileLower = sfxFileName.ToLowerInvariant();
+
+        if (fileLower.Contains("hitreact"))
+            return symLower.Contains("hitreact") || symLower.Contains("stun");
+
+        if (fileLower.Contains("sword"))
+            return symLower.Contains("sword") || symLower.Contains("swoosh") || symLower.Contains("blade");
+
+        if (fileLower.Contains("hammer"))
+            return symLower.Contains("hammer") || symLower.Contains("slam") || symLower.Contains("smash");
+
+        if (fileLower.Contains("pistols"))
+            return symLower.Contains("pistol") || symLower.Contains("blaster") || symLower.Contains("gun") || symLower.Contains("shot");
+
+        if (fileLower.Contains("spear"))
+            return symLower.Contains("spear") || symLower.Contains("lance") || symLower.Contains("thrust");
+
+        if (fileLower.Contains("axe"))
+            return symLower.Contains("axe") || symLower.Contains("chop");
+
+        if (fileLower.Contains("katar"))
+            return symLower.Contains("katar") || symLower.Contains("claw") || symLower.Contains("stab");
+
+        if (fileLower.Contains("bow"))
+            return symLower.Contains("bow") || symLower.Contains("arrow");
+
+        if (fileLower.Contains("fists"))
+            return symLower.Contains("fist") || symLower.Contains("gauntlet") || symLower.Contains("punch");
+
+        if (fileLower.Contains("scythe"))
+            return symLower.Contains("scythe") || symLower.Contains("reap");
+
+        if (fileLower.Contains("orb"))
+            return symLower.Contains("orb") || symLower.Contains("magic") || symLower.Contains("blast") || symLower.Contains("diw");
+
+        if (fileLower.Contains("cannon"))
+            return symLower.Contains("cannon") || symLower.Contains("boom");
+
+        if (fileLower.Contains("greatsword"))
+            return symLower.Contains("greatsword") || symLower.Contains("gsword");
+
+        return symLower.Contains("attackspecial") || symLower.Contains("iwfx") || symLower.Contains("ofx");
+    }
+
+    private void ApplyHandsModification(string targetHands, string replHands, Dictionary<uint, uint> colorMap, ModificationResult result)
+    {
+        string handsSwfPath = Path.Combine(_gamePath, "Gfx_Hands.swf");
+        if (!File.Exists(handsSwfPath)) return;
+
+        SwfFile handsSwf;
+        using (var fs = new FileStream(handsSwfPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            handsSwf = SwfFile.ReadFrom(fs);
+        }
+
+        var symClass = handsSwf.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+        if (symClass == null) return;
+
+        int remappedCount = 0;
+        if (!string.Equals(targetHands, replHands, StringComparison.OrdinalIgnoreCase))
+        {
+            var replMap = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+            foreach (var r in symClass.References)
+            {
+                if (r.SymbolName.EndsWith("_" + replHands, StringComparison.OrdinalIgnoreCase))
+                {
+                    string prefix = r.SymbolName[..r.SymbolName.LastIndexOf('_')];
+                    replMap[prefix] = r.SymbolID;
+                }
+            }
+
+            foreach (var r in symClass.References)
+            {
+                if (r.SymbolName.EndsWith("_" + targetHands, StringComparison.OrdinalIgnoreCase))
+                {
+                    string prefix = r.SymbolName[..r.SymbolName.LastIndexOf('_')];
+                    if (replMap.TryGetValue(prefix, out ushort replId))
+                    {
+                        r.SymbolID = replId;
+                        remappedCount++;
+                    }
+                }
+            }
+        }
+
+        if (colorMap.Count > 0)
+        {
+            ApplyColorMapToSwf(handsSwf, colorMap, result);
+        }
+
+        SaveSwfAtomically(handsSwf, handsSwfPath);
+        result.OperationLog.Add($"Applied hands modification in Gfx_Hands.swf ({targetHands} -> {replHands}, {remappedCount} hand poses remapped).");
+    }
+
+    private void ApplyCrossoverVisualEffects(CostumeInfo? targetCostume, CostumeInfo? replCostume, ModificationResult result)
+    {
+        if (replCostume == null) return;
+
+        // 1. Process SwapCustomArts (e.g. SFX_Sword.swf/SwapCyberSam)
+        foreach (var swap in replCostume.SwapCustomArts)
+        {
+            if (swap.StartsWith("SFX_", StringComparison.OrdinalIgnoreCase) && swap.Contains('/'))
+            {
+                var parts = swap.Split('/');
+                string sfxFileName = parts[0];
+                string swapSuffix = parts[1];
+                string sfxPath = Path.Combine(_gamePath, sfxFileName);
+                if (!File.Exists(sfxPath)) continue;
+
+                SwfFile sfxSwf;
+                using (var fs = new FileStream(sfxPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    sfxSwf = SwfFile.ReadFrom(fs);
+                }
+
+                var symClass = sfxSwf.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+                if (symClass == null) continue;
+
+                var swapSyms = symClass.References
+                    .Where(r => r.SymbolName.EndsWith("_" + swapSuffix, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (swapSyms.Count > 0)
+                {
+                    int remapped = 0;
+                    foreach (var ss in swapSyms)
+                    {
+                        string basePrefix = ss.SymbolName[..ss.SymbolName.LastIndexOf('_')];
+                        var baseSym = symClass.References.FirstOrDefault(r => r.SymbolName.Equals(basePrefix, StringComparison.OrdinalIgnoreCase));
+                        if (baseSym != null)
+                        {
+                            baseSym.SymbolID = ss.SymbolID;
+                            remapped++;
+                        }
+
+                        // Also remap target hero's signature symbol if cross-legend
+                        if (targetCostume != null && !string.IsNullOrEmpty(targetCostume.OwnerHero) && !string.IsNullOrEmpty(replCostume.OwnerHero) &&
+                            !string.Equals(targetCostume.OwnerHero, replCostume.OwnerHero, StringComparison.OrdinalIgnoreCase))
+                        {
+                            string targetSymName = basePrefix.Replace(replCostume.OwnerHero, targetCostume.OwnerHero, StringComparison.OrdinalIgnoreCase);
+                            var targetSym = symClass.References.FirstOrDefault(r => r.SymbolName.Equals(targetSymName, StringComparison.OrdinalIgnoreCase));
+                            if (targetSym != null)
+                            {
+                                targetSym.SymbolID = ss.SymbolID;
+                                remapped++;
+                            }
+                        }
+                    }
+
+                    SaveSwfAtomically(sfxSwf, sfxPath);
+                    result.OperationLog.Add($"Applied crossover SFX swaps in '{sfxFileName}' ({remapped} effects active).");
+                }
+            }
+        }
+
+        // 2. Process Dedicated SFX (e.g. SFX_DarthVader.swf, SFX_MasterChief.swf)
+        string dedicatedSfxPath = Path.Combine(_gamePath, $"SFX_{replCostume.CostumeName}.swf");
+        if (File.Exists(dedicatedSfxPath))
+        {
+            SwfFile srcSfx;
+            using (var fs = new FileStream(dedicatedSfxPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                srcSfx = SwfFile.ReadFrom(fs);
+            }
+
+            var srcSymClass = srcSfx.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+            if (srcSymClass != null && srcSymClass.References.Count > 0)
+            {
+                var relevantSfxFiles = GetCrossoverSfxFiles(targetCostume, replCostume);
+                foreach (var targetSfxPath in relevantSfxFiles)
+                {
+                    if (!File.Exists(targetSfxPath) || string.Equals(targetSfxPath, dedicatedSfxPath, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    SwfFile dstSfx;
+                    using (var fs = new FileStream(targetSfxPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        dstSfx = SwfFile.ReadFrom(fs);
+                    }
+
+                    var dstSymClass = dstSfx.Tags.OfType<SymbolClassTag>().FirstOrDefault();
+                    if (dstSymClass == null) continue;
+
+                    string targetFileName = Path.GetFileName(targetSfxPath);
+                    var matchingRefs = srcSymClass.References.Where(r => IsSymbolRelevantToSfx(r.SymbolName, targetFileName)).ToList();
+                    if (matchingRefs.Count > 0)
+                    {
+                        PortAndRemapCrossoverSfx(srcSfx, dstSfx, matchingRefs, targetCostume, replCostume, result);
+                        SaveSwfAtomically(dstSfx, targetSfxPath);
+                        result.OperationLog.Add($"Ported {matchingRefs.Count} signature effects from '{Path.GetFileName(dedicatedSfxPath)}' into '{targetFileName}'.");
+                    }
+                }
+            }
+        }
+    }
+
+    private void PortAndRemapCrossoverSfx(
+        SwfFile sourceSwf,
+        SwfFile targetSwf,
+        List<SwfSymbolReference> sourceRefs,
+        CostumeInfo? targetCostume,
+        CostumeInfo? replCostume,
+        ModificationResult result)
+    {
+        var neededIds = new HashSet<ushort>();
+        foreach (var r in sourceRefs)
+        {
+            CollectNeededCharacters(r.SymbolID, sourceSwf, neededIds);
+        }
+
+        ushort maxId = 0;
+        foreach (var tag in targetSwf.Tags)
+        {
+            if (tag is DefineSpriteTag s) maxId = Math.Max(maxId, s.SpriteID);
+            else if (tag is ShapeBaseTag sh) maxId = Math.Max(maxId, sh.ShapeID);
+        }
+
+        var idMap = new Dictionary<ushort, ushort>();
+        foreach (var oldId in neededIds)
+        {
+            maxId++;
+            idMap[oldId] = maxId;
+        }
+
+        var newShapes = new List<SwfTagBase>();
+        foreach (var sh in sourceSwf.Tags.OfType<ShapeBaseTag>())
+        {
+            if (neededIds.Contains(sh.ShapeID))
+            {
+                newShapes.Add(CloneShapeWithNewId(sh, idMap[sh.ShapeID], []));
+            }
+        }
+
+        var newSprites = new List<SwfTagBase>();
+        foreach (var sp in sourceSwf.Tags.OfType<DefineSpriteTag>())
+        {
+            if (neededIds.Contains(sp.SpriteID))
+            {
+                newSprites.Add(CloneSpriteWithNewId(sp, idMap[sp.SpriteID], idMap));
+            }
+        }
+
+        var targetSymClass = targetSwf.Tags.OfType<SymbolClassTag>().First();
+        int insertIdx = targetSwf.Tags.IndexOf(targetSymClass);
+        if (insertIdx < 0) insertIdx = targetSwf.Tags.Count;
+
+        foreach (var sh in newShapes) targetSwf.Tags.Insert(insertIdx++, sh);
+        foreach (var sp in newSprites) targetSwf.Tags.Insert(insertIdx++, sp);
+
+        // Remap references
+        foreach (var sr in sourceRefs)
+        {
+            ushort newSpriteId = idMap[sr.SymbolID];
+
+            var existing = targetSymClass.References.FirstOrDefault(r => r.SymbolName.Equals(sr.SymbolName, StringComparison.OrdinalIgnoreCase));
+            if (existing != null) existing.SymbolID = newSpriteId;
+            else targetSymClass.References.Add(new SwfSymbolReference { SymbolID = newSpriteId, SymbolName = sr.SymbolName });
+
+            int lastUnderscore = sr.SymbolName.LastIndexOf('_');
+            if (lastUnderscore > 0)
+            {
+                string baseSymName = sr.SymbolName[..lastUnderscore];
+                var baseRef = targetSymClass.References.FirstOrDefault(r => r.SymbolName.Equals(baseSymName, StringComparison.OrdinalIgnoreCase));
+                if (baseRef != null) baseRef.SymbolID = newSpriteId;
+
+                if (targetCostume != null && replCostume != null &&
+                    !string.IsNullOrEmpty(targetCostume.OwnerHero) && !string.IsNullOrEmpty(replCostume.OwnerHero) &&
+                    !string.Equals(targetCostume.OwnerHero, replCostume.OwnerHero, StringComparison.OrdinalIgnoreCase))
+                {
+                    string targetHeroSym = baseSymName.Replace(replCostume.OwnerHero, targetCostume.OwnerHero, StringComparison.OrdinalIgnoreCase);
+                    var targetHeroRef = targetSymClass.References.FirstOrDefault(r => r.SymbolName.Equals(targetHeroSym, StringComparison.OrdinalIgnoreCase));
+                    if (targetHeroRef != null) targetHeroRef.SymbolID = newSpriteId;
+                }
+            }
+        }
     }
 }

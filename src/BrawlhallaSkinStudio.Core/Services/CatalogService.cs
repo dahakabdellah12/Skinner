@@ -295,6 +295,38 @@ public class CatalogService
             string weaponSet = GetCol(cols, colMap, "WeaponSet");
             if (weaponSet == "--") weaponSet = "";
 
+            // Hands style
+            string handsArt = customArtCandidates.FirstOrDefault(c => c.StartsWith("Gfx_Hands.swf/", StringComparison.OrdinalIgnoreCase)) ?? "";
+            string handsSuffix = "";
+            if (!string.IsNullOrEmpty(handsArt) && handsArt.Contains('/'))
+            {
+                handsSuffix = handsArt.Split('/')[1];
+            }
+
+            // Capes & Head Art & Overrides
+            string defaultCape = GetCol(cols, colMap, "DefaultCape");
+            if (defaultCape == "--" || defaultCape == "0" || defaultCape.Equals("FALSE", StringComparison.OrdinalIgnoreCase)) defaultCape = "";
+
+            string headGfx = GetCol(cols, colMap, "HeadGfxCustomArt");
+            if (headGfx == "--" || headGfx == "0") headGfx = "";
+
+            string boneOverride = GetCol(cols, colMap, "BoneOverride");
+            if (boneOverride == "--" || boneOverride.Equals("FALSE", StringComparison.OrdinalIgnoreCase)) boneOverride = "";
+
+            string platformAnim = GetCol(cols, colMap, "PlatformAnimOverride");
+            if (platformAnim == "--" || platformAnim.Equals("FALSE", StringComparison.OrdinalIgnoreCase)) platformAnim = "";
+
+            // Crossover Swaps (Animations and SFX)
+            var swapArts = new List<string>();
+            foreach (var swapCol in new[] { "SwapCustomArt", "SwapCustomArt2", "SwapCustomArt3", "SwapCustomArt4", "SwapCustomArt5" })
+            {
+                string sVal = GetCol(cols, colMap, swapCol);
+                if (!string.IsNullOrEmpty(sVal) && sVal != "--" && sVal.Contains('/'))
+                {
+                    swapArts.Add(sVal);
+                }
+            }
+
             var costume = new CostumeInfo
             {
                 CostumeId = id,
@@ -309,7 +341,15 @@ public class CatalogService
                 IconName = (icon != "--" && !string.IsNullOrWhiteSpace(icon)) ? icon : "",
                 IconFileName = iconFile,
                 IsCrossover = isCrossover,
-                IsMetadev = isMetadev
+                IsMetadev = isMetadev,
+                HandsArt = handsArt,
+                HandsSuffix = handsSuffix,
+                CustomArtLayers = customArtCandidates,
+                DefaultCape = defaultCape,
+                HeadGfxCustomArt = headGfx,
+                BoneOverride = boneOverride,
+                PlatformAnimOverride = platformAnim,
+                SwapCustomArts = swapArts
             };
 
             // Parse base palette define colors

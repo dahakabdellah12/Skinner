@@ -47,7 +47,7 @@ export default function StudioPage({
   const [isValidating, setIsValidating] = useState(false);
   const [previewSvg, setPreviewSvg] = useState('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [autoRestart, setAutoRestart] = useState(true);
+  const [autoRestart, setAutoRestart] = useState(false);
 
   // Available costumes for currently selected host legend (fallback to catalog if legend.costumes is not populated)
   const hostCostumes = useMemo(() => {
@@ -1001,8 +1001,8 @@ export default function StudioPage({
           </button>
         </div>
 
-        {/* Center: Live Auto-Restart Option */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Center: Live Auto-Restart Option & Hot-Swap Status */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', userSelect: 'none' }}>
             <input
               type="checkbox"
@@ -1014,6 +1014,11 @@ export default function StudioPage({
               {t('opt_auto_restart')}
             </span>
           </label>
+          {systemInfo?.isGameRunning && !autoRestart && (
+            <span style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              ⚡ {t('live_hotswap_active')}
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>

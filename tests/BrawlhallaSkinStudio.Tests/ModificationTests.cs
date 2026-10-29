@@ -433,4 +433,107 @@ public class ModificationTests : IDisposable
         uint bankId = BitConverter.ToUInt32(bytes, 12);
         Assert.Equal(ModificationEngine.FnvHash("WEP_Saber_01"), bankId);
     }
+
+    [Fact]
+    public void TestHandsAndFullBodyReplacement()
+    {
+        string srcHands = Path.Combine(_realGameDir, "Gfx_Hands.swf");
+        string testHands = Path.Combine(_testDir, "Gfx_Hands.swf");
+        File.Copy(srcHands, testHands);
+
+        var inst = GameDetector.DetectGameInstallation();
+        var catalog = new CatalogService();
+        catalog.LoadFromInstallation(inst!);
+
+        var engine = new ModificationEngine(_testDir, _backupManager, catalog);
+
+        // Bödvar (Claw hands) -> Darth Vader (Glove hands)
+        var bodvar = catalog.Legends.First(l => l.HeroName.Equals("Viking", StringComparison.OrdinalIgnoreCase));
+        var bodvarCostume = bodvar.Costumes.First(c => c.IsDefault);
+        var vaderCostume = catalog.Costumes.First(c => c.CostumeName.Equals("DarthVader", StringComparison.OrdinalIgnoreCase));
+
+        // Copy Gfx_DarthVader.swf to test directory
+        string srcVader = Path.Combine(_realGameDir, "Gfx_DarthVader.swf");
+        string testVader = Path.Combine(_testDir, "Gfx_DarthVader.swf");
+        File.Copy(srcVader, testVader);
+
+        var req = new ModificationRequest
+        {
+            TargetLegend = bodvar,
+            TargetCostume = bodvarCostume,
+            ReplacementCostume = vaderCostume
+        };
+
+        var result = engine.ApplyModification(req);
+        Assert.True(result.Success, string.Join("; ", result.OperationLog));
+        Assert.Contains(result.ModifiedFiles, f => f.EndsWith("Gfx_Hands.swf", StringComparison.OrdinalIgnoreCase));
+
+        // 1. Verify Gfx_Hands.swf remapped Claw to Glove
+        using (var fs = File.OpenRead(testHands))
+        {
+            var swf = SwfLib.SwfFile.ReadFrom(fs);
+            var symClass = swf.Tags.OfType<SymbolClassTag>().First();
+            var clawHand = symClass.References.First(r => r.SymbolName == "a_HandOpen03_Claw");
+            var gloveHand = symClass.References.First(r => r.SymbolName == "a_HandOpen03_Glove");
+            Assert.Equal(gloveHand.SymbolID, clawHand.SymbolID);
+        }
+
+        // 2. Verify target Gfx_Viking.swf blanked out missing cosmetic part a_Nose_Viking to bc_EmptySprite
+        string targetSwf = Path.Combine(_testDir, "Gfx_Viking.swf");
+        using (var fs = File.OpenRead(targetSwf))
+        {
+            var swf = SwfLib.SwfFile.ReadFrom(fs);
+            var symClass = swf.Tags.OfType<SymbolClassTag>().First();
+            var noseRef = symClass.References.First(r => r.SymbolName == "a_Nose_Viking");
+            var emptyRef = symClass.References.First(r => r.SymbolName == "bc_EmptySprite");
+            Assert.Equal(emptyRef.SymbolID, noseRef.SymbolID);
+
+            // 3. Verify cape symbols from Vader were ported
+            Assert.Contains(symClass.References, r => r.SymbolName.Contains("CapeDarthVader", StringComparison.OrdinalIgnoreCase) ||
+                                                      r.SymbolName.Equals("a_CapeBack_Viking", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    [Fact]
+    public void TestCrossoverSFXVisualEffects()
+    {
+        string srcSfxSword = Path.Combine(_realGameDir, "SFX_Sword.swf");
+        string testSfxSword = Path.Combine(_testDir, "SFX_Sword.swf");
+        File.Copy(srcSfxSword, testSfxSword);
+
+        var inst = GameDetector.DetectGameInstallation();
+        var catalog = new CatalogService();
+        catalog.LoadFromInstallation(inst!);
+
+        var engine = new ModificationEngine(_testDir, _backupManager, catalog);
+
+        // Koji (Samurai) -> Cyber Samurai (SwapCyberSam)
+        var koji = catalog.Legends.First(l => l.HeroName.Equals("Samurai", StringComparison.OrdinalIgnoreCase));
+        var kojiCostume = koji.Costumes.First(c => c.IsDefault);
+        var cyberSam = catalog.Costumes.First(c => c.CostumeName.Equals("CyberSam", StringComparison.OrdinalIgnoreCase));
+
+        // Copy Gfx_Skins_02.swf to test directory
+        string srcSkins02 = Path.Combine(_realGameDir, "Gfx_Skins_02.swf");
+        string testSkins02 = Path.Combine(_testDir, "Gfx_Skins_02.swf");
+        File.Copy(srcSkins02, testSkins02);
+
+        var req = new ModificationRequest
+        {
+            TargetLegend = koji,
+            TargetCostume = kojiCostume,
+            ReplacementCostume = cyberSam
+        };
+
+        var result = engine.ApplyModification(req);
+        Assert.True(result.Success, string.Join("; ", result.OperationLog));
+        Assert.Contains(result.ModifiedFiles, f => f.EndsWith("SFX_Sword.swf", StringComparison.OrdinalIgnoreCase));
+
+        // Verify that base signature symbol was remapped to SwapCyberSam
+        using var fs = File.OpenRead(testSfxSword);
+        var swf = SwfLib.SwfFile.ReadFrom(fs);
+        var symClass = swf.Tags.OfType<SymbolClassTag>().First();
+        var baseSym = symClass.References.First(r => r.SymbolName == "a_SFXAttackSpecialSamurai2_Rear");
+        var swapSym = symClass.References.First(r => r.SymbolName == "a_SFXAttackSpecialSamurai2_Rear_SwapCyberSam");
+        Assert.Equal(swapSym.SymbolID, baseSym.SymbolID);
+    }
 }

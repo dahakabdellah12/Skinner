@@ -237,7 +237,7 @@ export default function LegendCustomizer({
   });
 
   const [autoRestart, setAutoRestart] = useState(() => {
-    return savedCustomization?.autoRestart !== undefined ? savedCustomization.autoRestart : true;
+    return savedCustomization?.autoRestart !== undefined ? savedCustomization.autoRestart : false;
   });
 
   // Character/legend selected as source for replacement visual skin ('Random' | heroName)
@@ -1135,14 +1135,23 @@ export default function LegendCustomizer({
 
       {/* Action Footer Bar */}
       <div className="workbench-footer">
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={autoRestart}
-            onChange={(e) => setAutoRestart(e.target.checked)}
-          />
-          <span>{isRTL ? 'إعادة تشغيل اللعبة تلقائياً لتطبيق المظهر فوراً' : 'Auto restart game instantly to apply visual change'}</span>
-        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              checked={autoRestart}
+              onChange={(e) => setAutoRestart(e.target.checked)}
+            />
+            <span style={{ fontWeight: autoRestart ? '500' : 'normal' }}>
+              {isRTL ? 'إعادة تشغيل اللعبة تلقائياً عند التطبيق' : 'Auto restart game on apply'}
+            </span>
+          </label>
+          {systemInfo?.isGameRunning && !autoRestart && (
+            <span style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              ⚡ {isRTL ? 'التبديل الفوري مفعّل: التعديل يطبق واللعبة شغالة بدون إعادة تشغيل' : 'Live Hot-Swap: applies instantly while game is running without restarting'}
+            </span>
+          )}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button

@@ -337,6 +337,12 @@ public class WebViewBridge
             GameLauncher.RestartGame(_installation.ExePath, preferSteam: true);
             result.OperationLog.Add("Auto-restarted Brawlhalla to load modifications live.");
         }
+        else if (result.Success && GameLauncher.IsGameRunning())
+        {
+            GameLauncher.BringGameToFront();
+            result.OperationLog.Add("⚡ Live Hot-Swap applied! Changes are active in running game without restarting.");
+            result.Message += " (⚡ تم تطبيق التعديل فورياً في اللعبة الشغالة - Live Hot-Swap!)";
+        }
 
         return result;
     }
@@ -346,6 +352,22 @@ public class WebViewBridge
         string? swfFile = payload.TryGetProperty("swfFile", out var prop) ? prop.GetString() : null;
         if (string.IsNullOrEmpty(swfFile)) return false;
         bool restored = _backupManager.RestoreFile(swfFile);
+
+        if (_backupManager.IsFileModified("Gfx_Hands.swf"))
+        {
+            _backupManager.RestoreFile("Gfx_Hands.swf");
+        }
+        foreach (var rec in _backupManager.Records)
+        {
+            foreach (var key in rec.BackupFilesRelativePath.Keys)
+            {
+                if (key.StartsWith("SFX_", StringComparison.OrdinalIgnoreCase) && _backupManager.IsFileModified(key))
+                {
+                    _backupManager.RestoreFile(key);
+                }
+            }
+        }
+
         if (restored)
         {
             PreviewRenderer.InvalidateCache(swfFile);
@@ -1128,7 +1150,7 @@ public class WebViewBridge
 
     private async Task<object> CheckForUpdatesAsync(JsonElement payload)
     {
-        const string currentVersion = "2.2.8";
+        const string currentVersion = "2.2.9";
         string targetRepo = payload.TryGetProperty("repo", out var rProp) && !string.IsNullOrWhiteSpace(rProp.GetString())
             ? rProp.GetString()!.Trim()
             : GetGitHubRepo();
@@ -1141,7 +1163,7 @@ public class WebViewBridge
         {
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(8);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.2.8");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/2.2.9");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);

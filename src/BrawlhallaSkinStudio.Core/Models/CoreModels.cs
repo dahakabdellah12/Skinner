@@ -47,6 +47,14 @@ public class CostumeInfo
     public string IconFileName { get; set; } = string.Empty;
     public bool IsCrossover { get; set; }
     public bool IsMetadev { get; set; }
+    public string HandsArt { get; set; } = string.Empty;
+    public string HandsSuffix { get; set; } = string.Empty;
+    public List<string> CustomArtLayers { get; set; } = [];
+    public string DefaultCape { get; set; } = string.Empty;
+    public string HeadGfxCustomArt { get; set; } = string.Empty;
+    public string BoneOverride { get; set; } = string.Empty;
+    public string PlatformAnimOverride { get; set; } = string.Empty;
+    public List<string> SwapCustomArts { get; set; } = [];
     public Dictionary<string, uint> BaseColors { get; set; } = [];
 
     public override string ToString() => $"{DisplayName} [{CostumeName}] {(IsDefault ? "(Default)" : "")}";
