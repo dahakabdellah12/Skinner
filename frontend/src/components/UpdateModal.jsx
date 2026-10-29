@@ -12,7 +12,7 @@ export default function UpdateModal({
   onResume,
   onClose
 }) {
-  const { isRTL } = useLanguage();
+  const { isArabic } = useLanguage();
 
   if (!isOpen || !updateInfo) return null;
 
@@ -56,7 +56,7 @@ export default function UpdateModal({
           boxShadow: '0 24px 48px rgba(0, 0, 0, 0.8)',
           padding: '24px',
           position: 'relative',
-          direction: isRTL ? 'rtl' : 'ltr'
+          direction: 'ltr'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -79,12 +79,12 @@ export default function UpdateModal({
             </div>
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                {isRTL
+                {isArabic
                   ? `يتوفر تحديث جديد: v${updateInfo.latestVersion}`
                   : `Software Update Available: v${updateInfo.latestVersion}`}
               </h2>
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {isRTL
+                {isArabic
                   ? `الإصدار الحالي: v${updateInfo.currentVersion}`
                   : `Current installed version: v${updateInfo.currentVersion}`}
               </span>
@@ -102,7 +102,7 @@ export default function UpdateModal({
                 padding: '4px',
                 borderRadius: '6px'
               }}
-              title={isRTL ? 'إغلاق' : 'Close'}
+              title={isArabic ? 'إغلاق' : 'Close'}
             >
               <X size={18} />
             </button>
@@ -113,7 +113,7 @@ export default function UpdateModal({
         {!isDownloading ? (
           <div style={{ marginBottom: '22px' }}>
             <p style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 14px 0' }}>
-              {isRTL
+              {isArabic
                 ? `هل ترغب في متابعة تثبيت التحديث الآن؟ سيتم تحميل وتحديث BrawlCraft تلقائياً بالكامل دون الحاجة لإعدادات يدوية.`
                 : `Would you like to proceed with the update now? BrawlCraft will be downloaded and updated automatically in-place.`}
             </p>
@@ -134,7 +134,7 @@ export default function UpdateModal({
                 </div>
                 {updateInfo.assetSizeFormatted && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {isRTL ? 'حجم التنزيل:' : 'Download size:'} {updateInfo.assetSizeFormatted}
+                    {isArabic ? 'حجم التنزيل:' : 'Download size:'} {updateInfo.assetSizeFormatted}
                   </div>
                 )}
               </div>
@@ -146,10 +146,10 @@ export default function UpdateModal({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '12px' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                 {isInstalling
-                  ? (isRTL ? 'جاري استخراج الملفات وتطبيق التحديث...' : 'Applying update and restarting...')
+                  ? (isArabic ? 'جاري استخراج الملفات وتطبيق التحديث...' : 'Applying update and restarting...')
                   : isPaused
-                    ? (isRTL ? 'تم إيقاف التنزيل مؤقتاً' : 'Download Paused')
-                    : (isRTL ? 'جاري التحميل...' : 'Downloading update...')}
+                    ? (isArabic ? 'تم إيقاف التنزيل مؤقتاً' : 'Download Paused')
+                    : (isArabic ? 'جاري التحميل...' : 'Downloading update...')}
               </span>
               <span style={{ fontWeight: 700, color: 'var(--accent, #3B82F6)' }}>
                 {progressPercent}%
@@ -182,7 +182,7 @@ export default function UpdateModal({
             {updateProgress.bytesDownloaded && updateProgress.totalBytes > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
                 <span>{formatBytes(updateProgress.bytesDownloaded)} / {formatBytes(updateProgress.totalBytes)}</span>
-                <span>{isPaused ? (isRTL ? 'متوقف' : 'Paused') : ''}</span>
+                <span>{isPaused ? (isArabic ? 'متوقف' : 'Paused') : ''}</span>
               </div>
             )}
           </div>
@@ -198,7 +198,7 @@ export default function UpdateModal({
                 onClick={onClose}
                 style={{ padding: '9px 18px', fontSize: '13px' }}
               >
-                {isRTL ? 'لاحقاً' : 'Later'}
+                {isArabic ? 'لاحقاً' : 'Later'}
               </button>
               <button
                 type="button"
@@ -208,14 +208,14 @@ export default function UpdateModal({
               >
                 <Download size={15} />
                 <span>
-                  {isRTL ? 'تحديث الآن' : 'Update Now'}
+                  {isArabic ? 'تحديث الآن' : 'Update Now'}
                 </span>
               </button>
             </>
           ) : (
             <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {isInstalling ? (isRTL ? 'يرجى الانتظار...' : 'Please wait...') : ''}
+                {isInstalling ? (isArabic ? 'يرجى الانتظار...' : 'Please wait...') : ''}
               </div>
 
               {!isInstalling && (
@@ -228,7 +228,7 @@ export default function UpdateModal({
                       style={{ padding: '7px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Play size={14} />
-                      <span>{isRTL ? 'استئناف' : 'Resume'}</span>
+                      <span>{isArabic ? 'استئناف' : 'Resume'}</span>
                     </button>
                   ) : (
                     <button
@@ -238,7 +238,7 @@ export default function UpdateModal({
                       style={{ padding: '7px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Pause size={14} />
-                      <span>{isRTL ? 'إيقاف مؤقت' : 'Pause'}</span>
+                      <span>{isArabic ? 'إيقاف مؤقت' : 'Pause'}</span>
                     </button>
                   )}
                 </div>

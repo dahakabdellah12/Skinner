@@ -51,23 +51,36 @@ public class LiveGameTests
         string testSwf = Path.Combine(inst.GamePath, "Gfx_Viking.swf");
         Assert.True(File.Exists(testSwf));
 
-        byte[] originalBytes = File.ReadAllBytes(testSwf);
-        string originalHash = BackupManager.ComputeSha256(testSwf);
+        // Work on a temporary copy so the live game installation is never written to.
+        string tempDir = Path.Combine(Path.GetTempPath(), "BrawlCraftFileTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string workFile = Path.Combine(tempDir, "Gfx_Viking.swf");
 
-        // Test File.Copy overwrite
-        string tmpCopy = testSwf + ".test_tmp";
-        File.WriteAllBytes(tmpCopy, originalBytes);
-        File.Copy(tmpCopy, testSwf, overwrite: true);
-        File.Delete(tmpCopy);
+        try
+        {
+            byte[] originalBytes = File.ReadAllBytes(testSwf);
+            File.WriteAllBytes(workFile, originalBytes);
+            string originalHash = BackupManager.ComputeSha256(workFile);
 
-        // Test File.Move overwrite
-        string tmpMove = testSwf + ".test_tmp2";
-        File.WriteAllBytes(tmpMove, originalBytes);
-        File.Move(tmpMove, testSwf, overwrite: true);
+            // Test File.Copy overwrite
+            string tmpCopy = workFile + ".test_tmp";
+            File.WriteAllBytes(tmpCopy, originalBytes);
+            File.Copy(tmpCopy, workFile, overwrite: true);
+            File.Delete(tmpCopy);
 
-        // Verify hash remains identical
-        string finalHash = BackupManager.ComputeSha256(testSwf);
-        Assert.Equal(originalHash, finalHash);
+            // Test File.Move overwrite
+            string tmpMove = workFile + ".test_tmp2";
+            File.WriteAllBytes(tmpMove, originalBytes);
+            File.Move(tmpMove, workFile, overwrite: true);
+
+            // Verify hash remains identical
+            string finalHash = BackupManager.ComputeSha256(workFile);
+            Assert.Equal(originalHash, finalHash);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
+        }
     }
 
     [Fact]
@@ -76,8 +89,6 @@ public class LiveGameTests
         var inst = GameDetector.DetectGameInstallation();
         Assert.True(inst.IsValid);
 
-        var backupMgr = new BackupManager(inst.GamePath);
-        var modEngine = new ModificationEngine(inst.GamePath, backupMgr);
         var catalog = new CatalogService();
         catalog.LoadFromInstallation(inst);
 
@@ -89,28 +100,53 @@ public class LiveGameTests
         var replCostume = costumes.Find(c => !c.IsDefault);
         Assert.NotNull(replCostume);
 
-        var req = new ModificationRequest
+        // Isolate the whole apply/restore cycle in a temporary game directory.
+        string tempDir = Path.Combine(Path.GetTempPath(), "BrawlCraftEngineTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        try
         {
-            TargetLegend = bodvar,
-            TargetCostume = targetCostume,
-            ReplacementCostume = replCostume
-        };
+            foreach (var swf in new[] { targetCostume.SwfFile, replCostume.SwfFile, "Gfx_Hands.swf" }
+                         .Where(f => !string.IsNullOrWhiteSpace(f))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string source = Path.Combine(inst.GamePath, swf);
+                if (File.Exists(source))
+                {
+                    File.Copy(source, Path.Combine(tempDir, swf), overwrite: true);
+                }
+            }
 
-        // 1. Validate
-        var comp = modEngine.ValidateModification(req);
-        Assert.True(comp.IsCompatible);
+            var backupMgr = new BackupManager(tempDir);
+            var modEngine = new ModificationEngine(tempDir, backupMgr);
 
-        // 2. Apply while live game is running
-        var result = modEngine.ApplyModification(req);
-        Assert.True(result.Success, result.Message);
+            var req = new ModificationRequest
+            {
+                TargetLegend = bodvar,
+                TargetCostume = targetCostume,
+                ReplacementCostume = replCostume
+            };
 
-        // 3. Verify backup was created
-        Assert.True(backupMgr.IsFileModified(targetCostume.SwfFile));
+            // 1. Validate
+            var comp = modEngine.ValidateModification(req);
+            Assert.True(comp.IsCompatible);
 
-        // 4. Restore original safely
-        bool restored = backupMgr.RestoreFile(targetCostume.SwfFile);
-        Assert.True(restored);
-        Assert.False(backupMgr.IsFileModified(targetCostume.SwfFile));
+            // 2. Apply to the isolated copy
+            var result = modEngine.ApplyModification(req);
+            Assert.True(result.Success, result.Message);
+
+            // 3. Verify backup was created
+            Assert.True(backupMgr.IsFileModified(targetCostume.SwfFile));
+
+            // 4. Restore original safely
+            bool restored = backupMgr.RestoreFile(targetCostume.SwfFile);
+            Assert.True(restored);
+            Assert.False(backupMgr.IsFileModified(targetCostume.SwfFile));
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
+        }
     }
 
     [Fact]

@@ -15,6 +15,9 @@ namespace BrawlhallaSkinStudio.Tests;
 
 public class SearchUiSymbols
 {
+    private static readonly string GamePath =
+        BrawlhallaSkinStudio.Core.Services.GameDetector.DetectGameInstallation().GamePath;
+
     [Fact]
     public void TestPairedWeaponsLogic()
     {
@@ -40,7 +43,7 @@ public class SearchUiSymbols
     [Fact]
     public void TestSvgExportCorrectViewBox()
     {
-        string uiIcons = @"D:\SteamLibrary\steamapps\common\Brawlhalla\UI_Icons.swf";
+        string uiIcons = Path.Combine(GamePath, "UI_Icons.swf");
         using var fs = File.OpenRead(uiIcons);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -97,7 +100,7 @@ public class SearchUiSymbols
     [Fact]
     public void InspectNixAndJhalaColors()
     {
-        string uiIcons = @"D:\SteamLibrary\steamapps\common\Brawlhalla\UI_Icons.swf";
+        string uiIcons = Path.Combine(GamePath, "UI_Icons.swf");
         using var fs = File.OpenRead(uiIcons);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -118,7 +121,7 @@ public class SearchUiSymbols
     [Fact]
     public void InspectColorTransforms()
     {
-        string uiIcons = @"D:\SteamLibrary\steamapps\common\Brawlhalla\UI_Icons.swf";
+        string uiIcons = Path.Combine(GamePath, "UI_Icons.swf");
         using var fs = File.OpenRead(uiIcons);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -268,7 +271,7 @@ public class SearchUiSymbols
     [Fact]
     public void InspectBowSpriteDetails()
     {
-        string swfPath = @"D:\SteamLibrary\steamapps\common\Brawlhalla\Gfx_Weapons_02.swf";
+        string swfPath = Path.Combine(GamePath, "Gfx_Weapons_02.swf");
         using var fs = File.OpenRead(swfPath);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -317,7 +320,7 @@ public class SearchUiSymbols
     [Fact]
     public void TestExportBowWithMatrices()
     {
-        string swfPath = @"D:\SteamLibrary\steamapps\common\Brawlhalla\Gfx_Weapons_02.swf";
+        string swfPath = Path.Combine(GamePath, "Gfx_Weapons_02.swf");
         using var fs = File.OpenRead(swfPath);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -430,7 +433,7 @@ public class SearchUiSymbols
     [Fact]
     public void InspectQueenNaiSprite()
     {
-        string uiIcons = @"D:\SteamLibrary\steamapps\common\Brawlhalla\UI_Icons.swf";
+        string uiIcons = Path.Combine(GamePath, "UI_Icons.swf");
         using var fs = File.OpenRead(uiIcons);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -523,7 +526,7 @@ public class SearchUiSymbols
     [Fact]
     public void InspectJhalaNixAndWeapons()
     {
-        string uiIcons = @"D:\SteamLibrary\steamapps\common\Brawlhalla\UI_Icons.swf";
+        string uiIcons = Path.Combine(GamePath, "UI_Icons.swf");
         using var fs = File.OpenRead(uiIcons);
         var swf = SwfFile.ReadFrom(fs);
         var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -795,10 +798,10 @@ public class SearchUiSymbols
         var crossGauntlet = cat.WeaponSkins.First(w => w.WeaponSkinName == "FistsMobster");
         var mirageScythe = cat.WeaponSkins.First(w => w.WeaponSkinName == "ScytheStreetMirage");
 
-        // Pre-read head and torso symbol IDs of Mordex
-        string werewolfSwf = Path.Combine(inst.GamePath, "Gfx_Werewolf.swf");
+        // Pre-read head and torso symbol IDs of Mordex from the live installation (read-only).
+        string liveWerewolfSwf = Path.Combine(inst.GamePath, "Gfx_Werewolf.swf");
         ushort origFootId;
-        using (var fs = File.OpenRead(werewolfSwf))
+        using (var fs = File.OpenRead(liveWerewolfSwf))
         {
             var swf = SwfFile.ReadFrom(fs);
             var sym = swf.Tags.OfType<SymbolClassTag>().First();
@@ -816,13 +819,38 @@ public class SearchUiSymbols
             ReplacementWeapon2 = mirageScythe  // Mirage Scythe
         };
 
-        var bm = new BrawlhallaSkinStudio.Core.Engine.BackupManager(inst.GamePath);
-        var engine = new BrawlhallaSkinStudio.Core.Engine.ModificationEngine(inst.GamePath, bm);
-        var result = engine.ApplyModification(req);
-        Assert.True(result.Success, result.Message);
-
+        // Run the destructive apply against an isolated copy of the required SWFs.
+        string tempDir = Path.Combine(Path.GetTempPath(), "BrawlCraftMordexTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
         try
         {
+            var requiredSwfs = new[]
+            {
+                mordexCostume.SwfFile,
+                mordexGauntlet.SwfFile,
+                mordexScythe.SwfFile,
+                crossGauntlet.SwfFile,
+                mirageScythe.SwfFile,
+                "Gfx_Hands.swf"
+            };
+
+            foreach (var swf in requiredSwfs
+                         .Where(f => !string.IsNullOrWhiteSpace(f))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string source = Path.Combine(inst.GamePath, swf);
+                if (File.Exists(source))
+                {
+                    File.Copy(source, Path.Combine(tempDir, swf), overwrite: true);
+                }
+            }
+
+            string werewolfSwf = Path.Combine(tempDir, "Gfx_Werewolf.swf");
+            var bm = new BrawlhallaSkinStudio.Core.Engine.BackupManager(tempDir);
+            var engine = new BrawlhallaSkinStudio.Core.Engine.ModificationEngine(tempDir, bm);
+            var result = engine.ApplyModification(req);
+            Assert.True(result.Success, result.Message);
+
             // Verify Gfx_Werewolf.swf on disk
             using var fsPost = File.OpenRead(werewolfSwf);
             var swfPost = SwfFile.ReadFrom(fsPost);
@@ -838,8 +866,7 @@ public class SearchUiSymbols
         }
         finally
         {
-            // Restore Gfx_Werewolf.swf
-            bm.RestoreFile("Gfx_Werewolf.swf");
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
         }
     }
 
@@ -863,20 +890,29 @@ public class SearchUiSymbols
             SelectedColorScheme = sunsetScheme
         };
 
-        var bm = new BrawlhallaSkinStudio.Core.Engine.BackupManager(inst.GamePath);
-        var engine = new BrawlhallaSkinStudio.Core.Engine.ModificationEngine(inst.GamePath, bm, cat);
+        string tempDir = Path.Combine(Path.GetTempPath(), "BrawlCraftColorTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var bm = new BrawlhallaSkinStudio.Core.Engine.BackupManager(tempDir);
+            var engine = new BrawlhallaSkinStudio.Core.Engine.ModificationEngine(tempDir, bm, cat);
 
-        // Call private BuildWeaponColorSwapMap via reflection
-        var method = typeof(BrawlhallaSkinStudio.Core.Engine.ModificationEngine).GetMethod("BuildWeaponColorSwapMap",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        Assert.NotNull(method);
+            // Call private BuildWeaponColorSwapMap via reflection
+            var method = typeof(BrawlhallaSkinStudio.Core.Engine.ModificationEngine).GetMethod("BuildWeaponColorSwapMap",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Assert.NotNull(method);
 
-        var colorMap = (Dictionary<uint, uint>)method.Invoke(engine, new object[] { mordexGauntlet, null!, req })!;
-        Assert.NotNull(colorMap);
-        Assert.NotEmpty(colorMap);
+            var colorMap = (Dictionary<uint, uint>)method.Invoke(engine, new object[] { mordexGauntlet, null!, req })!;
+            Assert.NotNull(colorMap);
+            Assert.NotEmpty(colorMap);
 
-        // Body1 or Body2 from Mordex's costume base colors must be in colorMap
-        bool hasCostumeMapped = mordexCostume.BaseColors.Values.Any(bc => colorMap.ContainsKey(bc));
-        Assert.True(hasCostumeMapped, "Color map should contain swaps for costume color defines present on weapon shapes");
+            // Body1 or Body2 from Mordex's costume base colors must be in colorMap
+            bool hasCostumeMapped = mordexCostume.BaseColors.Values.Any(bc => colorMap.ContainsKey(bc));
+            Assert.True(hasCostumeMapped, "Color map should contain swaps for costume color defines present on weapon shapes");
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
+        }
     }
 }

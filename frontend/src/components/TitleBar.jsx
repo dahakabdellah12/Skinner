@@ -5,7 +5,7 @@ import appLogo from '../assets/logo.png';
 import { ArrowUpCircle } from 'lucide-react';
 
 export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdate }) {
-  const { isRTL } = useLanguage();
+  const { isArabic } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
           type="button"
           className="title-bar-settings-btn"
           onClick={onOpenSettings}
-          title={isRTL ? 'الإعدادات' : 'Settings'}
+          title={isArabic ? 'الإعدادات' : 'Settings'}
           aria-label="Settings"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
@@ -115,11 +115,11 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
             type="button"
             className="title-bar-update-btn"
             onClick={onOpenUpdate}
-            title={isRTL ? 'تحديث متوفر - انقر لفتح نافذة التحديث' : 'Update Available - Click to view and install'}
+            title={isArabic ? 'تحديث متوفر - انقر لفتح نافذة التحديث' : 'Update Available - Click to view and install'}
             aria-label="Update"
           >
             <ArrowUpCircle size={14} />
-            <span>{isRTL ? 'تحديث' : 'Update'}</span>
+            <span>{isArabic ? 'تحديث' : 'Update'}</span>
           </button>
         )}
       </div>
@@ -130,7 +130,7 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
           <button
             className="window-button"
             onClick={handleMinimize}
-            title={isRTL ? 'تصغير' : 'Minimize'}
+            title={isArabic ? 'تصغير' : 'Minimize'}
             aria-label="Minimize"
           >
             <svg width="11" height="1" viewBox="0 0 11 1" fill="currentColor">
@@ -142,7 +142,7 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
           <button
             className={`window-button ${isMaximized ? 'is-maximized' : ''}`}
             onClick={handleMaximize}
-            title={isMaximized ? (isRTL ? 'استعادة' : 'Restore') : (isRTL ? 'تكبير' : 'Maximize')}
+            title={isMaximized ? (isArabic ? 'استعادة' : 'Restore') : (isArabic ? 'تكبير' : 'Maximize')}
             aria-label={isMaximized ? 'Restore' : 'Maximize'}
           >
             {isMaximized ? (
@@ -160,7 +160,7 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
           <button
             className="window-button close"
             onClick={handleClose}
-            title={isRTL ? 'إغلاق' : 'Close'}
+            title={isArabic ? 'إغلاق' : 'Close'}
             aria-label="Close"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">

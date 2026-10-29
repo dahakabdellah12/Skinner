@@ -17,7 +17,7 @@ export default function LegendCustomizer({
   showToast,
   isBusy
 }) {
-  const { tWeapon, isRTL } = useLanguage();
+  const { tWeapon, isArabic } = useLanguage();
 
   // All costumes available for this legend
   const legendCostumes = useMemo(() => {
@@ -176,13 +176,13 @@ export default function LegendCustomizer({
     return found || {
       weaponSkinId: 0,
       weaponSkinName: `${legend?.weapon1 || 'Weapon'}Default`,
-      displayName: isRTL ? `${tWeapon(legend?.weapon1 || '')} (الافتراضي)` : `${tWeapon(legend?.weapon1 || '')} (Stock)`,
+      displayName: isArabic ? `${tWeapon(legend?.weapon1 || '')} (الافتراضي)` : `${tWeapon(legend?.weapon1 || '')} (Stock)`,
       baseWeapon: legend?.weapon1 || '',
       ownerHero: legend?.heroName || '',
       symbolSuffix: legend?.heroName || '',
       isDefault: true
     };
-  }, [weapon1Skins, legend, tWeapon, isRTL]);
+  }, [weapon1Skins, legend, tWeapon, isArabic]);
 
   const defaultWeapon2 = useMemo(() => {
     const heroNameLower = (legend?.heroName || '').trim().toLowerCase();
@@ -191,13 +191,13 @@ export default function LegendCustomizer({
     return found || {
       weaponSkinId: 0,
       weaponSkinName: `${legend?.weapon2 || 'Weapon'}Default`,
-      displayName: isRTL ? `${tWeapon(legend?.weapon2 || '')} (الافتراضي)` : `${tWeapon(legend?.weapon2 || '')} (Stock)`,
+      displayName: isArabic ? `${tWeapon(legend?.weapon2 || '')} (الافتراضي)` : `${tWeapon(legend?.weapon2 || '')} (Stock)`,
       baseWeapon: legend?.weapon2 || '',
       ownerHero: legend?.heroName || '',
       symbolSuffix: legend?.heroName || '',
       isDefault: true
     };
-  }, [weapon2Skins, legend, tWeapon, isRTL]);
+  }, [weapon2Skins, legend, tWeapon, isArabic]);
 
   const selectedTargetWeapon1 = defaultWeapon1;
   const [selectedReplacementWeapon1, setSelectedReplacementWeapon1] = useState(() => {
@@ -266,15 +266,15 @@ export default function LegendCustomizer({
           id: l.heroName,
           title: l.displayName || l.heroName,
           subtitle: isCurrent
-            ? `${weaponsSubtitle} (${isRTL ? 'الأسطورة الحالية' : 'Current'})`
+            ? `${weaponsSubtitle} (${isArabic ? 'الأسطورة الحالية' : 'Current'})`
             : weaponsSubtitle,
-          badge: isCurrent ? (isRTL ? 'الحالية' : 'Current') : null,
+          badge: isCurrent ? (isArabic ? 'الحالية' : 'Current') : null,
           rawItem: l,
           searchKey: `${l.displayName || ''} ${l.heroName || ''} ${l.weapon1 || ''} ${l.weapon2 || ''} ${w1} ${w2}`
         };
       })
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  }, [catalog?.legends, legend, tWeapon, isRTL]);
+  }, [catalog?.legends, legend, tWeapon, isArabic]);
 
   // Selected hero object for thumbnail image
   const selectedHeroObject = useMemo(() => {
@@ -409,8 +409,8 @@ export default function LegendCustomizer({
   const colorSchemeCards = useMemo(() => {
     const noneCard = {
       id: '__NONE__',
-      title: isRTL ? 'ألوان الأسطورة الأصلية (بدون تعديل)' : 'Default Legend Colors (Stock)',
-      subtitle: isRTL ? 'الصبغة الأساسية للأصل' : 'Stock Legend Palette',
+      title: isArabic ? 'ألوان الأسطورة الأصلية (بدون تعديل)' : 'Default Legend Colors (Stock)',
+      subtitle: isArabic ? 'الصبغة الأساسية للأصل' : 'Stock Legend Palette',
       isNone: true
     };
 
@@ -418,7 +418,7 @@ export default function LegendCustomizer({
       .map((cs) => ({
         id: cs?.schemeId ?? cs?.schemeName ?? '__SCHEME__',
         title: cs?.displayName || cs?.schemeName || 'Color',
-        subtitle: cs?.rarity ? `Rarity: ${cs.rarity}` : (isRTL ? 'نظام ألوان' : 'Color Scheme'),
+        subtitle: cs?.rarity ? `Rarity: ${cs.rarity}` : (isArabic ? 'نظام ألوان' : 'Color Scheme'),
         badge: cs?.displayName === 'Community Colors' ? 'Special' : null,
         rawItem: cs,
         searchKey: `${cs?.displayName || ''} ${cs?.schemeName || ''}`
@@ -426,7 +426,7 @@ export default function LegendCustomizer({
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     return [noneCard, ...rest];
-  }, [catalog?.colorSchemes, isRTL]);
+  }, [catalog?.colorSchemes, isArabic]);
 
   // --- Visual Card Gallery Items for Card Picker Modals ---
   const targetCostumeCards = useMemo(() => {
@@ -434,20 +434,20 @@ export default function LegendCustomizer({
       .map((c) => ({
         id: c.costumeId || c.costumeName,
         title: c.displayName || c.costumeName,
-        subtitle: c.isDefault ? (isRTL ? 'الزي الافتراضي للأصل' : 'Default Costume') : (c.ownerHero || ''),
-        badge: c.isDefault ? (isRTL ? 'افتراضي' : 'Default') : (c.isCrossover ? 'Crossover' : null),
+        subtitle: c.isDefault ? (isArabic ? 'الزي الافتراضي للأصل' : 'Default Costume') : (c.ownerHero || ''),
+        badge: c.isDefault ? (isArabic ? 'افتراضي' : 'Default') : (c.isCrossover ? 'Crossover' : null),
         rawItem: c,
         searchKey: `${c.displayName || ''} ${c.costumeName || ''} ${c.ownerHero || ''}`
       }))
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  }, [legendCostumes, isRTL]);
+  }, [legendCostumes, isArabic]);
 
   const legDisplayName = legend?.displayName || '';
   const replacementCostumeCards = useMemo(() => {
     const noneCard = {
       id: '__NONE__',
-      title: isRTL ? 'بدون تغيير (الاحتفاظ بمظهر الزي المستهدف)' : 'Unchanged (Keep Target Look)',
-      subtitle: isRTL ? 'لا يتم تعديل مظهر الزي' : 'Stock Target Visual',
+      title: isArabic ? 'بدون تغيير (الاحتفاظ بمظهر الزي المستهدف)' : 'Unchanged (Keep Target Look)',
+      subtitle: isArabic ? 'لا يتم تعديل مظهر الزي' : 'Stock Target Visual',
       isNone: true,
       ownerHero: legend?.heroName || ''
     };
@@ -477,12 +477,12 @@ export default function LegendCustomizer({
 
       let subtitle = heroDisp;
       if (c.isDefault) {
-        subtitle = isRTL ? `${heroDisp} (الافتراضي)` : `${heroDisp} (Default / Stock)`;
+        subtitle = isArabic ? `${heroDisp} (الافتراضي)` : `${heroDisp} (Default / Stock)`;
       }
 
       let badge = null;
       if (c.isDefault) {
-        badge = isRTL ? 'افتراضي' : 'Default';
+        badge = isArabic ? 'افتراضي' : 'Default';
       } else if (c.isCrossover) {
         badge = 'Crossover';
       } else if (!isCurrentLegend) {
@@ -516,14 +516,14 @@ export default function LegendCustomizer({
     });
 
     return [noneCard, ...skins];
-  }, [allCatalogCostumes, catalog?.legends, legend, legDisplayName, selectedReplacementHero, isRTL]);
+  }, [allCatalogCostumes, catalog?.legends, legend, legDisplayName, selectedReplacementHero, isArabic]);
 
   const weapon1Cards = useMemo(() => {
     const weaponLabel = tWeapon(legWeapon1);
     const noneCard = {
       id: '__NONE__',
-      title: isRTL ? `الافتراضي لـ ${weaponLabel} (بدون تعديل)` : `Default ${weaponLabel} (Stock)`,
-      subtitle: isRTL ? 'المظهر الأصلي للسلاح' : 'Stock Weapon Skin',
+      title: isArabic ? `الافتراضي لـ ${weaponLabel} (بدون تعديل)` : `Default ${weaponLabel} (Stock)`,
+      subtitle: isArabic ? 'المظهر الأصلي للسلاح' : 'Stock Weapon Skin',
       isNone: true
     };
     const skins = (weapon1Skins || [])
@@ -531,7 +531,7 @@ export default function LegendCustomizer({
         const ownerLegend = catalog?.legends?.find(
           (l) => (l?.heroName || '').trim().toLowerCase() === (w?.ownerHero || '').trim().toLowerCase()
         );
-        const ownerDisp = ownerLegend ? ownerLegend.displayName : (w?.ownerHero ? w.ownerHero : (isRTL ? 'عام' : 'Universal'));
+        const ownerDisp = ownerLegend ? ownerLegend.displayName : (w?.ownerHero ? w.ownerHero : (isArabic ? 'عام' : 'Universal'));
         return {
           id: w.weaponSkinId != null && w.weaponSkinId !== 0 ? w.weaponSkinId : w.weaponSkinName,
           title: w.displayName || w.weaponSkinName,
@@ -543,14 +543,14 @@ export default function LegendCustomizer({
       })
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     return [noneCard, ...skins];
-  }, [weapon1Skins, legWeapon1, isRTL, tWeapon, catalog]);
+  }, [weapon1Skins, legWeapon1, isArabic, tWeapon, catalog]);
 
   const weapon2Cards = useMemo(() => {
     const weaponLabel = tWeapon(legWeapon2);
     const noneCard = {
       id: '__NONE__',
-      title: isRTL ? `الافتراضي لـ ${weaponLabel} (بدون تعديل)` : `Default ${weaponLabel} (Stock)`,
-      subtitle: isRTL ? 'المظهر الأصلي للسلاح' : 'Stock Weapon Skin',
+      title: isArabic ? `الافتراضي لـ ${weaponLabel} (بدون تعديل)` : `Default ${weaponLabel} (Stock)`,
+      subtitle: isArabic ? 'المظهر الأصلي للسلاح' : 'Stock Weapon Skin',
       isNone: true
     };
     const skins = (weapon2Skins || [])
@@ -558,7 +558,7 @@ export default function LegendCustomizer({
         const ownerLegend = catalog?.legends?.find(
           (l) => (l?.heroName || '').trim().toLowerCase() === (w?.ownerHero || '').trim().toLowerCase()
         );
-        const ownerDisp = ownerLegend ? ownerLegend.displayName : (w?.ownerHero ? w.ownerHero : (isRTL ? 'عام' : 'Universal'));
+        const ownerDisp = ownerLegend ? ownerLegend.displayName : (w?.ownerHero ? w.ownerHero : (isArabic ? 'عام' : 'Universal'));
         return {
           id: w.weaponSkinId != null && w.weaponSkinId !== 0 ? w.weaponSkinId : w.weaponSkinName,
           title: w.displayName || w.weaponSkinName,
@@ -570,7 +570,7 @@ export default function LegendCustomizer({
       })
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     return [noneCard, ...skins];
-  }, [weapon2Skins, legWeapon2, isRTL, tWeapon, catalog]);
+  }, [weapon2Skins, legWeapon2, isArabic, tWeapon, catalog]);
 
   // Handle target costume select
   const handleSelectTargetCostume = (val) => {
@@ -636,7 +636,7 @@ export default function LegendCustomizer({
   // Apply
   const handleApply = () => {
     if (!selectedTargetCostume) {
-      showToast(isRTL ? 'يرجى تحديد الزي المستهدف.' : 'Target costume is required.', 'error');
+      showToast(isArabic ? 'يرجى تحديد الزي المستهدف.' : 'Target costume is required.', 'error');
       return;
     }
     onApplyModification({
@@ -671,7 +671,7 @@ export default function LegendCustomizer({
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            <span>{isRTL ? 'العودة إلى قائمة الأساطير' : 'Back to Legends'}</span>
+            <span>{isArabic ? 'العودة إلى قائمة الأساطير' : 'Back to Legends'}</span>
           </button>
 
           <div>
@@ -682,7 +682,7 @@ export default function LegendCustomizer({
               </span>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {isRTL
+              {isArabic
                 ? `تخصيص المظهر والأسلحة لـ ${legend.displayName} (${legend.heroName})`
                 : `Customizing appearance & weaponry for ${legend.displayName} (${legend.heroName})`}
             </p>
@@ -693,7 +693,7 @@ export default function LegendCustomizer({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {isValidating ? (
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {isRTL ? 'جاري التحقق...' : 'Validating...'}
+              {isArabic ? 'جاري التحقق...' : 'Validating...'}
             </span>
           ) : compatibility?.isCompatible ? (
             <span style={{
@@ -713,8 +713,8 @@ export default function LegendCustomizer({
               </svg>
               <span>
                 {compatibility?.level === 'CrossLegendExperimental'
-                  ? (isRTL ? 'توافق أزياء متقاطع (Cross-Legend)' : 'Cross-Legend Compatible')
-                  : (isRTL ? 'جاهز ومتوافق ١٠٠٪' : '100% Compatible')}
+                  ? (isArabic ? 'توافق أزياء متقاطع (Cross-Legend)' : 'Cross-Legend Compatible')
+                  : (isArabic ? 'جاهز ومتوافق ١٠٠٪' : '100% Compatible')}
               </span>
             </span>
           ) : (
@@ -729,7 +729,7 @@ export default function LegendCustomizer({
               fontSize: '12px',
               fontWeight: 600
             }}>
-              <span>{isRTL ? 'غير متوافق' : 'Incompatible'}</span>
+              <span>{isArabic ? 'غير متوافق' : 'Incompatible'}</span>
             </span>
           )}
         </div>
@@ -749,7 +749,7 @@ export default function LegendCustomizer({
               />
             </div>
             <span className="product-badge default-badge">
-              {isRTL ? 'في المخزون' : 'Target'}
+              {isArabic ? 'في المخزون' : 'Target'}
             </span>
           </div>
           <div className="card-content">
@@ -759,7 +759,7 @@ export default function LegendCustomizer({
               </h3>
             </div>
             <p className="product-description">
-              {isRTL ? 'الزي الذي تملكه وسيتم استبدال شكله في اللعبة' : 'Costume in your game inventory to be cosmetically replaced.'}
+              {isArabic ? 'الزي الذي تملكه وسيتم استبدال شكله في اللعبة' : 'Costume in your game inventory to be cosmetically replaced.'}
             </p>
           </div>
         </div>
@@ -778,22 +778,22 @@ export default function LegendCustomizer({
             </div>
             <span className="product-badge">
               {displayedReplacementCostume?.ownerHero && displayedReplacementCostume.ownerHero.toLowerCase() !== (legend?.heroName || '').toLowerCase()
-                ? (isRTL ? `مظهر من ${displayedReplacementCostume.ownerHero}` : `From ${displayedReplacementCostume.ownerHero}`)
-                : (isRTL ? 'المظهر الجديد' : 'New Visual')}
+                ? (isArabic ? `مظهر من ${displayedReplacementCostume.ownerHero}` : `From ${displayedReplacementCostume.ownerHero}`)
+                : (isArabic ? 'المظهر الجديد' : 'New Visual')}
             </span>
           </div>
           <div className="card-content">
             <div className="card-heading">
               <h3 className="product-title" title={displayedReplacementCostume?.displayName || displayedReplacementCostume?.costumeName || ''}>
-                {displayedReplacementCostume?.displayName || displayedReplacementCostume?.costumeName || (isRTL ? 'نفس الزي' : 'Same Costume')}
+                {displayedReplacementCostume?.displayName || displayedReplacementCostume?.costumeName || (isArabic ? 'نفس الزي' : 'Same Costume')}
               </h3>
             </div>
             <p className="product-description">
               {displayedReplacementCostume?.ownerHero && displayedReplacementCostume.ownerHero.toLowerCase() !== (legend?.heroName || '').toLowerCase()
-                ? (isRTL
+                ? (isArabic
                     ? `مظهر منسوخ من ${displayedReplacementCostume.ownerHero} • ${displayedReplacementCostume.isDefault ? 'الزي الافتراضي' : 'سكن'}`
                     : `Cross-Legend skin from ${displayedReplacementCostume.ownerHero} • ${displayedReplacementCostume.isDefault ? 'Stock' : 'Skin'}`)
-                : (isRTL ? 'المظهر الذي سيظهر في اللعبة أثناء المعارك' : 'The visual look you will see during combat and animations.')}
+                : (isArabic ? 'المظهر الذي سيظهر في اللعبة أثناء المعارك' : 'The visual look you will see during combat and animations.')}
             </p>
           </div>
         </div>
@@ -818,7 +818,7 @@ export default function LegendCustomizer({
               </h3>
             </div>
             <p className="product-description">
-              {isRTL ? `مظهر السلاح الأول (${tWeapon(legend?.weapon1 || '')})` : `Equipped skin for ${legend?.weapon1 || ''}`}
+              {isArabic ? `مظهر السلاح الأول (${tWeapon(legend?.weapon1 || '')})` : `Equipped skin for ${legend?.weapon1 || ''}`}
             </p>
           </div>
         </div>
@@ -843,7 +843,7 @@ export default function LegendCustomizer({
               </h3>
             </div>
             <p className="product-description">
-              {isRTL ? `مظهر السلاح الثاني (${tWeapon(legend?.weapon2 || '')})` : `Equipped skin for ${legend?.weapon2 || ''}`}
+              {isArabic ? `مظهر السلاح الثاني (${tWeapon(legend?.weapon2 || '')})` : `Equipped skin for ${legend?.weapon2 || ''}`}
             </p>
           </div>
         </div>
@@ -852,7 +852,7 @@ export default function LegendCustomizer({
       {/* Configuration Controls Panel */}
       <div className="config-panel">
         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-          {isRTL ? 'خيارات التخصيص والأزياء' : 'Customization Configuration'}
+          {isArabic ? 'خيارات التخصيص والأزياء' : 'Customization Configuration'}
         </h3>
 
         {/* Costumes Row: Target Costume & New Visual Skin */}
@@ -866,7 +866,7 @@ export default function LegendCustomizer({
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
-                  <span>{isRTL ? 'الأسطورة الحالية في اللعبة:' : 'Current Legend in Game:'}</span>
+                  <span>{isArabic ? 'الأسطورة الحالية في اللعبة:' : 'Current Legend in Game:'}</span>
                 </label>
               </div>
               <div style={{
@@ -885,7 +885,7 @@ export default function LegendCustomizer({
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
                 <span>{legend?.displayName || legend?.heroName}</span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginInlineStart: 'auto', fontWeight: 500 }}>
-                  ({isRTL ? 'المستهدفة' : 'Target'})
+                  ({isArabic ? 'المستهدفة' : 'Target'})
                 </span>
               </div>
             </div>
@@ -895,12 +895,12 @@ export default function LegendCustomizer({
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              <span>{isRTL ? 'الزي المستهدف في مخزونك (Target Costume)' : 'Target Costume in Inventory'}</span>
+              <span>{isArabic ? 'الزي المستهدف في مخزونك (Target Costume)' : 'Target Costume in Inventory'}</span>
             </label>
             <div
               className="card-selector-trigger"
               onClick={() => setActivePicker('targetCostume')}
-              title={isRTL ? 'اضغط لفتح واجهة البطاقات واختيار الزي' : 'Click to open visual cards picker'}
+              title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار الزي' : 'Click to open visual cards picker'}
             >
               <div className="card-selector-trigger-thumb">
                 <AssetImage type="costume" item={selectedTargetCostume} style={{ width: '100%', height: '100%' }} />
@@ -910,7 +910,7 @@ export default function LegendCustomizer({
                   {selectedTargetCostume?.displayName || selectedTargetCostume?.costumeName || legend?.displayName}
                 </div>
                 <div className="card-selector-trigger-sub">
-                  {selectedTargetCostume?.isDefault ? (isRTL ? 'الزي الافتراضي (الأصلي)' : 'Default Costume') : (selectedTargetCostume?.ownerHero || '')}
+                  {selectedTargetCostume?.isDefault ? (isArabic ? 'الزي الافتراضي (الأصلي)' : 'Default Costume') : (selectedTargetCostume?.ownerHero || '')}
                 </div>
               </div>
               <div className="card-selector-trigger-badge">
@@ -920,7 +920,7 @@ export default function LegendCustomizer({
                   <rect x="14" y="14" width="7" height="7" />
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
-                <span>{isRTL ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
+                <span>{isArabic ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
               </div>
             </div>
           </div>
@@ -934,7 +934,7 @@ export default function LegendCustomizer({
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <span>{isRTL ? 'اختيار شخصية السكن:' : 'Skin Character / Legend:'}</span>
+                  <span>{isArabic ? 'اختيار شخصية السكن:' : 'Skin Character / Legend:'}</span>
                 </label>
               </div>
 
@@ -942,7 +942,7 @@ export default function LegendCustomizer({
               <div
                 className="card-selector-trigger"
                 onClick={() => setActivePicker('replacementHero')}
-                title={isRTL ? 'اضغط لاختيار شخصية السكن من البطاقات' : 'Click to select skin character from cards'}
+                title={isArabic ? 'اضغط لاختيار شخصية السكن من البطاقات' : 'Click to select skin character from cards'}
               >
                 <div className="card-selector-trigger-thumb">
                   <AssetImage
@@ -956,7 +956,7 @@ export default function LegendCustomizer({
                     {currentSelectedHeroDisplayName}
                   </div>
                   <div className="card-selector-trigger-sub">
-                    {isRTL ? `استعارة سكنات من ${currentSelectedHeroDisplayName}` : `Borrow skins from ${currentSelectedHeroDisplayName}`}
+                    {isArabic ? `استعارة سكنات من ${currentSelectedHeroDisplayName}` : `Borrow skins from ${currentSelectedHeroDisplayName}`}
                   </div>
                 </div>
                 <div className="card-selector-trigger-badge">
@@ -966,7 +966,7 @@ export default function LegendCustomizer({
                     <rect x="14" y="14" width="7" height="7" />
                     <rect x="3" y="14" width="7" height="7" />
                   </svg>
-                  <span>{isRTL ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
+                  <span>{isArabic ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
                 </div>
               </div>
             </div>
@@ -975,12 +975,12 @@ export default function LegendCustomizer({
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
-              <span>{isRTL ? 'زي الاستبدال المرئي الجديد (Visual Skin)' : 'New Visual Replacement Skin'}</span>
+              <span>{isArabic ? 'زي الاستبدال المرئي الجديد (Visual Skin)' : 'New Visual Replacement Skin'}</span>
             </label>
             <div
               className="card-selector-trigger"
               onClick={() => setActivePicker('replacementCostume')}
-              title={isRTL ? 'اضغط لفتح واجهة البطاقات واختيار السكن' : 'Click to pick visual skin from cards'}
+              title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار السكن' : 'Click to pick visual skin from cards'}
             >
               <div className="card-selector-trigger-thumb">
                 {selectedReplacementCostume ? (
@@ -993,12 +993,12 @@ export default function LegendCustomizer({
                 <div className="card-selector-trigger-title">
                   {selectedReplacementCostume
                     ? (selectedReplacementCostume.displayName || selectedReplacementCostume.costumeName)
-                    : (isRTL ? 'بدون تغيير (الاحتفاظ بمظهر الزي المستهدف)' : 'Unchanged (Keep Target Look)')}
+                    : (isArabic ? 'بدون تغيير (الاحتفاظ بمظهر الزي المستهدف)' : 'Unchanged (Keep Target Look)')}
                 </div>
                 <div className="card-selector-trigger-sub">
                   {selectedReplacementCostume
-                    ? `${selectedReplacementCostume.ownerHero || ''} ${selectedReplacementCostume.isDefault ? (isRTL ? '• الافتراضي' : '• Stock') : ''}`
-                    : (isRTL ? 'المظهر الأصلي للزي المستهدف' : 'Stock target costume')}
+                    ? `${selectedReplacementCostume.ownerHero || ''} ${selectedReplacementCostume.isDefault ? (isArabic ? '• الافتراضي' : '• Stock') : ''}`
+                    : (isArabic ? 'المظهر الأصلي للزي المستهدف' : 'Stock target costume')}
                 </div>
               </div>
               <div className="card-selector-trigger-badge">
@@ -1008,7 +1008,7 @@ export default function LegendCustomizer({
                   <rect x="14" y="14" width="7" height="7" />
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
-                <span>{isRTL ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
+                <span>{isArabic ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
               </div>
             </div>
           </div>
@@ -1021,12 +1021,12 @@ export default function LegendCustomizer({
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14.5 17.5L3 6V3h3l11.5 11.5-3 3z" />
               </svg>
-              <span>{isRTL ? `مظهر سلاح: ${tWeapon(legend.weapon1)} (خاص بـ ${tWeapon(legend.weapon1)} فقط)` : `Weapon Skin: ${tWeapon(legend.weapon1)} (${tWeapon(legend.weapon1)} Only)`}</span>
+              <span>{isArabic ? `مظهر سلاح: ${tWeapon(legend.weapon1)} (خاص بـ ${tWeapon(legend.weapon1)} فقط)` : `Weapon Skin: ${tWeapon(legend.weapon1)} (${tWeapon(legend.weapon1)} Only)`}</span>
             </label>
             <div
               className="card-selector-trigger"
               onClick={() => setActivePicker('weapon1')}
-              title={isRTL ? 'اضغط لفتح واجهة البطاقات واختيار مظهر السلاح' : 'Click to pick weapon skin from cards'}
+              title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار مظهر السلاح' : 'Click to pick weapon skin from cards'}
             >
               <div className="card-selector-trigger-thumb">
                 <div className={`weapon-preview weapon-${(legend?.weapon1 || '').toLowerCase().replace(/[\s_]+/g, '')}`} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1037,10 +1037,10 @@ export default function LegendCustomizer({
                 <div className="card-selector-trigger-title">
                   {selectedReplacementWeapon1
                     ? (selectedReplacementWeapon1.displayName || selectedReplacementWeapon1.weaponSkinName)
-                    : (isRTL ? `الافتراضي لـ ${tWeapon(legend.weapon1)} (بدون تعديل)` : `Default ${tWeapon(legend.weapon1)} (Stock)`)}
+                    : (isArabic ? `الافتراضي لـ ${tWeapon(legend.weapon1)} (بدون تعديل)` : `Default ${tWeapon(legend.weapon1)} (Stock)`)}
                 </div>
                 <div className="card-selector-trigger-sub">
-                  {selectedReplacementWeapon1?.ownerHero ? `${selectedReplacementWeapon1.ownerHero}` : (isRTL ? `${weapon1Skins.length} مظهر متاح للـ ${tWeapon(legend.weapon1)}` : `${weapon1Skins.length} skins available`)}
+                  {selectedReplacementWeapon1?.ownerHero ? `${selectedReplacementWeapon1.ownerHero}` : (isArabic ? `${weapon1Skins.length} مظهر متاح للـ ${tWeapon(legend.weapon1)}` : `${weapon1Skins.length} skins available`)}
                 </div>
               </div>
               <div className="card-selector-trigger-badge">
@@ -1050,7 +1050,7 @@ export default function LegendCustomizer({
                   <rect x="14" y="14" width="7" height="7" />
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
-                <span>{isRTL ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
+                <span>{isArabic ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
               </div>
             </div>
           </div>
@@ -1060,12 +1060,12 @@ export default function LegendCustomizer({
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14.5 17.5L3 6V3h3l11.5 11.5-3 3z" />
               </svg>
-              <span>{isRTL ? `مظهر سلاح: ${tWeapon(legend.weapon2)} (خاص بـ ${tWeapon(legend.weapon2)} فقط)` : `Weapon Skin: ${tWeapon(legend.weapon2)} (${tWeapon(legend.weapon2)} Only)`}</span>
+              <span>{isArabic ? `مظهر سلاح: ${tWeapon(legend.weapon2)} (خاص بـ ${tWeapon(legend.weapon2)} فقط)` : `Weapon Skin: ${tWeapon(legend.weapon2)} (${tWeapon(legend.weapon2)} Only)`}</span>
             </label>
             <div
               className="card-selector-trigger"
               onClick={() => setActivePicker('weapon2')}
-              title={isRTL ? 'اضغط لفتح واجهة البطاقات واختيار مظهر السلاح' : 'Click to pick weapon skin from cards'}
+              title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار مظهر السلاح' : 'Click to pick weapon skin from cards'}
             >
               <div className="card-selector-trigger-thumb">
                 <div className={`weapon-preview weapon-${(legend?.weapon2 || '').toLowerCase().replace(/[\s_]+/g, '')}`} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1076,10 +1076,10 @@ export default function LegendCustomizer({
                 <div className="card-selector-trigger-title">
                   {selectedReplacementWeapon2
                     ? (selectedReplacementWeapon2.displayName || selectedReplacementWeapon2.weaponSkinName)
-                    : (isRTL ? `الافتراضي لـ ${tWeapon(legend.weapon2)} (بدون تعديل)` : `Default ${tWeapon(legend.weapon2)} (Stock)`)}
+                    : (isArabic ? `الافتراضي لـ ${tWeapon(legend.weapon2)} (بدون تعديل)` : `Default ${tWeapon(legend.weapon2)} (Stock)`)}
                 </div>
                 <div className="card-selector-trigger-sub">
-                  {selectedReplacementWeapon2?.ownerHero ? `${selectedReplacementWeapon2.ownerHero}` : (isRTL ? `${weapon2Skins.length} مظهر متاح للـ ${tWeapon(legend.weapon2)}` : `${weapon2Skins.length} skins available`)}
+                  {selectedReplacementWeapon2?.ownerHero ? `${selectedReplacementWeapon2.ownerHero}` : (isArabic ? `${weapon2Skins.length} مظهر متاح للـ ${tWeapon(legend.weapon2)}` : `${weapon2Skins.length} skins available`)}
                 </div>
               </div>
               <div className="card-selector-trigger-badge">
@@ -1089,7 +1089,7 @@ export default function LegendCustomizer({
                   <rect x="14" y="14" width="7" height="7" />
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
-                <span>{isRTL ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
+                <span>{isArabic ? 'اختيار من البطاقات' : 'Browse Cards'}</span>
               </div>
             </div>
           </div>
@@ -1102,22 +1102,22 @@ export default function LegendCustomizer({
               <circle cx="12" cy="12" r="10" />
               <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10" />
             </svg>
-            <span>{isRTL ? 'نظام الألوان والصبغة (Color Palette)' : 'Color Scheme / Palette'}</span>
+            <span>{isArabic ? 'نظام الألوان والصبغة (Color Palette)' : 'Color Scheme / Palette'}</span>
           </label>
           <div
             className="card-selector-trigger"
             onClick={() => setActivePicker('colorScheme')}
-            title={isRTL ? 'اضغط لفتح واجهة البطاقات واختيار نظام الألوان' : 'Click to pick color palette from visual cards'}
+            title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار نظام الألوان' : 'Click to pick color palette from visual cards'}
           >
             <div className="card-selector-trigger-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ColorEmblem colorData={selectedColorScheme} size={32} />
             </div>
             <div className="card-selector-trigger-info">
               <div className="card-selector-trigger-title">
-                {selectedColorScheme ? (selectedColorScheme.displayName || selectedColorScheme.schemeName) : (isRTL ? 'ألوان الأسطورة الأصلية (بدون تعديل)' : 'Default Legend Colors')}
+                {selectedColorScheme ? (selectedColorScheme.displayName || selectedColorScheme.schemeName) : (isArabic ? 'ألوان الأسطورة الأصلية (بدون تعديل)' : 'Default Legend Colors')}
               </div>
               <div className="card-selector-trigger-sub">
-                {selectedColorScheme ? (isRTL ? 'أيقونة اللعبة الرسمية • صبغة معتمدة' : 'Official in-game color palette') : (isRTL ? `${catalog?.colorSchemes?.length || 0} نظام ألوان متاح مع أيقونات اللعبة` : `${catalog?.colorSchemes?.length || 0} palettes available`)}
+                {selectedColorScheme ? (isArabic ? 'أيقونة اللعبة الرسمية • صبغة معتمدة' : 'Official in-game color palette') : (isArabic ? `${catalog?.colorSchemes?.length || 0} نظام ألوان متاح مع أيقونات اللعبة` : `${catalog?.colorSchemes?.length || 0} palettes available`)}
               </div>
             </div>
             <div className="card-selector-trigger-badge">
@@ -1127,7 +1127,7 @@ export default function LegendCustomizer({
                 <rect x="14" y="14" width="7" height="7" />
                 <rect x="3" y="14" width="7" height="7" />
               </svg>
-              <span>{isRTL ? 'اختيار من البطاقات' : 'Browse Colors'}</span>
+              <span>{isArabic ? 'اختيار من البطاقات' : 'Browse Colors'}</span>
             </div>
           </div>
         </div>
@@ -1141,7 +1141,7 @@ export default function LegendCustomizer({
             checked={autoRestart}
             onChange={(e) => setAutoRestart(e.target.checked)}
           />
-          <span>{isRTL ? 'إعادة تشغيل اللعبة تلقائياً لتطبيق المظهر فوراً' : 'Auto restart game instantly to apply visual change'}</span>
+          <span>{isArabic ? 'إعادة تشغيل اللعبة تلقائياً لتطبيق المظهر فوراً' : 'Auto restart game instantly to apply visual change'}</span>
         </label>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1149,13 +1149,13 @@ export default function LegendCustomizer({
             className="button-secondary"
             onClick={onRestoreTargetCostume}
             disabled={isBusy}
-            title={isRTL ? 'استعادة ملف الزي الحالي لأصله' : 'Restore target costume to original SWF'}
+            title={isArabic ? 'استعادة ملف الزي الحالي لأصله' : 'Restore target costume to original SWF'}
           >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="1 4 1 10 7 10" />
               <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
             </svg>
-            <span>{isRTL ? 'استعادة الأصلية' : 'Restore Original'}</span>
+            <span>{isArabic ? 'استعادة الأصلية' : 'Restore Original'}</span>
           </button>
 
           {systemInfo?.isGameRunning && (
@@ -1163,12 +1163,12 @@ export default function LegendCustomizer({
               className="button-secondary"
               onClick={onRestartGame}
               disabled={isBusy}
-              title={isRTL ? 'إعادة تشغيل اللعبة فوراً لتحديث المتجهات' : 'Instantly restart Brawlhalla'}
+              title={isArabic ? 'إعادة تشغيل اللعبة فوراً لتحديث المتجهات' : 'Instantly restart Brawlhalla'}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
               </svg>
-              <span>{isRTL ? 'تحديث اللعبة' : 'Restart Game'}</span>
+              <span>{isArabic ? 'تحديث اللعبة' : 'Restart Game'}</span>
             </button>
           )}
 
@@ -1177,7 +1177,7 @@ export default function LegendCustomizer({
             onClick={handleApply}
             disabled={isBusy || !selectedTargetCostume}
           >
-            <span>{isBusy ? (isRTL ? 'جاري التطبيق...' : 'Applying...') : (isRTL ? 'تطبيق التعديل على اللعبة' : 'Apply Modification to Game')}</span>
+            <span>{isBusy ? (isArabic ? 'جاري التطبيق...' : 'Applying...') : (isArabic ? 'تطبيق التعديل على اللعبة' : 'Apply Modification to Game')}</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M7 17L17 7M17 7H7M17 7V17" />
             </svg>
@@ -1190,8 +1190,8 @@ export default function LegendCustomizer({
         <CardPickerModal
           isOpen={true}
           onClose={() => setActivePicker(null)}
-          title={isRTL ? 'اختيار شخصية السكن' : 'Select Skin Character'}
-          subtitle={isRTL ? `اختر أسطورة لاستعارة سكناتها أو اختر Random (${heroCards.length} خيار متاح)` : `Pick a character to borrow skins from or choose Random (${heroCards.length} options)`}
+          title={isArabic ? 'اختيار شخصية السكن' : 'Select Skin Character'}
+          subtitle={isArabic ? `اختر أسطورة لاستعارة سكناتها أو اختر Random (${heroCards.length} خيار متاح)` : `Pick a character to borrow skins from or choose Random (${heroCards.length} options)`}
           items={heroCards}
           selectedId={selectedReplacementHero}
           onSelect={handleSelectHeroFilter}
@@ -1203,8 +1203,8 @@ export default function LegendCustomizer({
         <CardPickerModal
           isOpen={true}
           onClose={() => setActivePicker(null)}
-          title={isRTL ? 'اختيار الزي المستهدف في المخزون' : 'Select Target Costume'}
-          subtitle={isRTL ? `اختر الزي الذي تملكه لـ ${legend.displayName} وسيتم استبدال شكله` : `Costume in inventory to replace`}
+          title={isArabic ? 'اختيار الزي المستهدف في المخزون' : 'Select Target Costume'}
+          subtitle={isArabic ? `اختر الزي الذي تملكه لـ ${legend.displayName} وسيتم استبدال شكله` : `Costume in inventory to replace`}
           items={targetCostumeCards}
           selectedId={selectedTargetCostume?.costumeId || selectedTargetCostume?.costumeName}
           onSelect={handleSelectTargetCostume}
@@ -1216,11 +1216,11 @@ export default function LegendCustomizer({
         <CardPickerModal
           isOpen={true}
           onClose={() => setActivePicker(null)}
-          title={isRTL ? 'اختيار زي ومظهر الاستبدال' : 'Select Visual Replacement Skin'}
+          title={isArabic ? 'اختيار زي ومظهر الاستبدال' : 'Select Visual Replacement Skin'}
           subtitle={
             selectedReplacementHero === 'Random'
-              ? (isRTL ? 'مظاهر عشوائية من جميع الأساطير' : 'Random skins across all legends')
-              : (isRTL ? `مظاهر أسطورة ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} مظهر متاح)` : `Skins for ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} skins)`)
+              ? (isArabic ? 'مظاهر عشوائية من جميع الأساطير' : 'Random skins across all legends')
+              : (isArabic ? `مظاهر أسطورة ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} مظهر متاح)` : `Skins for ${currentSelectedHeroDisplayName} (${replacementCostumeCards.length - 1} skins)`)
           }
           items={replacementCostumeCards}
           selectedId={selectedReplacementCostume ? (selectedReplacementCostume.costumeId != null && selectedReplacementCostume.costumeId !== 0 ? selectedReplacementCostume.costumeId : selectedReplacementCostume.costumeName) : '__NONE__'}
@@ -1234,8 +1234,8 @@ export default function LegendCustomizer({
         <CardPickerModal
           isOpen={true}
           onClose={() => setActivePicker(null)}
-          title={isRTL ? 'اختيار نظام الألوان والصبغة' : 'Select Color Scheme'}
-          subtitle={isRTL ? `اختر الصبغة بأيقونتها الأصلية كما في اللعبة (${colorSchemeCards.length} نظام ألوان)` : `Choose palette with authentic in-game emblems (${colorSchemeCards.length} palettes)`}
+          title={isArabic ? 'اختيار نظام الألوان والصبغة' : 'Select Color Scheme'}
+          subtitle={isArabic ? `اختر الصبغة بأيقونتها الأصلية كما في اللعبة (${colorSchemeCards.length} نظام ألوان)` : `Choose palette with authentic in-game emblems (${colorSchemeCards.length} palettes)`}
           items={colorSchemeCards}
           selectedId={selectedColorScheme ? (selectedColorScheme.schemeId || selectedColorScheme.schemeName) : '__NONE__'}
           onSelect={handleSelectColorScheme}
@@ -1247,8 +1247,8 @@ export default function LegendCustomizer({
         <CardPickerModal
           isOpen={true}
           onClose={() => setActivePicker(null)}
-          title={isRTL ? `اختيار مظهر سلاح: ${tWeapon(legend.weapon1)}` : `Select ${tWeapon(legend.weapon1)} Skin`}
-          subtitle={isRTL ? `قائمة حصرية لمظاهر سلاح الـ ${tWeapon(legend.weapon1)} فقط (${weapon1Skins.length} مظهر متاح)` : `${weapon1Skins.length} skins for ${tWeapon(legend.weapon1)} only`}
+          title={isArabic ? `اختيار مظهر سلاح: ${tWeapon(legend.weapon1)}` : `Select ${tWeapon(legend.weapon1)} Skin`}
+          subtitle={isArabic ? `قائمة حصرية لمظاهر سلاح الـ ${tWeapon(legend.weapon1)} فقط (${weapon1Skins.length} مظهر متاح)` : `${weapon1Skins.length} skins for ${tWeapon(legend.weapon1)} only`}
           items={weapon1Cards}
           selectedId={selectedReplacementWeapon1 ? (selectedReplacementWeapon1.weaponSkinId != null && selectedReplacementWeapon1.weaponSkinId !== 0 ? selectedReplacementWeapon1.weaponSkinId : selectedReplacementWeapon1.weaponSkinName) : '__NONE__'}
           onSelect={handleSelectWeapon1}
@@ -1262,8 +1262,8 @@ export default function LegendCustomizer({
         <CardPickerModal
           isOpen={true}
           onClose={() => setActivePicker(null)}
-          title={isRTL ? `اختيار مظهر سلاح: ${tWeapon(legend.weapon2)}` : `Select ${tWeapon(legend.weapon2)} Skin`}
-          subtitle={isRTL ? `قائمة حصرية لمظاهر سلاح الـ ${tWeapon(legend.weapon2)} فقط (${weapon2Skins.length} مظهر متاح)` : `${weapon2Skins.length} skins for ${tWeapon(legend.weapon2)} only`}
+          title={isArabic ? `اختيار مظهر سلاح: ${tWeapon(legend.weapon2)}` : `Select ${tWeapon(legend.weapon2)} Skin`}
+          subtitle={isArabic ? `قائمة حصرية لمظاهر سلاح الـ ${tWeapon(legend.weapon2)} فقط (${weapon2Skins.length} مظهر متاح)` : `${weapon2Skins.length} skins for ${tWeapon(legend.weapon2)} only`}
           items={weapon2Cards}
           selectedId={selectedReplacementWeapon2 ? (selectedReplacementWeapon2.weaponSkinId != null && selectedReplacementWeapon2.weaponSkinId !== 0 ? selectedReplacementWeapon2.weaponSkinId : selectedReplacementWeapon2.weaponSkinName) : '__NONE__'}
           onSelect={handleSelectWeapon2}

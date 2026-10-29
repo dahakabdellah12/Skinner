@@ -160,25 +160,33 @@ public partial class MainWindow : Window
             var core = MainWebView.CoreWebView2;
 
             // 3. Configure Security and Origin
-            core.Settings.AreDefaultScriptDialogsEnabled = true;
+            // JavaScript alert/confirm/prompt dialogs are never used by the UI; disabling them
+            // prevents hostile page content from blocking the WebView thread.
+            core.Settings.AreDefaultScriptDialogsEnabled = false;
             core.Settings.IsStatusBarEnabled = false;
 
             // Restrict Navigation to authorized local or dev origins
             core.NavigationStarting += (s, args) =>
             {
-                var uri = new Uri(args.Uri);
-                bool isAllowed = (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) && uri.Port == 5173) ||
-                                 uri.Host.Equals("appassets.local", StringComparison.OrdinalIgnoreCase);
+                bool isAllowed = false;
+                if (Uri.TryCreate(args.Uri, UriKind.Absolute, out var uri))
+                {
+                    isAllowed = (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) && uri.Port == 5173) ||
+                                uri.Host.Equals("appassets.local", StringComparison.OrdinalIgnoreCase);
+                }
 
-                if (!isAllowed && !args.Uri.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                if (!isAllowed)
                 {
                     args.Cancel = true;
-                    // Open external links in default browser
-                    try
+                    // Open external links in the default browser, but only over HTTP(S).
+                    if (IsSafeExternalUri(args.Uri))
                     {
-                        Process.Start(new ProcessStartInfo { FileName = args.Uri, UseShellExecute = true });
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo { FileName = args.Uri, UseShellExecute = true });
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
             };
 
@@ -186,7 +194,7 @@ public partial class MainWindow : Window
             core.NewWindowRequested += (s, args) =>
             {
                 args.Handled = true;
-                if (!string.IsNullOrEmpty(args.Uri))
+                if (IsSafeExternalUri(args.Uri))
                 {
                     try
                     {
@@ -315,6 +323,12 @@ public partial class MainWindow : Window
 
         // Default to candidate 0
         return candidates[0];
+    }
+
+    private static bool IsSafeExternalUri(string? uriString)
+    {
+        return Uri.TryCreate(uriString, UriKind.Absolute, out var uri)
+               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
     private static async Task<bool> CheckDevServerRunningAsync(string url)

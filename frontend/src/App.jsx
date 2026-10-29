@@ -10,7 +10,7 @@ import { api } from './services/api';
 import { useLanguage } from './i18n/LanguageContext';
 
 export default function App() {
-  const { isRTL } = useLanguage();
+  const { isArabic } = useLanguage();
   const [catalog, setCatalog] = useState(null);
   const [systemInfo, setSystemInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,13 +84,13 @@ export default function App() {
         setCatalog(cat);
       } catch (err) {
         console.error('Initialization error:', err);
-        showToast((isRTL ? 'فشل تحميل بيانات اللعبة: ' : 'Failed to load game catalog: ') + err.message, 'error');
+        showToast((isArabic ? 'فشل تحميل بيانات اللعبة: ' : 'Failed to load game catalog: ') + err.message, 'error');
       } finally {
         setLoading(false);
       }
     }
     init();
-  }, [showToast, isRTL]);
+  }, [showToast, isArabic]);
 
   // Listen for background update progress events from WebView bridge
   useEffect(() => {
@@ -143,16 +143,16 @@ export default function App() {
     setIsUpdatePaused(false);
 
     try {
-      await api.installUpdate(pendingUpdate.downloadUrl, pendingUpdate.latestVersion);
+      await api.installUpdate(pendingUpdate.downloadUrl, pendingUpdate.latestVersion, pendingUpdate.sha256);
     } catch (err) {
       console.error('Install update failed:', err);
       showToast(
-        (isRTL ? 'فشل تثبيت التحديث: ' : 'Update installation failed: ') + err.message,
+        (isArabic ? 'فشل تثبيت التحديث: ' : 'Update installation failed: ') + err.message,
         'error'
       );
       setUpdateProgress(null);
     }
-  }, [pendingUpdate, isRTL, showToast]);
+  }, [pendingUpdate, isArabic, showToast]);
 
   const handlePauseUpdate = useCallback(async () => {
     try {
@@ -246,21 +246,21 @@ export default function App() {
       if (result.success) {
         if (req.autoRestart && systemInfo?.isGameRunning) {
           showToast(
-            isRTL
+            isArabic
               ? 'تم تطبيق التعديل بنجاح وإعادة تشغيل اللعبة فوراً!'
               : 'Modification applied and game restarted successfully!',
             'success'
           );
         } else if (systemInfo?.isGameRunning) {
           showToast(
-            isRTL
+            isArabic
               ? 'تم تطبيق التعديل على اللعبة مباشرة! غيّر الأسطورة في شاشة الاختيار لترى التعديل.'
               : 'Applied live! Switch legends in-game to see the new look.',
             'success'
           );
         } else {
           showToast(
-            isRTL
+            isArabic
               ? 'تم تطبيق التعديل بنجاح على ملفات اللعبة.'
               : 'Modification successfully written to game files.',
             'success'
@@ -268,21 +268,21 @@ export default function App() {
         }
         await fetchSystemInfo();
       } else {
-        showToast(result.message || (isRTL ? 'فشل تطبيق التعديل.' : 'Modification failed.'), 'error');
+        showToast(result.message || (isArabic ? 'فشل تطبيق التعديل.' : 'Modification failed.'), 'error');
       }
     } catch (err) {
       console.error('Apply error:', err);
-      showToast((isRTL ? 'خطأ أثناء تطبيق التعديل: ' : 'Error applying modification: ') + err.message, 'error');
+      showToast((isArabic ? 'خطأ أثناء تطبيق التعديل: ' : 'Error applying modification: ') + err.message, 'error');
     } finally {
       setIsBusy(false);
     }
-  }, [isRTL, showToast, systemInfo, fetchSystemInfo]);
+  }, [isArabic, showToast, systemInfo, fetchSystemInfo]);
 
   // Handler: Restore Target Costume's SWF
   const handleRestoreTargetCostume = useCallback(async () => {
     const swf = activeLegend?.primarySwf;
     if (!swf) {
-      showToast(isRTL ? 'لا يوجد ملف مرتبط بهذه الأسطورة.' : 'No SWF file linked.', 'error');
+      showToast(isArabic ? 'لا يوجد ملف مرتبط بهذه الأسطورة.' : 'No SWF file linked.', 'error');
       return;
     }
 
@@ -291,7 +291,7 @@ export default function App() {
       const success = await api.restoreCostume(swf);
       if (success) {
         showToast(
-          isRTL
+          isArabic
             ? `تمت استعادة ملف "${swf}" لحالته الأصلية بنجاح.`
             : `Successfully restored "${swf}" to original pristine state.`,
           'success'
@@ -299,18 +299,18 @@ export default function App() {
         await fetchSystemInfo();
       } else {
         showToast(
-          isRTL
+          isArabic
             ? `الملف "${swf}" بحالته الأصلية بالفعل.`
             : `File "${swf}" is already original or has no backup.`,
           'info'
         );
       }
     } catch (err) {
-      showToast((isRTL ? 'فشلت الاستعادة: ' : 'Restore failed: ') + err.message, 'error');
+      showToast((isArabic ? 'فشلت الاستعادة: ' : 'Restore failed: ') + err.message, 'error');
     } finally {
       setIsBusy(false);
     }
-  }, [activeLegend, isRTL, showToast, fetchSystemInfo]);
+  }, [activeLegend, isArabic, showToast, fetchSystemInfo]);
 
   // Handler: Instant Restart Game
   const handleRestartGame = useCallback(async () => {
@@ -319,19 +319,19 @@ export default function App() {
       const ok = await api.restartGame();
       if (ok) {
         showToast(
-          isRTL ? 'تمت إعادة تشغيل اللعبة فوراً وتحديث المظاهر!' : 'Brawlhalla restarted successfully!',
+          isArabic ? 'تمت إعادة تشغيل اللعبة فوراً وتحديث المظاهر!' : 'Brawlhalla restarted successfully!',
           'success'
         );
       } else {
-        showToast(isRTL ? 'فشلت إعادة تشغيل اللعبة.' : 'Failed to restart Brawlhalla.', 'error');
+        showToast(isArabic ? 'فشلت إعادة تشغيل اللعبة.' : 'Failed to restart Brawlhalla.', 'error');
       }
       await fetchSystemInfo();
     } catch (err) {
-      showToast((isRTL ? 'خطأ في إعادة التشغيل: ' : 'Restart error: ') + err.message, 'error');
+      showToast((isArabic ? 'خطأ في إعادة التشغيل: ' : 'Restart error: ') + err.message, 'error');
     } finally {
       setIsBusy(false);
     }
-  }, [isRTL, showToast, fetchSystemInfo]);
+  }, [isArabic, showToast, fetchSystemInfo]);
 
   // Handler: Factory Reset & Revert All to Original
   const handleRestoreEverything = useCallback(async () => {
@@ -350,7 +350,7 @@ export default function App() {
       await fetchSystemInfo();
       setIsSettingsOpen(false);
 
-      const msg = isRTL
+      const msg = isArabic
         ? (restoredCount > 0
             ? `تمت استعادة كافة ملفات اللعبة للأصل (${restoredCount} ملف) وإعادة ضبط جميع القوائم بنجاح!`
             : 'كافة ملفات اللعبة بحالتها الأصلية بالفعل، وتمت إعادة ضبط جميع القوائم والتخصيصات للأصل!')
@@ -361,11 +361,11 @@ export default function App() {
       showToast(msg, 'success');
     } catch (err) {
       console.error('Factory restore failed:', err);
-      showToast((isRTL ? 'فشلت استعادة الملفات الأصلية: ' : 'Failed to restore original files: ') + err.message, 'error');
+      showToast((isArabic ? 'فشلت استعادة الملفات الأصلية: ' : 'Failed to restore original files: ') + err.message, 'error');
     } finally {
       setIsBusy(false);
     }
-  }, [isRTL, showToast, fetchSystemInfo]);
+  }, [isArabic, showToast, fetchSystemInfo]);
 
   // Handler: Select custom Brawlhalla game path
   const handleSelectGamePath = useCallback(async (pathOrAction) => {
@@ -383,7 +383,7 @@ export default function App() {
         setSystemInfo(res.systemInfo);
         setCatalog(res.catalog);
         showToast(
-          isRTL
+          isArabic
             ? `تم التعرف على مسار اللعبة بنجاح! تم تحميل ${res.catalog?.legends?.length || 0} أسطورة.`
             : `Game path detected! Loaded ${res.catalog?.legends?.length || 0} legends.`,
           'success'
@@ -392,13 +392,13 @@ export default function App() {
     } catch (err) {
       console.error('Failed to set game path:', err);
       showToast(
-        (isRTL ? 'فشل تحديد مسار اللعبة: ' : 'Failed to set game path: ') + err.message,
+        (isArabic ? 'فشل تحديد مسار اللعبة: ' : 'Failed to set game path: ') + err.message,
         'error'
       );
     } finally {
       setLoading(false);
     }
-  }, [isRTL, showToast]);
+  }, [isArabic, showToast]);
 
   return (
     <div className="app-container">
@@ -423,7 +423,7 @@ export default function App() {
                 animation: 'spin 0.8s linear infinite'
               }} />
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 600 }}>
-                {isRTL ? 'جاري فحص ملفات اللعبة وتحميل الأساطير والمظاهر...' : 'Analyzing Brawlhalla assets and loading legends...'}
+                {isArabic ? 'جاري فحص ملفات اللعبة وتحميل الأساطير والمظاهر...' : 'Analyzing Brawlhalla assets and loading legends...'}
               </p>
               <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
             </div>

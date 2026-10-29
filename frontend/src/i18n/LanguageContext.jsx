@@ -15,7 +15,7 @@ export function LanguageProvider({ children }) {
     return 'ar';
   });
 
-  const isRTL = lang === 'ar';
+  const isArabic = lang === 'ar';
 
   useEffect(() => {
     try {
@@ -23,7 +23,6 @@ export function LanguageProvider({ children }) {
     } catch { }
 
     if (typeof document !== 'undefined') {
-      document.documentElement.dir = 'ltr';
       document.documentElement.lang = lang;
     }
   }, [lang]);
@@ -62,7 +61,7 @@ export function LanguageProvider({ children }) {
     lang,
     setLang,
     toggleLang,
-    isRTL,
+    isArabic,
     t,
     tWeapon
   };

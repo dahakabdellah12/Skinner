@@ -17,21 +17,47 @@ namespace BrawlhallaSkinStudio.Core.Services;
 
 public static class PreviewRenderer
 {
+    private const int MaxSvgCacheEntries = 512;
+    private const int MaxSwfCacheEntries = 16;
+
     private static readonly Dictionary<string, string> _svgCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, SwfFile> _swfFileCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object _svgCacheLock = new();
+
+    private static bool TryGetCachedSvg(string cacheKey, out string? svg)
+    {
+        lock (_svgCacheLock)
+        {
+            return _svgCache.TryGetValue(cacheKey, out svg);
+        }
+    }
+
+    private static void SetCachedSvg(string cacheKey, string svg)
+    {
+        lock (_svgCacheLock)
+        {
+            if (_svgCache.Count >= MaxSvgCacheEntries && !_svgCache.ContainsKey(cacheKey))
+            {
+                // Drop the oldest half in one pass instead of evicting on every insert.
+                foreach (var key in _svgCache.Keys.Take(MaxSvgCacheEntries / 2).ToList())
+                {
+                    _svgCache.Remove(key);
+                }
+            }
+            _svgCache[cacheKey] = svg;
+        }
+    }
 
     public static void InvalidateCache(string? swfPath = null)
     {
-        lock (_swfFileCache)
+        lock (_svgCacheLock)
         {
             if (string.IsNullOrEmpty(swfPath))
             {
-                _swfFileCache.Clear();
                 _svgCache.Clear();
             }
             else
             {
-                _swfFileCache.Remove(swfPath);
                 string fileName = Path.GetFileName(swfPath);
                 var keysToRemove = _svgCache.Keys
                     .Where(k => k.StartsWith(fileName + "#", StringComparison.OrdinalIgnoreCase))
@@ -40,6 +66,18 @@ public static class PreviewRenderer
                 {
                     _svgCache.Remove(k);
                 }
+            }
+        }
+
+        lock (_swfFileCache)
+        {
+            if (string.IsNullOrEmpty(swfPath))
+            {
+                _swfFileCache.Clear();
+            }
+            else
+            {
+                _swfFileCache.Remove(swfPath);
             }
         }
     }
@@ -51,6 +89,15 @@ public static class PreviewRenderer
         {
             if (!_swfFileCache.TryGetValue(swfPath, out var swf))
             {
+                if (_swfFileCache.Count >= MaxSwfCacheEntries)
+                {
+                    var oldest = _swfFileCache.Keys.FirstOrDefault();
+                    if (oldest != null)
+                    {
+                        _swfFileCache.Remove(oldest);
+                    }
+                }
+
                 using var fs = new FileStream(swfPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 swf = SwfFile.ReadFrom(fs);
                 _swfFileCache[swfPath] = swf;
@@ -67,7 +114,7 @@ public static class PreviewRenderer
             ? "#c" + string.Join("_", colorMap.OrderBy(k => k.Key).Select(k => $"{k.Key:X6}:{k.Value:X6}"))
             : "";
         string cacheKey = $"{Path.GetFileName(swfPath)}#{symbolName}{colorKey}";
-        if (_svgCache.TryGetValue(cacheKey, out var cached))
+        if (TryGetCachedSvg(cacheKey, out var cached))
             return cached;
 
         try
@@ -91,7 +138,7 @@ public static class PreviewRenderer
             string? svgString = BuildSvgFromPlacedShapes(placedShapes, colorMap);
             if (svgString != null)
             {
-                _svgCache[cacheKey] = svgString;
+                SetCachedSvg(cacheKey, svgString);
 
                 if (!string.IsNullOrEmpty(cacheFolder))
                 {
@@ -125,7 +172,7 @@ public static class PreviewRenderer
             ? "#c" + string.Join("_", colorMap.OrderBy(k => k.Key).Select(k => $"{k.Key:X6}:{k.Value:X6}"))
             : "";
         string cacheKey = $"paired#{baseWeapon}#{symbol}#{swfFile}#{ownerHero}{colorKey}";
-        if (_svgCache.TryGetValue(cacheKey, out var cached))
+        if (TryGetCachedSvg(cacheKey, out var cached))
             return cached;
 
         string bw = baseWeapon?.Trim() ?? "";
@@ -212,14 +259,14 @@ public static class PreviewRenderer
                 string? svg = BuildSvgFromPlacedShapes(placedShapes, colorMap);
                 if (svg != null)
                 {
-                    _svgCache[cacheKey] = svg;
+                    SetCachedSvg(cacheKey, svg);
                     return svg;
                 }
             }
 
             string tooltipSwf = Path.Combine(gamePath, "UI_TooltipAnimations.swf");
             var fb = RenderSymbolToSvg(tooltipSwf, "a__TooltipAnimation_KatarPose", null, colorMap);
-            if (fb != null) { _svgCache[cacheKey] = fb; return fb; }
+            if (fb != null) { SetCachedSvg(cacheKey, fb); return fb; }
         }
         else if (isBoots)
         {
@@ -275,14 +322,14 @@ public static class PreviewRenderer
                 string? svg = BuildSvgFromPlacedShapes(placedShapes, colorMap);
                 if (svg != null)
                 {
-                    _svgCache[cacheKey] = svg;
+                    SetCachedSvg(cacheKey, svg);
                     return svg;
                 }
             }
 
             string tooltipSwf = Path.Combine(gamePath, "UI_TooltipAnimations.swf");
             var fb = RenderSymbolToSvg(tooltipSwf, "a__TooltipAnimation_BootsPose", null, colorMap);
-            if (fb != null) { _svgCache[cacheKey] = fb; return fb; }
+            if (fb != null) { SetCachedSvg(cacheKey, fb); return fb; }
         }
         else if (isFists)
         {
@@ -344,14 +391,14 @@ public static class PreviewRenderer
                 string? svg = BuildSvgFromPlacedShapes(placedShapes, colorMap);
                 if (svg != null)
                 {
-                    _svgCache[cacheKey] = svg;
+                    SetCachedSvg(cacheKey, svg);
                     return svg;
                 }
             }
 
             string tooltipSwf = Path.Combine(gamePath, "UI_TooltipAnimations.swf");
             var fb = RenderSymbolToSvg(tooltipSwf, "a__TooltipAnimation_FistsPose", null, colorMap);
-            if (fb != null) { _svgCache[cacheKey] = fb; return fb; }
+            if (fb != null) { SetCachedSvg(cacheKey, fb); return fb; }
         }
 
         return null;

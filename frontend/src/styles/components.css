@@ -237,10 +237,6 @@
   transform: translate(2px, -2px);
 }
 
-[dir="rtl"] .button-primary:hover:not(:disabled) svg {
-  transform: translate(-2px, -2px);
-}
-
 .button-secondary {
   display: inline-flex;
   align-items: center;
@@ -380,11 +376,6 @@
   z-index: 2;
 }
 
-[dir="rtl"] .product-badge {
-  right: auto;
-  left: 10px;
-}
-
 .product-badge.default-badge {
   background: #374151;
   color: #9CA3AF;
@@ -484,10 +475,6 @@
   transform: translate(2px, -2px);
 }
 
-[dir="rtl"] .card-button:hover svg {
-  transform: translate(-2px, -2px);
-}
-
 /* --- Search Box --- */
 .search-box {
   position: relative;
@@ -504,11 +491,6 @@
   height: 16px;
   color: var(--text-muted);
   pointer-events: none;
-}
-
-[dir="rtl"] .search-icon {
-  left: auto;
-  right: 12px;
 }
 
 .search-input {
@@ -545,11 +527,6 @@
   pointer-events: none;
 }
 
-[dir="rtl"] .shortcut {
-  right: auto;
-  left: 10px;
-}
-
 .clear-button {
   position: absolute;
   right: 10px;
@@ -562,11 +539,6 @@
   justify-content: center;
   padding: 4px;
   border-radius: 50%;
-}
-
-[dir="rtl"] .clear-button {
-  right: auto;
-  left: 10px;
 }
 
 .clear-button:hover {
@@ -586,10 +558,6 @@
   user-select: none;
   flex-shrink: 0;
   z-index: 1000;
-}
-
-[dir="rtl"] .title-bar {
-  padding: 0 18px 0 0;
 }
 
 .title-bar-drag {
@@ -737,11 +705,6 @@
   display: flex;
   align-items: center;
   height: 100%;
-}
-
-[dir="rtl"] .window-controls {
-  margin-left: 0;
-  margin-right: 8px;
 }
 
 .window-button {
@@ -932,12 +895,6 @@
   animation: slideDownToast 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   max-width: 560px;
   pointer-events: auto;
-}
-
-[dir="rtl"] .toast-banner {
-  right: auto;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .toast-success {

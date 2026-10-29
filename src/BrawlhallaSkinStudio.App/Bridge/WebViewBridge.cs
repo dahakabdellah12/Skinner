@@ -5,8 +5,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BrawlhallaSkinStudio.Core.Engine;
@@ -18,6 +20,21 @@ namespace BrawlhallaSkinStudio.App.Bridge;
 
 public class WebViewBridge
 {
+    private static readonly Regex RepoPattern = new(@"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", RegexOptions.Compiled);
+    private static readonly Regex VersionPattern = new(@"^\d+(\.\d+){0,3}$", RegexOptions.Compiled);
+    private static readonly Regex Sha256Pattern = new(@"^[a-fA-F0-9]{64}$", RegexOptions.Compiled);
+
+    private const long MaxUpdateArchiveBytes = 512L * 1024 * 1024;
+    private const int MaxUpdateArchiveEntries = 20000;
+
+    private static readonly string CurrentVersion = ResolveCurrentVersion();
+
+    private static string ResolveCurrentVersion()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        return version == null ? "3.1.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+    }
+
     private readonly CoreWebView2 _webView;
     private GameInstallation _installation;
     private CatalogService _catalog;
@@ -261,14 +278,7 @@ public class WebViewBridge
 
     private object GetSystemInfo()
     {
-        int activeMods = 0;
-        foreach (var r in _backupManager.Records)
-        {
-            foreach (var file in r.FileOriginalHashes.Keys)
-            {
-                if (_backupManager.IsFileModified(file)) activeMods++;
-            }
-        }
+        int activeMods = _backupManager.CountModifiedFiles();
 
         return new
         {
@@ -279,6 +289,7 @@ public class WebViewBridge
             isValid = _installation.IsValid,
             isGameRunning = GameLauncher.IsGameRunning(),
             activeModCount = activeMods,
+            appVersion = CurrentVersion,
             totalLegends = _catalog.Legends.Count,
             totalCostumes = _catalog.Costumes.Count,
             totalWeaponSkins = _catalog.WeaponSkins.Count,
@@ -1038,7 +1049,7 @@ public class WebViewBridge
         return new
         {
             success = true,
-            message = "تم تفريغ ذاكرة التخزين المؤقت للصور بنجاح."
+            message = "Asset preview cache cleared successfully."
         };
     }
 
@@ -1085,7 +1096,7 @@ public class WebViewBridge
             return new
             {
                 success = true,
-                message = "تم فحص وإصلاح ملفات اللعبة ومسح الكاش وتحديث الأصول بنجاح.",
+                message = "Game installation validated and repaired successfully.",
                 gamePath = _installation.GamePath,
                 version = _installation.Version,
                 swfCount = _installation.DiscoveredSwfCount,
@@ -1101,7 +1112,7 @@ public class WebViewBridge
             return new
             {
                 success = false,
-                message = "تعذر العثور على مجلد اللعبة الرسمي. يرجى تحديد مسار Brawlhalla.exe يدوياً.",
+                message = "Could not find a valid game installation. Please select Brawlhalla.exe manually.",
                 validationMessages = detected.ValidationMessages
             };
         }
@@ -1118,7 +1129,7 @@ public class WebViewBridge
             if (File.Exists(repoFile))
             {
                 string custom = File.ReadAllText(repoFile).Trim();
-                if (!string.IsNullOrEmpty(custom) && custom.Contains('/'))
+                if (RepoPattern.IsMatch(custom))
                     return custom;
             }
         }
@@ -1129,25 +1140,30 @@ public class WebViewBridge
     private object SetGitHubRepo(JsonElement payload)
     {
         string? repo = payload.TryGetProperty("repo", out var rProp) ? rProp.GetString()?.Trim() : null;
-        if (!string.IsNullOrEmpty(repo) && repo.Contains('/'))
+        if (string.IsNullOrEmpty(repo) || !RepoPattern.IsMatch(repo))
         {
-            try
+            return new
             {
-                string cfgDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BrawlhallaSkinStudio");
-                Directory.CreateDirectory(cfgDir);
-                File.WriteAllText(Path.Combine(cfgDir, "github_repo.txt"), repo);
-            }
-            catch { }
+                success = false,
+                message = "Repository must use the owner/name format.",
+                repo = GetGitHubRepo()
+            };
         }
+
+        try
+        {
+            string cfgDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BrawlhallaSkinStudio");
+            Directory.CreateDirectory(cfgDir);
+            File.WriteAllText(Path.Combine(cfgDir, "github_repo.txt"), repo);
+        }
+        catch { }
         return new { success = true, repo = GetGitHubRepo() };
     }
 
     private async Task<object> CheckForUpdatesAsync(JsonElement payload)
     {
-        const string currentVersion = "3.0.0";
-        string targetRepo = payload.TryGetProperty("repo", out var rProp) && !string.IsNullOrWhiteSpace(rProp.GetString())
-            ? rProp.GetString()!.Trim()
-            : GetGitHubRepo();
+        string requestedRepo = payload.TryGetProperty("repo", out var rProp) ? rProp.GetString()?.Trim() ?? "" : "";
+        string targetRepo = RepoPattern.IsMatch(requestedRepo) ? requestedRepo : GetGitHubRepo();
 
         string repoUrl = $"https://github.com/{targetRepo}";
         string releasesUrl = $"{repoUrl}/releases";
@@ -1156,8 +1172,8 @@ public class WebViewBridge
         try
         {
             using var client = new HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(8);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater/3.0.0");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-OpenSource-Updater/{CurrentVersion}");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);
@@ -1172,16 +1188,23 @@ public class WebViewBridge
                 string releaseNotes = root.TryGetProperty("body", out var bProp) ? bProp.GetString() ?? "" : "";
                 string publishedAt = root.TryGetProperty("published_at", out var pubProp) ? pubProp.GetString() ?? "" : "";
 
-                // Look for direct .zip or .exe installer asset in the release
+                // Look for a portable .zip or a setup .exe in the release
                 string downloadUrl = htmlUrl;
                 string? assetName = null;
                 long assetSize = 0;
+                string? sha256 = null;
+
                 string? zipDownloadUrl = null;
-                string? exeDownloadUrl = null;
                 string? zipAssetName = null;
-                string? exeAssetName = null;
                 long zipAssetSize = 0;
+                string? zipDigest = null;
+
+                string? exeDownloadUrl = null;
+                string? exeAssetName = null;
                 long exeAssetSize = 0;
+                string? exeDigest = null;
+
+                string? checksumsUrl = null;
 
                 if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array)
                 {
@@ -1190,39 +1213,65 @@ public class WebViewBridge
                         string aName = asset.TryGetProperty("name", out var anProp) ? anProp.GetString() ?? "" : "";
                         string bUrl = asset.TryGetProperty("browser_download_url", out var dProp) ? dProp.GetString() ?? "" : "";
                         long sVal = asset.TryGetProperty("size", out var sProp) ? sProp.GetInt64() : 0;
+                        string? digest = ReadAssetDigest(asset);
 
-                        if (aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        if (aName.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
+                        {
+                            checksumsUrl = bUrl;
+                        }
+                        else if (aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && zipDownloadUrl == null)
                         {
                             zipAssetName = aName;
                             zipDownloadUrl = bUrl;
                             zipAssetSize = sVal;
+                            zipDigest = digest;
                         }
-                        else if (aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        else if (aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && exeDownloadUrl == null)
                         {
                             exeAssetName = aName;
                             exeDownloadUrl = bUrl;
                             exeAssetSize = sVal;
+                            exeDigest = digest;
                         }
                     }
                 }
 
-                // Prefer portable zip for seamless silent background in-place updates, fallback to setup exe
+                // Prefer the portable zip for a seamless in-place update, fall back to the setup exe.
                 if (!string.IsNullOrEmpty(zipDownloadUrl))
                 {
                     downloadUrl = zipDownloadUrl;
                     assetName = zipAssetName;
                     assetSize = zipAssetSize;
+                    sha256 = zipDigest;
                 }
                 else if (!string.IsNullOrEmpty(exeDownloadUrl))
                 {
                     downloadUrl = exeDownloadUrl;
                     assetName = exeAssetName;
                     assetSize = exeAssetSize;
+                    sha256 = exeDigest;
+                }
+
+                // Fall back to the release's SHA256SUMS.txt when GitHub did not expose an asset digest.
+                if (sha256 == null && !string.IsNullOrEmpty(checksumsUrl) && !string.IsNullOrEmpty(assetName))
+                {
+                    try
+                    {
+                        string? sumsText = await TryFetchTextAsync(client, checksumsUrl);
+                        if (sumsText != null)
+                        {
+                            sha256 = FindChecksumForAsset(sumsText, assetName);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        App.SafeLog("bridge.log", $"[UPDATE] Checksum lookup failed: {ex.Message}");
+                    }
                 }
 
                 string latestVerClean = tagName.TrimStart('v', 'V');
                 bool hasUpdate = false;
-                if (Version.TryParse(latestVerClean, out var latestVer) && Version.TryParse(currentVersion, out var currVer))
+                if (Version.TryParse(latestVerClean, out var latestVer) && Version.TryParse(CurrentVersion, out var currVer))
                 {
                     hasUpdate = latestVer > currVer;
                 }
@@ -1231,14 +1280,16 @@ public class WebViewBridge
                 {
                     success = true,
                     hasUpdate,
-                    currentVersion,
-                    latestVersion = string.IsNullOrEmpty(latestVerClean) ? currentVersion : latestVerClean,
+                    currentVersion = CurrentVersion,
+                    latestVersion = string.IsNullOrEmpty(latestVerClean) ? CurrentVersion : latestVerClean,
                     releaseTitle = string.IsNullOrEmpty(releaseName) ? tagName : releaseName,
                     releaseNotes,
                     htmlUrl,
                     downloadUrl,
                     assetName,
                     assetSizeFormatted = assetSize > 0 ? $"{assetSize / (1024.0 * 1024.0):F1} MB" : null,
+                    sha256,
+                    verified = sha256 != null,
                     repo = targetRepo,
                     repoUrl,
                     releasesUrl,
@@ -1252,10 +1303,10 @@ public class WebViewBridge
                 {
                     success = true,
                     hasUpdate = false,
-                    currentVersion,
-                    latestVersion = currentVersion,
-                    releaseTitle = "BrawlCraft v2.0.3 (Official Open Source)",
-                    releaseNotes = "أنت تستخدم أحدث إصدار مستقر للمشروع المفتوح المصدر على GitHub.",
+                    currentVersion = CurrentVersion,
+                    latestVersion = CurrentVersion,
+                    releaseTitle = $"BrawlCraft v{CurrentVersion} (Official Open Source)",
+                    releaseNotes = "You are running the latest stable open-source release on GitHub.",
                     htmlUrl = releasesUrl,
                     downloadUrl = releasesUrl,
                     repo = targetRepo,
@@ -1272,8 +1323,8 @@ public class WebViewBridge
             {
                 success = true,
                 hasUpdate = false,
-                currentVersion,
-                latestVersion = currentVersion,
+                currentVersion = CurrentVersion,
+                latestVersion = CurrentVersion,
                 networkError = true,
                 errorMessage = ex.Message,
                 repo = targetRepo,
@@ -1282,6 +1333,64 @@ public class WebViewBridge
                 checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
         }
+    }
+
+    private static string? ReadAssetDigest(JsonElement asset)
+    {
+        if (!asset.TryGetProperty("digest", out var digestProp) || digestProp.ValueKind != JsonValueKind.String)
+            return null;
+
+        string digest = digestProp.GetString() ?? "";
+        const string prefix = "sha256:";
+        if (!digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        string hex = digest[prefix.Length..].Trim();
+        return Sha256Pattern.IsMatch(hex) ? hex.ToLowerInvariant() : null;
+    }
+
+    private static string? FindChecksumForAsset(string sumsText, string assetName)
+    {
+        foreach (var raw in sumsText.Split('\n'))
+        {
+            string line = raw.Trim();
+            if (line.Length == 0) continue;
+
+            int separator = line.IndexOfAny([' ', '\t']);
+            if (separator <= 0) continue;
+
+            string hash = line[..separator].Trim();
+            string name = line[(separator + 1)..].Trim().TrimStart('*').Trim();
+            if (name.StartsWith("./", StringComparison.Ordinal)) name = name[2..];
+
+            if (Sha256Pattern.IsMatch(hash) && string.Equals(name, assetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return hash.ToLowerInvariant();
+            }
+        }
+        return null;
+    }
+
+    private static async Task<string?> TryFetchTextAsync(HttpClient client, string url)
+    {
+        if (!IsAllowedGitHubDownloadUrl(url)) return null;
+
+        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        if (!response.IsSuccessStatusCode) return null;
+        if (response.Content.Headers.ContentLength is > 1024 * 1024) return null;
+
+        string text = await response.Content.ReadAsStringAsync();
+        return text.Length <= 1024 * 1024 ? text : null;
+    }
+
+    private static bool IsAllowedGitHubDownloadUrl(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        if (uri.Scheme != Uri.UriSchemeHttps) return false;
+
+        return uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+               || uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
+               || uri.Host.Equals("github-releases.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool PauseUpdate()
@@ -1334,12 +1443,28 @@ public class WebViewBridge
     private async Task<object> InstallUpdateAsync(JsonElement payload)
     {
         string? downloadUrl = payload.TryGetProperty("downloadUrl", out var dProp) ? dProp.GetString() : null;
-        string? targetVersion = payload.TryGetProperty("version", out var vProp) ? vProp.GetString() : "latest";
+        string? requestedVersion = payload.TryGetProperty("version", out var vProp) ? vProp.GetString() : null;
+        string? expectedSha256 = payload.TryGetProperty("sha256", out var sProp) ? sProp.GetString()?.Trim() : null;
 
         if (string.IsNullOrWhiteSpace(downloadUrl))
         {
             throw new ArgumentException("Download URL cannot be empty.");
         }
+
+        if (!IsAllowedGitHubDownloadUrl(downloadUrl))
+        {
+            throw new ArgumentException("Update download URL must be an HTTPS GitHub release URL.");
+        }
+
+        if (string.IsNullOrWhiteSpace(expectedSha256) || !Sha256Pattern.IsMatch(expectedSha256))
+        {
+            throw new InvalidOperationException("Update verification failed: no valid SHA-256 checksum was provided. Refusing to install.");
+        }
+
+        expectedSha256 = expectedSha256.ToLowerInvariant();
+        string targetVersion = !string.IsNullOrWhiteSpace(requestedVersion) && VersionPattern.IsMatch(requestedVersion)
+            ? requestedVersion
+            : "latest";
 
         App.SafeLog("bridge.log", $"[AUTO_UPDATE] Starting download for version {targetVersion} from: {downloadUrl}");
 
@@ -1354,83 +1479,111 @@ public class WebViewBridge
         Directory.CreateDirectory(tempFolder);
 
         string fileName = Path.GetFileName(new Uri(downloadUrl).AbsolutePath);
-        if (string.IsNullOrEmpty(fileName)) fileName = "update.bin";
+        if (string.IsNullOrEmpty(fileName)
+            || fileName is "." or ".."
+            || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            fileName = "update.bin";
+        }
         string downloadedFile = Path.Combine(tempFolder, fileName);
 
         SendEvent("updateProgress", new { status = "starting", progress = 0, isPaused = false, version = targetVersion });
 
-        // Download asset from GitHub with stream progress tracking and pause support
-        using (var client = new HttpClient())
+        try
         {
-            client.Timeout = TimeSpan.FromMinutes(10);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("BrawlCraft-OpenSource-Updater");
-
-            using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
-            response.EnsureSuccessStatusCode();
-
-            long totalBytes = response.Content.Headers.ContentLength ?? -1;
-
-            using var stream = await response.Content.ReadAsStreamAsync(ct);
-            using var fs = new FileStream(downloadedFile, FileMode.Create, FileAccess.Write, FileShare.None);
-
-            byte[] buffer = new byte[81920]; // 80 KB
-            long totalRead = 0;
-            int bytesRead;
-            DateTime lastReportTime = DateTime.MinValue;
-
-            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+            // Download asset from GitHub with stream progress tracking and pause support
+            using (var client = new HttpClient())
             {
-                // If paused, wait here until resumed or cancelled
-                while (_isUpdatePaused && !ct.IsCancellationRequested)
+                client.Timeout = TimeSpan.FromMinutes(10);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-OpenSource-Updater/{CurrentVersion}");
+
+                using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+                response.EnsureSuccessStatusCode();
+
+                long totalBytes = response.Content.Headers.ContentLength ?? -1;
+                if (totalBytes > MaxUpdateArchiveBytes)
                 {
-                    _updatePauseEvent.Wait(200);
+                    throw new InvalidOperationException("Update package is larger than the allowed limit.");
                 }
-                ct.ThrowIfCancellationRequested();
 
-                await fs.WriteAsync(buffer, 0, bytesRead, ct);
-                totalRead += bytesRead;
+                using var stream = await response.Content.ReadAsStreamAsync(ct);
+                using var fs = new FileStream(downloadedFile, FileMode.Create, FileAccess.Write, FileShare.None);
 
-                if ((DateTime.Now - lastReportTime).TotalMilliseconds > 120 || totalRead == totalBytes)
+                byte[] buffer = new byte[81920]; // 80 KB
+                long totalRead = 0;
+                int bytesRead;
+                DateTime lastReportTime = DateTime.MinValue;
+
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
                 {
-                    lastReportTime = DateTime.Now;
-                    int percent = totalBytes > 0 ? (int)((totalRead * 100) / totalBytes) : 0;
-                    SendEvent("updateProgress", new
+                    // If paused, wait here until resumed or cancelled
+                    while (_isUpdatePaused && !ct.IsCancellationRequested)
                     {
-                        status = "downloading",
-                        progress = percent,
-                        bytesDownloaded = totalRead,
-                        totalBytes = totalBytes,
-                        isPaused = _isUpdatePaused,
-                        version = targetVersion
-                    });
+                        _updatePauseEvent.Wait(200);
+                    }
+                    ct.ThrowIfCancellationRequested();
+
+                    await fs.WriteAsync(buffer, 0, bytesRead, ct);
+                    totalRead += bytesRead;
+                    if (totalRead > MaxUpdateArchiveBytes)
+                    {
+                        throw new InvalidOperationException("Update package is larger than the allowed limit.");
+                    }
+
+                    if ((DateTime.Now - lastReportTime).TotalMilliseconds > 120 || totalRead == totalBytes)
+                    {
+                        lastReportTime = DateTime.Now;
+                        int percent = totalBytes > 0 ? (int)((totalRead * 100) / totalBytes) : 0;
+                        SendEvent("updateProgress", new
+                        {
+                            status = "downloading",
+                            progress = percent,
+                            bytesDownloaded = totalRead,
+                            totalBytes,
+                            isPaused = _isUpdatePaused,
+                            version = targetVersion
+                        });
+                    }
                 }
             }
-        }
 
-        App.SafeLog("bridge.log", $"[AUTO_UPDATE] Successfully downloaded update payload to {downloadedFile}");
-        SendEvent("updateProgress", new { status = "installing", progress = 100, isPaused = false, version = targetVersion });
-
-        string appDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
-        string appExe = Process.GetCurrentProcess().MainModule?.FileName ?? Path.Combine(appDir, "BrawlCraft.exe");
-        int currentPid = Environment.ProcessId;
-
-        // If it's a Zip package, perform seamless in-place update using a helper batch script
-        if (downloadedFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-        {
-            string extractDir = Path.Combine(tempFolder, "extracted");
-            Directory.CreateDirectory(extractDir);
-            ZipFile.ExtractToDirectory(downloadedFile, extractDir, overwriteFiles: true);
-
-            // Handle potential nested folder inside the zip
-            string contentDir = extractDir;
-            var subDirs = Directory.GetDirectories(extractDir);
-            if (subDirs.Length == 1 && !File.Exists(Path.Combine(extractDir, "BrawlCraft.exe")) && File.Exists(Path.Combine(subDirs[0], "BrawlCraft.exe")))
+            // Refuse to execute anything that does not match the published checksum.
+            string actualSha256 = BackupManager.ComputeSha256(downloadedFile);
+            if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
             {
-                contentDir = subDirs[0];
+                App.SafeLog("bridge.log", $"[AUTO_UPDATE] Checksum mismatch. expected={expectedSha256} actual={actualSha256}");
+                throw new InvalidOperationException("Update verification failed: checksum mismatch. The download was discarded.");
             }
 
-            string updaterScript = Path.Combine(tempFolder, "apply_update.bat");
-            string scriptContent = $@"@echo off
+            App.SafeLog("bridge.log", $"[AUTO_UPDATE] Verified SHA-256 and downloaded update payload to {downloadedFile}");
+            SendEvent("updateProgress", new { status = "installing", progress = 100, isPaused = false, version = targetVersion });
+
+            string appDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
+            string appExe = Process.GetCurrentProcess().MainModule?.FileName ?? Path.Combine(appDir, "BrawlCraft.exe");
+            int currentPid = Environment.ProcessId;
+
+            // If it's a Zip package, perform seamless in-place update using a helper batch script
+            if (downloadedFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                string extractDir = Path.Combine(tempFolder, "extracted");
+                Directory.CreateDirectory(extractDir);
+                ExtractZipSafely(downloadedFile, extractDir);
+
+                // Handle potential nested folder inside the zip
+                string contentDir = extractDir;
+                var subDirs = Directory.GetDirectories(extractDir);
+                if (subDirs.Length == 1 && !File.Exists(Path.Combine(extractDir, "BrawlCraft.exe")) && File.Exists(Path.Combine(subDirs[0], "BrawlCraft.exe")))
+                {
+                    contentDir = subDirs[0];
+                }
+
+                if (!File.Exists(Path.Combine(contentDir, "BrawlCraft.exe")))
+                {
+                    throw new InvalidOperationException("Update package does not contain BrawlCraft.exe.");
+                }
+
+                string updaterScript = Path.Combine(tempFolder, "apply_update.bat");
+                string scriptContent = $@"@echo off
 chcp 65001 > nul
 echo Updating BrawlCraft to version {targetVersion}...
 echo Waiting for application (PID {currentPid}) to exit...
@@ -1452,41 +1605,98 @@ timeout /t 2 /nobreak >nul
 (goto) 2>nul & rd /s /q ""{tempFolder}""
 exit
 ";
-            File.WriteAllText(updaterScript, scriptContent);
+                File.WriteAllText(updaterScript, scriptContent);
 
-            App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching silent in-place updater script and exiting current instance.");
+                App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching silent in-place updater script and exiting current instance.");
 
-            var psi = new ProcessStartInfo
+                var psi = new ProcessStartInfo
+                {
+                    FileName = updaterScript,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                Process.Start(psi);
+
+                // Close the current application to free up locked binaries
+                _onClose?.Invoke();
+
+                return new { success = true, mode = "in-place", restarting = true };
+            }
+            else if (downloadedFile.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                FileName = updaterScript,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            Process.Start(psi);
+                // Execute setup installer silently
+                App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching setup installer silently...");
+                var psi = new ProcessStartInfo
+                {
+                    FileName = downloadedFile,
+                    Arguments = "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
 
-            // Close the current application to free up locked binaries
-            _onClose?.Invoke();
+                _onClose?.Invoke();
+                return new { success = true, mode = "installer", restarting = true };
+            }
 
-            return new { success = true, mode = "in-place", restarting = true };
+            throw new InvalidOperationException("Unsupported update archive format.");
         }
-        else if (downloadedFile.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        catch
         {
-            // Execute setup installer silently
-            App.SafeLog("bridge.log", "[AUTO_UPDATE] Launching setup installer silently...");
-            var psi = new ProcessStartInfo
+            try
             {
-                FileName = downloadedFile,
-                Arguments = "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
-                UseShellExecute = true
-            };
-            Process.Start(psi);
+                if (Directory.Exists(tempFolder)) Directory.Delete(tempFolder, recursive: true);
+            }
+            catch { }
+            throw;
+        }
+    }
 
-            _onClose?.Invoke();
-            return new { success = true, mode = "installer", restarting = true };
+    /// <summary>
+    /// Extracts a zip archive while blocking path traversal (Zip Slip) and zip bombs.
+    /// </summary>
+    private static void ExtractZipSafely(string archivePath, string destinationDir)
+    {
+        string destRoot = Path.GetFullPath(destinationDir);
+        if (!destRoot.EndsWith(Path.DirectorySeparatorChar))
+        {
+            destRoot += Path.DirectorySeparatorChar;
         }
 
-        return new { success = false, message = "Unsupported update archive format." };
+        using var archive = ZipFile.OpenRead(archivePath);
+        if (archive.Entries.Count > MaxUpdateArchiveEntries)
+        {
+            throw new InvalidOperationException("Update archive contains too many entries.");
+        }
+
+        long totalExtracted = 0;
+        foreach (var entry in archive.Entries)
+        {
+            totalExtracted += entry.Length;
+            if (totalExtracted > MaxUpdateArchiveBytes)
+            {
+                throw new InvalidOperationException("Update archive expands beyond the allowed size.");
+            }
+
+            string targetPath = Path.GetFullPath(Path.Combine(destRoot, entry.FullName));
+            if (!targetPath.StartsWith(destRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Update archive contains an unsafe path.");
+            }
+
+            if (string.IsNullOrEmpty(entry.Name))
+            {
+                Directory.CreateDirectory(targetPath);
+                continue;
+            }
+
+            string? targetDir = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+            entry.ExtractToFile(targetPath, overwrite: true);
+        }
     }
 
     private bool OpenExternalUrl(JsonElement payload)

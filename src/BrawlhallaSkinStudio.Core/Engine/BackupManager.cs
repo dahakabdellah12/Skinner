@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using BrawlhallaSkinStudio.Core.Models;
@@ -9,10 +10,18 @@ namespace BrawlhallaSkinStudio.Core.Engine;
 
 public class BackupManager
 {
+    private const int MaxRetainedBackups = 25;
+
     private readonly string _gamePath;
     private readonly string _backupRoot;
     private readonly string _manifestPath;
     private readonly List<BackupRecord> _records = [];
+
+    // Hash cache keyed by absolute path. Invalidated automatically when the file
+    // timestamp or size changes, so repeated "is this modified?" scans stay cheap.
+    private readonly Dictionary<string, (DateTime LastWriteUtc, long Length, string Hash)> _hashCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _hashCacheLock = new();
 
     public BackupManager(string gamePath, string? customBackupDir = null)
     {
@@ -32,7 +41,7 @@ public class BackupManager
 
     public string CreateBackup(IEnumerable<string> filePaths, string reason = "Mod Application")
     {
-        string backupId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+        string backupId = CreateUniqueBackupId();
         string backupFolder = Path.Combine(_backupRoot, backupId);
         Directory.CreateDirectory(backupFolder);
 
@@ -63,6 +72,7 @@ public class BackupManager
         }
 
         _records.Insert(0, record);
+        PruneBackups();
         SaveManifest();
         return backupId;
     }
@@ -84,6 +94,7 @@ public class BackupManager
                 if (File.Exists(backupFullPath))
                 {
                     CopyFileSafely(backupFullPath, gameFullPath);
+                    InvalidateHash(gameFullPath);
                     return true;
                 }
             }
@@ -109,6 +120,7 @@ public class BackupManager
                     if (File.Exists(backupFullPath))
                     {
                         CopyFileSafely(backupFullPath, gameFullPath);
+                        InvalidateHash(gameFullPath);
                         restoredCount++;
                     }
                 }
@@ -124,7 +136,7 @@ public class BackupManager
         string fullPath = Path.Combine(_gamePath, relativePath);
         if (!File.Exists(fullPath)) return false;
 
-        string currentHash = ComputeSha256(fullPath);
+        string currentHash = ComputeSha256Cached(fullPath);
         // Compare with the earliest backup original hash
         for (int i = _records.Count - 1; i >= 0; i--)
         {
@@ -135,6 +147,69 @@ public class BackupManager
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// Counts distinct files that currently differ from their pristine backup copy.
+    /// O(unique files), not O(records × files), because duplicates across backups are de-duplicated.
+    /// </summary>
+    public int CountModifiedFiles()
+    {
+        var pristineHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = _records.Count - 1; i >= 0; i--)
+        {
+            foreach (var kvp in _records[i].FileOriginalHashes)
+            {
+                pristineHashes[kvp.Key] = kvp.Value;
+            }
+        }
+
+        int modified = 0;
+        foreach (var kvp in pristineHashes)
+        {
+            string fullPath = Path.Combine(_gamePath, kvp.Key);
+            if (!File.Exists(fullPath)) continue;
+
+            string currentHash = ComputeSha256Cached(fullPath);
+            if (!string.Equals(currentHash, kvp.Value, StringComparison.OrdinalIgnoreCase))
+            {
+                modified++;
+            }
+        }
+        return modified;
+    }
+
+    /// <summary>
+    /// Keeps the newest <see cref="MaxRetainedBackups"/> snapshots plus the oldest
+    /// (pristine) one, deleting stale folders so the backup tree cannot grow forever.
+    /// </summary>
+    private void PruneBackups()
+    {
+        if (_records.Count <= MaxRetainedBackups + 1) return;
+
+        var keep = new HashSet<BackupRecord>(_records.Take(MaxRetainedBackups));
+        keep.Add(_records[^1]);
+
+        var removed = _records.Where(r => !keep.Contains(r)).ToList();
+        if (removed.Count == 0) return;
+
+        _records.RemoveAll(r => !keep.Contains(r));
+
+        foreach (var record in removed)
+        {
+            try
+            {
+                string folder = Path.Combine(_backupRoot, record.BackupId);
+                if (Directory.Exists(folder))
+                {
+                    Directory.Delete(folder, recursive: true);
+                }
+            }
+            catch
+            {
+                // A locked/read-only backup folder is not fatal; keep the manifest entry gone.
+            }
+        }
     }
 
     public static void CopyFileSafely(string sourcePath, string destPath)
@@ -159,6 +234,48 @@ public class BackupManager
         using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         byte[] hash = sha256.ComputeHash(stream);
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+    }
+
+    private string ComputeSha256Cached(string fullPath)
+    {
+        var info = new FileInfo(fullPath);
+        DateTime lastWrite = info.LastWriteTimeUtc;
+        long length = info.Length;
+
+        lock (_hashCacheLock)
+        {
+            if (_hashCache.TryGetValue(fullPath, out var cached)
+                && cached.LastWriteUtc == lastWrite
+                && cached.Length == length)
+            {
+                return cached.Hash;
+            }
+
+            string hash = ComputeSha256(fullPath);
+            _hashCache[fullPath] = (lastWrite, length, hash);
+            return hash;
+        }
+    }
+
+    private void InvalidateHash(string fullPath)
+    {
+        lock (_hashCacheLock)
+        {
+            _hashCache.Remove(fullPath);
+        }
+    }
+
+    private string CreateUniqueBackupId()
+    {
+        string baseId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
+        string candidate = baseId;
+        int suffix = 1;
+        while (Directory.Exists(Path.Combine(_backupRoot, candidate))
+               || _records.Any(r => string.Equals(r.BackupId, candidate, StringComparison.OrdinalIgnoreCase)))
+        {
+            candidate = $"{baseId}_{suffix++}";
+        }
+        return candidate;
     }
 
     private void LoadManifest()

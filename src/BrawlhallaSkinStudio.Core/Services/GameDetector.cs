@@ -45,32 +45,38 @@ public static class GameDetector
         candidates.Add(Path.GetFullPath(Path.Combine(currentDir, "..")));
         candidates.Add(Path.GetFullPath(Path.Combine(currentDir, "..", "..")));
         candidates.Add(Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..")));
-        candidates.Add(@"D:\SteamLibrary\steamapps\common\Brawlhalla");
-        candidates.Add(@"C:\Program Files (x86)\Steam\steamapps\common\Brawlhalla");
-        candidates.Add(@"C:\SteamLibrary\steamapps\common\Brawlhalla");
+
+        // Common Steam install locations derived from the current machine (no hard-coded drives).
+        foreach (var steamRoot in GetDefaultSteamRoots())
+        {
+            candidates.Add(Path.Combine(steamRoot, "steamapps", "common", "Brawlhalla"));
+        }
 
         // Try detecting from Windows Uninstall Registry (Steam App 291550)
-        try
+        if (OperatingSystem.IsWindows())
         {
-            using var uKey = Registry.LocalMachine.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 291550");
-            string? loc = uKey?.GetValue("InstallLocation") as string;
-            if (!string.IsNullOrEmpty(loc))
+            try
             {
-                candidates.Add(loc);
+                using var uKey = Registry.LocalMachine.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 291550");
+                string? loc = uKey?.GetValue("InstallLocation") as string;
+                if (!string.IsNullOrEmpty(loc))
+                {
+                    candidates.Add(loc);
+                }
             }
-        }
-        catch { }
+            catch { }
 
-        try
-        {
-            using var uKey32 = Registry.LocalMachine.OpenSubKey(@"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 291550");
-            string? loc32 = uKey32?.GetValue("InstallLocation") as string;
-            if (!string.IsNullOrEmpty(loc32))
+            try
             {
-                candidates.Add(loc32);
+                using var uKey32 = Registry.LocalMachine.OpenSubKey(@"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 291550");
+                string? loc32 = uKey32?.GetValue("InstallLocation") as string;
+                if (!string.IsNullOrEmpty(loc32))
+                {
+                    candidates.Add(loc32);
+                }
             }
+            catch { }
         }
-        catch { }
 
         // Try detecting from Steam registry & libraryfolders.vdf
         try
@@ -170,6 +176,32 @@ public static class GameDetector
 
         installation.IsValid = installation.ValidationMessages.Count == 0;
         return installation;
+    }
+
+    private static IEnumerable<string> GetDefaultSteamRoots()
+    {
+        string? programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        string? programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+
+        if (!string.IsNullOrEmpty(programFilesX86))
+            yield return Path.Combine(programFilesX86, "Steam");
+        if (!string.IsNullOrEmpty(programFiles))
+            yield return Path.Combine(programFiles, "Steam");
+
+        // Secondary libraries are commonly installed as <Drive>:\SteamLibrary.
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            string? root = null;
+            try
+            {
+                if (drive.IsReady && (drive.DriveType == DriveType.Fixed || drive.DriveType == DriveType.Removable))
+                    root = drive.RootDirectory.FullName;
+            }
+            catch { }
+
+            if (!string.IsNullOrEmpty(root))
+                yield return Path.Combine(root, "SteamLibrary");
+        }
     }
 
     private static List<string> GetSteamLibraryFolders()

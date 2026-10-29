@@ -17,7 +17,6 @@ const normalizeWeapon = (w) => {
 
 export default function LegendsPage({
   catalog,
-  systemInfo,
   onSelectLegend,
   onSelectGamePath,
   search: externalSearch,
@@ -25,7 +24,7 @@ export default function LegendsPage({
   weaponFilter: externalWeaponFilter,
   setWeaponFilter: externalSetWeaponFilter
 }) {
-  const { tWeapon, isRTL } = useLanguage();
+  const { tWeapon, isArabic } = useLanguage();
   const [isSelectingPath, setIsSelectingPath] = useState(false);
   const [customPathInput, setCustomPathInput] = useState('');
 
@@ -55,16 +54,16 @@ export default function LegendsPage({
       }
     }
 
-    const firstOpt = { value: 'All', label: isRTL ? 'جميع الأسلحة (الكل)' : 'All Weapons' };
+    const firstOpt = { value: 'All', label: isArabic ? 'جميع الأسلحة (الكل)' : 'All Weapons' };
     const rest = Array.from(uniqueMap.values())
       .map((wt) => ({
         value: wt,
         label: tWeapon(wt)
       }))
-      .sort((a, b) => a.label.localeCompare(b.label, isRTL ? 'ar' : 'en'));
+      .sort((a, b) => a.label.localeCompare(b.label, isArabic ? 'ar' : 'en'));
 
     return [firstOpt, ...rest];
-  }, [catalog, isRTL, tWeapon]);
+  }, [catalog, isArabic, tWeapon]);
 
   const filteredLegends = useMemo(() => {
     if (!catalog?.legends) return [];
@@ -100,7 +99,7 @@ export default function LegendsPage({
           <SearchBox
             value={search}
             onChange={setSearch}
-            placeholder={isRTL ? 'بحث سريع عن أسطورة (Ctrl + K)...' : 'Quick search legends (Ctrl + K)...'}
+            placeholder={isArabic ? 'بحث سريع عن أسطورة (Ctrl + K)...' : 'Quick search legends (Ctrl + K)...'}
           />
 
           <div style={{ width: '200px' }}>
@@ -108,13 +107,13 @@ export default function LegendsPage({
               options={weaponFilterOptions}
               value={weaponFilter}
               onChange={setWeaponFilter}
-              placeholder={isRTL ? 'نوع السلاح' : 'Weapon Type'}
+              placeholder={isArabic ? 'نوع السلاح' : 'Weapon Type'}
             />
           </div>
         </div>
 
         <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-          {isRTL
+          {isArabic
             ? `${filteredLegends.length} من أصل ${catalog?.legends?.length || 0} أسطورة`
             : `${filteredLegends.length} of ${catalog?.legends?.length || 0} Legends`}
         </div>
@@ -124,7 +123,6 @@ export default function LegendsPage({
       <div className="legends-grid">
         {filteredLegends.map((legend, index) => {
           const costumeCount = legend.costumes?.length || 0;
-          const defaultCostume = legend.costumes?.find((c) => c.isDefault) || legend.costumes?.[0];
           return (
             <div
               key={legend.heroId}
@@ -154,7 +152,7 @@ export default function LegendsPage({
                 </div>
 
                 <p className="product-description">
-                  {isRTL
+                  {isArabic
                     ? `${costumeCount} مظهر وزي متاح • ${tWeapon(legend.weapon1)} و ${tWeapon(legend.weapon2)}`
                     : `${costumeCount} costumes available • ${legend.weapon1} & ${legend.weapon2}`}
                 </p>
@@ -170,7 +168,7 @@ export default function LegendsPage({
                       onSelectLegend(legend);
                     }}
                   >
-                    <span>{isRTL ? 'تخصيص الأسطورة' : 'Customize Legend'}</span>
+                    <span>{isArabic ? 'تخصيص الأسطورة' : 'Customize Legend'}</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M7 17L17 7M17 7H7M17 7V17" />
                     </svg>
@@ -214,23 +212,23 @@ export default function LegendsPage({
 
           <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
             {(!catalog?.legends || catalog.legends.length === 0)
-              ? (isRTL ? 'لم يتم العثور على ملفات لعبة Brawlhalla' : 'Brawlhalla Game Directory Not Found')
-              : (isRTL ? 'لم يتم العثور على أساطير تطابق بحثك' : 'No legends match your search')}
+              ? (isArabic ? 'لم يتم العثور على ملفات لعبة Brawlhalla' : 'Brawlhalla Game Directory Not Found')
+              : (isArabic ? 'لم يتم العثور على أساطير تطابق بحثك' : 'No legends match your search')}
           </h3>
 
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px', maxWidth: '500px', margin: '0 auto 20px' }}>
             {(!catalog?.legends || catalog.legends.length === 0)
-              ? (isRTL
+              ? (isArabic
                   ? 'يرجى تحديد مسار مجلد اللعبة أو اختيار ملف تشغيل اللعبة Brawlhalla.exe مباشرة لتحميل كافة الشخصيات والمظاهر.'
                   : 'Please locate your Brawlhalla installation folder or select Brawlhalla.exe directly to load all legends and skins.')
-              : (isRTL ? 'جرب البحث باسم آخر أو اختر سلاحاً مختلفاً أو أعد ضبط مسار اللعبة.' : 'Try searching with a different term, or select your game path manually below.')}
+              : (isArabic ? 'جرب البحث باسم آخر أو اختر سلاحاً مختلفاً أو أعد ضبط مسار اللعبة.' : 'Try searching with a different term, or select your game path manually below.')}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '480px' }}>
               <input
                 type="text"
-                placeholder={isRTL ? 'مسار مجلد اللعبة أو ملف Brawlhalla.exe...' : 'Path to Brawlhalla folder or Brawlhalla.exe...'}
+                placeholder={isArabic ? 'مسار مجلد اللعبة أو ملف Brawlhalla.exe...' : 'Path to Brawlhalla folder or Brawlhalla.exe...'}
                 value={customPathInput}
                 onChange={(e) => setCustomPathInput(e.target.value)}
                 style={{
@@ -273,7 +271,7 @@ export default function LegendsPage({
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
-                <span>{isRTL ? 'استعراض...' : 'Browse...'}</span>
+                <span>{isArabic ? 'استعراض...' : 'Browse...'}</span>
               </button>
             </div>
 
@@ -300,7 +298,7 @@ export default function LegendsPage({
                   cursor: 'pointer'
                 }}
               >
-                <span>{isRTL ? 'تأكيد المسار وتحميل الأساطير' : 'Confirm Path & Load Legends'}</span>
+                <span>{isArabic ? 'تأكيد المسار وتحميل الأساطير' : 'Confirm Path & Load Legends'}</span>
               </button>
             )}
           </div>

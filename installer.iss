@@ -1,5 +1,5 @@
 #define MyAppName "BrawlCraft"
-#define MyAppVersion "3.0.0"
+#define MyAppVersion "3.1.0"
 #define MyAppPublisher "dahakabdellah12"
 #define MyAppURL "https://github.com/dahakabdellah12/BrawlCraft"
 #define MyAppExeName "BrawlCraft.exe"
@@ -8,6 +8,7 @@
 AppId={{91C68AE2-A23F-433E-BDFA-5BA2D4EF6A51}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -15,9 +16,10 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableProgramGroupPage=yes
-OutputDir=C:\Users\Dahak Abdellah\Downloads\Project\BrawlCraft\release
-OutputBaseFilename=BrawlCraft-v3.0.0-Setup
-SetupIconFile=C:\Users\Dahak Abdellah\Downloads\Project\BrawlCraft\src\BrawlhallaSkinStudio.App\app.ico
+OutputDir=release
+OutputBaseFilename=BrawlCraft-v{#MyAppVersion}-Setup
+SetupIconFile=src\BrawlhallaSkinStudio.App\app.ico
+VersionInfoVersion={#MyAppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -32,7 +34,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Dahak Abdellah\Downloads\Project\BrawlCraft\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
-import { clearAssetImageCache } from './AssetImage';
+import { clearAssetImageCache } from '../services/assetImageCache';
+import { APP_VERSION } from '../version';
 import { Wrench, Sparkles, RotateCcw, Download } from 'lucide-react';
 
 // ─── GitHub icon (Octicons-style filled mark) ────────────────────────────────
@@ -27,7 +28,7 @@ export default function SettingsModal({
   showToast,
   isBusy
 }) {
-  const { lang, setLang, isRTL } = useLanguage();
+  const { lang, setLang, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState('language');
   const [confirmResetStock, setConfirmResetStock] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -51,20 +52,15 @@ export default function SettingsModal({
 
   // Maintenance & Troubleshooting State
   const [repairLoading, setRepairLoading] = useState(false);
-  const [repairResult, setRepairResult] = useState(null);
   const [cacheLoading, setCacheLoading] = useState(false);
-  const [cacheResult, setCacheResult] = useState(null);
-
-  // Auto-Installing State
-  const [installingUpdate, setInstallingUpdate] = useState(false);
 
   // Real Software Update State
   const [updateState, setUpdateState] = useState({
     loading: false,
     checked: false,
     hasUpdate: false,
-    currentVersion: '3.0.0',
-    latestVersion: '3.0.0',
+    currentVersion: APP_VERSION,
+    latestVersion: APP_VERSION,
     downloadUrl: '',
     releaseNotes: '',
     checkedAt: '',
@@ -98,8 +94,6 @@ export default function SettingsModal({
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setConfirmResetStock(false);
-    setRepairResult(null);
-    setCacheResult(null);
   };
 
   if (!isOpen) return null;
@@ -118,33 +112,19 @@ export default function SettingsModal({
   const handleRunDiagnosticRepair = async () => {
     if (repairLoading || isBusy) return;
     setRepairLoading(true);
-    setRepairResult(null);
     try {
       clearAssetImageCache();
       const res = await api.repairGameInstallation();
       if (res && res.success) {
         if (onReloadCatalog) await onReloadCatalog();
-        const successMsg = isRTL
+        const successMsg = isArabic
           ? 'تم الفحص الشامل وإصلاح كافة المشاكل وتحديث أصول اللعبة بنجاح!'
           : 'Diagnostic & auto-repair completed successfully! Assets refreshed and cache cleared.';
-        setRepairResult({
-          success: true,
-          message: successMsg,
-          details: `${isRTL ? 'الأساطير' : 'Legends'}: ${res.legendCount || 70} | ${isRTL ? 'المظاهر' : 'Costumes'}: ${res.costumeCount || 795} | ${isRTL ? 'الملفات المفحوصة' : 'Files Checked'}: ${res.swfCount || 564}`
-        });
         showToast?.(successMsg, 'success');
       } else {
-        setRepairResult({
-          success: false,
-          message: res?.message || (isRTL ? 'تعذر إتمام الإصلاح التلقائي.' : 'Failed to complete auto-repair.')
-        });
-        showToast?.(res?.message || (isRTL ? 'فشل فحص وإصلاح الملفات' : 'Repair failed'), 'error');
+        showToast?.(res?.message || (isArabic ? 'تعذر إتمام الإصلاح التلقائي.' : 'Failed to complete auto-repair.'), 'error');
       }
     } catch (err) {
-      setRepairResult({
-        success: false,
-        message: err.message
-      });
       showToast?.(err.message, 'error');
     } finally {
       setRepairLoading(false);
@@ -154,24 +134,15 @@ export default function SettingsModal({
   const handleClearCache = async () => {
     if (cacheLoading || isBusy) return;
     setCacheLoading(true);
-    setCacheResult(null);
     try {
       clearAssetImageCache();
       await api.clearAssetCache();
       if (onReloadCatalog) await onReloadCatalog();
-      const successMsg = isRTL
+      const successMsg = isArabic
         ? 'تم تفريغ ذاكرة التخزين المؤقت للصور وتحديث كافة الرسوم بنجاح!'
         : 'Image preview cache cleared! All visuals will refresh fresh.';
-      setCacheResult({
-        success: true,
-        message: successMsg
-      });
       showToast?.(successMsg, 'success');
     } catch (err) {
-      setCacheResult({
-        success: false,
-        message: err.message
-      });
       showToast?.(err.message, 'error');
     } finally {
       setCacheLoading(false);
@@ -188,29 +159,31 @@ export default function SettingsModal({
           loading: false,
           checked: true,
           hasUpdate: !!res.hasUpdate,
-          currentVersion: res.currentVersion || '2.0.0',
-          latestVersion: res.latestVersion || '2.0.0',
+          currentVersion: res.currentVersion || APP_VERSION,
+          latestVersion: res.latestVersion || APP_VERSION,
           releaseTitle: res.releaseTitle || '',
           downloadUrl: res.downloadUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases',
           htmlUrl: res.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases',
           assetName: res.assetName || null,
           assetSizeFormatted: res.assetSizeFormatted || null,
+          sha256: res.sha256 || null,
+          verified: !!res.verified,
           releaseNotes: res.releaseNotes || '',
           repo: res.repo || 'dahakabdellah12/BrawlCraft',
           repoUrl: res.repoUrl || 'https://github.com/dahakabdellah12/BrawlCraft',
           checkedAt: res.checkedAt || new Date().toLocaleTimeString(),
           error: res.networkError
-            ? (isRTL ? 'تعذر الاتصال بـ GitHub Releases. تحقق من اتصال الإنترنت.' : 'Could not reach GitHub Releases. Check internet connection.')
+            ? (isArabic ? 'تعذر الاتصال بـ GitHub Releases. تحقق من اتصال الإنترنت.' : 'Could not reach GitHub Releases. Check internet connection.')
             : ''
         });
         if (res.hasUpdate) {
           showToast?.(
-            isRTL ? `يتوفر إصدار جديد على GitHub: v${res.latestVersion}!` : `New update available on GitHub: v${res.latestVersion}!`,
+            isArabic ? `يتوفر إصدار جديد على GitHub: v${res.latestVersion}!` : `New update available on GitHub: v${res.latestVersion}!`,
             'info'
           );
         } else if (!res.networkError) {
           showToast?.(
-            isRTL ? `أنت تستخدم أحدث إصدار v${res.currentVersion || '3.0.0'} من GitHub ✓` : `You are running the latest v${res.currentVersion || '3.0.0'} release from GitHub ✓`,
+            isArabic ? `أنت تستخدم أحدث إصدار v${res.currentVersion || APP_VERSION} من GitHub ✓` : `You are running the latest v${res.currentVersion || APP_VERSION} release from GitHub ✓`,
             'success'
           );
         }
@@ -234,16 +207,16 @@ export default function SettingsModal({
 
   const pageMeta = {
     language: {
-      title: isRTL ? 'لغة الواجهة' : 'Language'
+      title: isArabic ? 'لغة الواجهة' : 'Language'
     },
     maintenance: {
-      title: isRTL ? 'الصيانة والاستعادة' : 'Maintenance & Reset'
+      title: isArabic ? 'الصيانة والاستعادة' : 'Maintenance & Reset'
     },
     updates: {
-      title: isRTL ? 'تحديثات البرنامج' : 'Software Updates'
+      title: isArabic ? 'تحديثات البرنامج' : 'Software Updates'
     },
     about: {
-      title: isRTL ? 'حول التطبيق' : 'About BrawlCraft'
+      title: isArabic ? 'حول التطبيق' : 'About BrawlCraft'
     }
   };
 
@@ -308,7 +281,7 @@ export default function SettingsModal({
                   <path fill="currentColor" d="m12.87 15.07l-2.54-2.51l.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35C8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5l3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7l1.62-4.33L19.12 17z" />
                 </svg>
               </span>
-              <span className="nav-text">{isRTL ? 'اللغة' : 'Language'}</span>
+              <span className="nav-text">{isArabic ? 'اللغة' : 'Language'}</span>
             </button>
 
             <button
@@ -322,7 +295,7 @@ export default function SettingsModal({
                   <path fill="currentColor" d="M8 2a6 6 0 0 1 5.743 7.743L20 16a2.828 2.828 0 0 1-3.785 4.194L16 20l-6.257-6.257a6 6 0 0 1-7.458-7.577L5.123 9l2.814-.937l.125-.126L9 5.127L6.158 2.288C6.738 2.101 7.358 2 8 2m4.586 9.57a.829.829 0 0 0-1.156 1.188l5.984 5.828a.829.829 0 0 0 1.172-1.172z" />
                 </svg>
               </span>
-              <span className="nav-text">{isRTL ? 'الصيانة والاستعادة' : 'Maintenance'}</span>
+              <span className="nav-text">{isArabic ? 'الصيانة والاستعادة' : 'Maintenance'}</span>
             </button>
 
             <button
@@ -335,7 +308,7 @@ export default function SettingsModal({
                   <path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z" />
                 </svg>
               </span>
-              <span className="nav-text">{isRTL ? 'التحديثات' : 'Updates'}</span>
+              <span className="nav-text">{isArabic ? 'التحديثات' : 'Updates'}</span>
             </button>
 
             <button
@@ -348,7 +321,7 @@ export default function SettingsModal({
                   <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
                 </svg>
               </span>
-              <span className="nav-text">{isRTL ? 'حول التطبيق' : 'About'}</span>
+              <span className="nav-text">{isArabic ? 'حول التطبيق' : 'About'}</span>
             </button>
           </div>
         </aside>
@@ -419,9 +392,9 @@ export default function SettingsModal({
                 <div className="card-group" style={{ overflow: 'visible' }}>
                   <div className="setting" style={{ overflow: 'visible' }}>
                     <div className="setting-info">
-                      <div className="setting-name">{isRTL ? 'اللغة المختارة' : 'Selected Language'}</div>
+                      <div className="setting-name">{isArabic ? 'اللغة المختارة' : 'Selected Language'}</div>
                       <div className="setting-desc">
-                        {isRTL ? 'التبديل الفوري بين اللغة العربية والإنجليزية.' : 'Instantly toggle between Arabic and English.'}
+                        {isArabic ? 'التبديل الفوري بين اللغة العربية والإنجليزية.' : 'Instantly toggle between Arabic and English.'}
                       </div>
                     </div>
 
@@ -485,10 +458,10 @@ export default function SettingsModal({
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Wrench size={16} style={{ color: 'var(--accent)' }} />
-                          <span>{isRTL ? 'إصلاح وتشخيص شامل وحل المشاكل (Auto-Repair)' : 'Diagnostic & Auto-Repair'}</span>
+                          <span>{isArabic ? 'إصلاح وتشخيص شامل وحل المشاكل (Auto-Repair)' : 'Diagnostic & Auto-Repair'}</span>
                         </div>
                         <div className="setting-desc" style={{ marginTop: '4px' }}>
-                          {isRTL
+                          {isArabic
                             ? 'خيار ذكي لحل أي مشاكل في اختفاء الشخصيات، البطاقات الفارغة، تلف الكاش، أو خطأ قراءة ملفات SWF، مع إعادة تهيئة ومزامنة كافة أصول اللعبة تلقائياً.'
                             : 'Smart diagnostic tool that fixes missing character portraits, empty cards, corrupted cache, and SWF read issues by resynchronizing all game assets.'}
                         </div>
@@ -501,7 +474,7 @@ export default function SettingsModal({
                         disabled={repairLoading || isBusy}
                         style={{ whiteSpace: 'nowrap', fontWeight: 700, minWidth: '130px', padding: '9px 18px', marginTop: '2px' }}
                       >
-                        {repairLoading ? (isRTL ? 'جاري الفحص...' : 'Diagnosing...') : (isRTL ? 'فحص وإصلاح الآن' : 'Run Auto-Repair')}
+                        {repairLoading ? (isArabic ? 'جاري الفحص...' : 'Diagnosing...') : (isArabic ? 'فحص وإصلاح الآن' : 'Run Auto-Repair')}
                       </button>
                     </div>
 
@@ -510,10 +483,10 @@ export default function SettingsModal({
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Sparkles size={16} style={{ color: 'var(--accent)' }} />
-                          <span>{isRTL ? 'تفريغ كاش الصور وتحديث الرسوم' : 'Clear Visual Cache & Refresh'}</span>
+                          <span>{isArabic ? 'تفريغ كاش الصور وتحديث الرسوم' : 'Clear Visual Cache & Refresh'}</span>
                         </div>
                         <div className="setting-desc" style={{ marginTop: '4px' }}>
-                          {isRTL
+                          {isArabic
                             ? 'مسح التخزين المؤقت لرسوم الشخصيات والأسلحة في الذاكرة لإعادة توليد صور البطاقات بأعلى دقة متوفرة.'
                             : 'Purges all in-memory character, costume, and weapon vector previews to trigger crisp, high-res rendering.'}
                         </div>
@@ -526,7 +499,7 @@ export default function SettingsModal({
                         disabled={cacheLoading || isBusy}
                         style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px', marginTop: '2px' }}
                       >
-                        {cacheLoading ? (isRTL ? 'جاري التفريغ...' : 'Clearing...') : (isRTL ? 'تفريغ الكاش' : 'Clear Cache')}
+                        {cacheLoading ? (isArabic ? 'جاري التفريغ...' : 'Clearing...') : (isArabic ? 'تفريغ الكاش' : 'Clear Cache')}
                       </button>
                     </div>
 
@@ -535,10 +508,10 @@ export default function SettingsModal({
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <RotateCcw size={16} style={{ color: 'var(--accent)' }} />
-                          <span>{isRTL ? 'استعادة ملفات اللعبة الأصلية (Stock Restore)' : 'Restore Original Game Files'}</span>
+                          <span>{isArabic ? 'استعادة ملفات اللعبة الأصلية (Stock Restore)' : 'Restore Original Game Files'}</span>
                         </div>
                         <div className="setting-desc" style={{ marginTop: '4px' }}>
-                          {isRTL
+                          {isArabic
                             ? 'إلغاء كافة المودات والتعديلات النشطة واستعادة الملفات الرسمية النظيفة للعبة كما تم تنزيلها من Steam.'
                             : 'Revert all applied mods and safely restore game files to their clean pristine official state.'}
                         </div>
@@ -551,7 +524,7 @@ export default function SettingsModal({
                         disabled={isBusy || repairLoading}
                         style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px', marginTop: '2px' }}
                       >
-                        {isRTL ? 'إعادة كل شيء للأصل' : 'Restore Stock'}
+                        {isArabic ? 'إعادة كل شيء للأصل' : 'Restore Stock'}
                       </button>
                     </div>
                   </div>
@@ -572,10 +545,10 @@ export default function SettingsModal({
                     }}
                   >
                     <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                      {isRTL ? 'هل تريد بالتأكيد إعادة كل شيء إلى الأصل؟' : 'Are you sure you want to restore everything to original?'}
+                      {isArabic ? 'هل تريد بالتأكيد إعادة كل شيء إلى الأصل؟' : 'Are you sure you want to restore everything to original?'}
                     </h2>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '440px', lineHeight: 1.5, margin: 0 }}>
-                      {isRTL
+                      {isArabic
                         ? 'سيتم إلغاء جميع التعديلات والمظاهر النشطة واستعادة الملفات الرسمية النظيفة للعبة.'
                         : 'All active mods and customizations will be reverted, restoring original game assets.'}
                     </p>
@@ -587,7 +560,7 @@ export default function SettingsModal({
                         disabled={isBusy}
                         style={{ minWidth: '96px', padding: '10px 24px', fontSize: '14px' }}
                       >
-                        {isBusy ? (isRTL ? 'جاري الاستعادة...' : 'Restoring...') : (isRTL ? 'نعم' : 'Yes')}
+                        {isBusy ? (isArabic ? 'جاري الاستعادة...' : 'Restoring...') : (isArabic ? 'نعم' : 'Yes')}
                       </button>
                       <button
                         type="button"
@@ -596,7 +569,7 @@ export default function SettingsModal({
                         disabled={isBusy}
                         style={{ minWidth: '96px', padding: '10px 24px', fontSize: '14px' }}
                       >
-                        {isRTL ? 'لا' : 'No'}
+                        {isArabic ? 'لا' : 'No'}
                       </button>
                     </div>
                   </div>
@@ -610,7 +583,7 @@ export default function SettingsModal({
                 <div className="card-group">
                   <div className="setting">
                     <div className="setting-info">
-                      <div className="setting-name">{isRTL ? 'اسم التطبيق' : 'Application Name'}</div>
+                      <div className="setting-name">{isArabic ? 'اسم التطبيق' : 'Application Name'}</div>
                       <div className="setting-desc">BrawlCraft — Ultimate Open-Source Cosmetic Studio for Brawlhalla</div>
                     </div>
                     <span style={{ fontWeight: 700, color: 'var(--accent-light)', fontSize: '13px' }}>
@@ -620,16 +593,16 @@ export default function SettingsModal({
 
                   <div className="setting">
                     <div className="setting-info">
-                      <div className="setting-name">{isRTL ? 'رقم الإصدار' : 'Application Version'}</div>
-                      <div className="setting-desc">{isRTL ? 'الإصدار المكتبي المستقر مفتوح المصدر.' : 'Installed open-source desktop release.'}</div>
+                      <div className="setting-name">{isArabic ? 'رقم الإصدار' : 'Application Version'}</div>
+                      <div className="setting-desc">{isArabic ? 'الإصدار المكتبي المستقر مفتوح المصدر.' : 'Installed open-source desktop release.'}</div>
                     </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v3.0.0</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v{APP_VERSION}</span>
                   </div>
 
                   <div className="setting">
                     <div className="setting-info">
-                      <div className="setting-name">{isRTL ? 'معمارية النواة والترخيص' : 'Architecture & License'}</div>
-                      <div className="setting-desc">.NET 8 (WPF x64) + WebView2 + React 18 · MIT Open Source</div>
+                      <div className="setting-name">{isArabic ? 'معمارية النواة والترخيص' : 'Architecture & License'}</div>
+                      <div className="setting-desc">.NET 8 (WPF x64) + WebView2 + React 19 · MIT Open Source</div>
                     </div>
                     <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>MIT License</span>
                   </div>
@@ -639,10 +612,10 @@ export default function SettingsModal({
                     <div className="setting-info" style={{ flex: 1 }}>
                       <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <GitHubIcon size={15} />
-                        <span>{isRTL ? 'المستودع المفتوح المصدر' : 'Open Source Repository'}</span>
+                        <span>{isArabic ? 'المستودع المفتوح المصدر' : 'Open Source Repository'}</span>
                       </div>
                       <div className="setting-desc">
-                        {isRTL
+                        {isArabic
                           ? 'كود البرنامج بالكامل مفتوح المصدر ومتاح مجاناً على منصة GitHub للجميع.'
                           : 'Full source code is publicly available under the MIT License on GitHub.'}
                         <div style={{ marginTop: '4px', fontFamily: 'monospace', color: 'var(--accent-light)', fontSize: '12px' }}>
@@ -655,8 +628,8 @@ export default function SettingsModal({
                       type="button"
                       className="github-icon-btn"
                       onClick={() => api.openExternalUrl('https://github.com/dahakabdellah12/BrawlCraft')}
-                      title={isRTL ? 'عرض على GitHub' : 'View on GitHub'}
-                      aria-label={isRTL ? 'عرض على GitHub' : 'View on GitHub'}
+                      title={isArabic ? 'عرض على GitHub' : 'View on GitHub'}
+                      aria-label={isArabic ? 'عرض على GitHub' : 'View on GitHub'}
                     >
                       <GitHubIcon size={18} />
                     </button>
@@ -677,10 +650,10 @@ export default function SettingsModal({
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/>
                         </svg>
-                        <span>{isRTL ? 'تحديثات البرنامج التلقائية' : 'Automatic In-App Updates'}</span>
+                        <span>{isArabic ? 'تحديثات البرنامج التلقائية' : 'Automatic In-App Updates'}</span>
                       </div>
                       <div className="setting-desc">
-                        {isRTL
+                        {isArabic
                           ? 'عند تفعيل هذا الخيار، يقوم BrawlCraft بالتحقق وتثبيت التحديثات تلقائياً في الخلفية تماماً مثل تحديثات Steam.'
                           : 'When enabled, BrawlCraft checks and automatically updates seamlessly in the background just like Steam game updates.'}
                       </div>
@@ -693,8 +666,8 @@ export default function SettingsModal({
                       onClick={() => handleToggleAutoUpdate(!autoUpdateEnabled)}
                       className={`toggle-switch ${autoUpdateEnabled ? 'on' : 'off'}`}
                       title={autoUpdateEnabled
-                        ? (isRTL ? 'انقر لتعطيل الإشعارات التلقائية' : 'Click to disable auto-notifications')
-                        : (isRTL ? 'انقر لتفعيل الإشعارات التلقائية' : 'Click to enable auto-notifications')}
+                        ? (isArabic ? 'انقر لتعطيل الإشعارات التلقائية' : 'Click to disable auto-notifications')
+                        : (isArabic ? 'انقر لتفعيل الإشعارات التلقائية' : 'Click to enable auto-notifications')}
                     >
                       <span className="toggle-thumb" />
                     </button>
@@ -707,18 +680,18 @@ export default function SettingsModal({
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6a5.87 5.87 0 0 1-2.8-.7l-1.46 1.46A7.93 7.93 0 0 0 12 20c4.42 0 8-3.58 8-8h3zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46A7.93 7.93 0 0 0 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4z"/>
                         </svg>
-                        <span>{isRTL ? 'التحقق اليدوي من التحديثات' : 'Manual Update Check'}</span>
+                        <span>{isArabic ? 'التحقق اليدوي من التحديثات' : 'Manual Update Check'}</span>
                       </div>
                       <div className="setting-desc" style={{ marginTop: '4px' }}>
                         {updateState.loading ? (
                           <span style={{ color: 'var(--accent-light)' }}>
-                            {isRTL ? 'جاري الاتصال بـ GitHub Releases للتحقق من أحدث إصدار...' : 'Connecting to GitHub Releases to check for updates...'}
+                            {isArabic ? 'جاري الاتصال بـ GitHub Releases للتحقق من أحدث إصدار...' : 'Connecting to GitHub Releases to check for updates...'}
                           </span>
                         ) : updateState.checked ? (
                           updateState.hasUpdate ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <span style={{ color: 'var(--warning, #F59E0B)', fontWeight: 700 }}>
-                                {isRTL
+                                {isArabic
                                   ? `يتوفر إصدار جديد مفتوح المصدر: v${updateState.latestVersion}!`
                                   : `New release available: v${updateState.latestVersion}!`}
                               </span>
@@ -729,7 +702,18 @@ export default function SettingsModal({
                               )}
                               {updateState.assetName && (
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                  {isRTL ? 'حزمة التثبيت:' : 'Setup Package:'} {updateState.assetName} {updateState.assetSizeFormatted ? `(${updateState.assetSizeFormatted})` : ''}
+                                  {isArabic ? 'حزمة التثبيت:' : 'Setup Package:'} {updateState.assetName} {updateState.assetSizeFormatted ? `(${updateState.assetSizeFormatted})` : ''}
+                                </span>
+                              )}
+                              {updateState.sha256 ? (
+                                <span style={{ fontSize: '11px', color: 'var(--success, #22C55E)' }}>
+                                  {isArabic ? 'تم التحقق من بصمة SHA-256 ✓' : 'SHA-256 checksum available ✓'}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '11px', color: 'var(--warning, #F59E0B)' }}>
+                                  {isArabic
+                                    ? 'لا تتوفر بصمة تحقق لهذا الإصدار، لذلك تم تعطيل التثبيت التلقائي.'
+                                    : 'No checksum is published for this release, so automatic install is disabled.'}
                                 </span>
                               )}
                             </div>
@@ -740,18 +724,18 @@ export default function SettingsModal({
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ color: 'var(--success, #22C55E)', fontWeight: 600 }}>
-                                {isRTL
+                                {isArabic
                                   ? `أنت تستخدم أحدث إصدار مستقر من GitHub v${updateState.currentVersion} ✓`
                                   : `You are on the latest GitHub release v${updateState.currentVersion} ✓`}
                               </span>
                               <span style={{ fontSize: '11px', opacity: 0.75 }}>
-                                ({isRTL ? 'تم الفحص من GitHub:' : 'Checked via GitHub:'} {updateState.checkedAt})
+                                ({isArabic ? 'تم الفحص من GitHub:' : 'Checked via GitHub:'} {updateState.checkedAt})
                               </span>
                             </div>
                           )
                         ) : (
                           <span>
-                            {isRTL
+                            {isArabic
                               ? 'فحص أحدث الإصدارات المنشورة مباشرة على مستودع GitHub الرسمي.'
                               : 'Check the official GitHub repository for the latest published release.'}
                           </span>
@@ -765,7 +749,7 @@ export default function SettingsModal({
                           type="button"
                           className="btn btn-primary"
                           onClick={handleDownloadUpdate}
-                          disabled={installingUpdate}
+                          disabled={!updateState.sha256}
                           style={{
                             minWidth: '150px',
                             fontWeight: 700,
@@ -774,14 +758,10 @@ export default function SettingsModal({
                             boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)'
                           }}
                         >
-                          {installingUpdate ? (
-                            isRTL ? 'جاري التحديث التلقائي...' : 'Updating Automatically...'
-                          ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              <Download size={14} />
-                              <span>{isRTL ? 'تثبيت التحديث الآن' : 'Install Update Now'}</span>
-                            </span>
-                          )}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <Download size={14} />
+                            <span>{isArabic ? 'تثبيت التحديث الآن' : 'Install Update Now'}</span>
+                          </span>
                         </button>
                       )}
 
@@ -792,7 +772,7 @@ export default function SettingsModal({
                           onClick={() => api.openExternalUrl(updateState.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases')}
                           style={{ fontWeight: 600, padding: '8px 14px' }}
                         >
-                          {isRTL ? 'سجل الإصدارات ↗' : 'Releases ↗'}
+                          {isArabic ? 'سجل الإصدارات ↗' : 'Releases ↗'}
                         </button>
                       )}
 
@@ -810,10 +790,10 @@ export default function SettingsModal({
                         }}
                       >
                         {updateState.loading
-                          ? (isRTL ? 'جاري الفحص...' : 'Checking...')
+                          ? (isArabic ? 'جاري الفحص...' : 'Checking...')
                           : updateState.checked
-                            ? (isRTL ? 'إعادة الفحص' : 'Check Again')
-                            : (isRTL ? 'فحص الآن' : 'Check Now')}
+                            ? (isArabic ? 'إعادة الفحص' : 'Check Again')
+                            : (isArabic ? 'فحص الآن' : 'Check Now')}
                       </button>
                     </div>
                   </div>

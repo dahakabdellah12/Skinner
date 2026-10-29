@@ -61,7 +61,7 @@ export default function CardPickerModal({
   baseWeapon = '',
   colorScheme = null
 }) {
-  const { isRTL } = useLanguage();
+  const { isArabic } = useLanguage();
   const [search, setSearch] = useState('');
   const searchInputRef = useRef(null);
 
@@ -131,7 +131,7 @@ export default function CardPickerModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h3>{title}</h3>
                 <span className="card-picker-header-badge">
-                  {items.length} {isRTL ? 'عنصر' : 'Items'}
+                  {items.length} {isArabic ? 'عنصر' : 'Items'}
                 </span>
               </div>
               {subtitle && (
@@ -153,14 +153,14 @@ export default function CardPickerModal({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={isRTL ? 'بحث سريع بالاسم...' : 'Quick search by name...'}
+                placeholder={isArabic ? 'بحث سريع بالاسم...' : 'Quick search by name...'}
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                  title={isRTL ? 'مسح' : 'Clear'}
+                  title={isArabic ? 'مسح' : 'Clear'}
                 >
                   ✕
                 </button>
@@ -171,7 +171,7 @@ export default function CardPickerModal({
               type="button"
               className="card-picker-close-btn"
               onClick={onClose}
-              title={isRTL ? 'إغلاق' : 'Close'}
+              title={isArabic ? 'إغلاق' : 'Close'}
             >
               ✕
             </button>
@@ -183,10 +183,10 @@ export default function CardPickerModal({
           {filteredItems.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
               <p style={{ fontSize: '15px', fontWeight: 600 }}>
-                {isRTL ? 'لا توجد عناصر مطابقة لبحثك' : 'No items found matching your search'}
+                {isArabic ? 'لا توجد عناصر مطابقة لبحثك' : 'No items found matching your search'}
               </p>
               <p style={{ fontSize: '12px', marginTop: '6px' }}>
-                {isRTL ? 'جرب البحث باسم مختلف' : 'Try searching with different keywords'}
+                {isArabic ? 'جرب البحث باسم مختلف' : 'Try searching with different keywords'}
               </p>
             </div>
           ) : (
@@ -217,7 +217,7 @@ export default function CardPickerModal({
 
                       {isSelected && (
                         <span className="product-badge" style={{ position: 'absolute', top: '8px', right: '8px', background: 'var(--accent)', color: '#fff', fontWeight: 800 }}>
-                          ✓ {isRTL ? 'تم التحديد' : 'Selected'}
+                          ✓ {isArabic ? 'تم التحديد' : 'Selected'}
                         </span>
                       )}
 
@@ -259,7 +259,7 @@ export default function CardPickerModal({
 
                       {isSelected && (
                         <span className="product-badge" style={{ position: 'absolute', top: '8px', right: '8px', background: 'var(--accent)', color: '#fff', fontWeight: 800 }}>
-                          ✓ {isRTL ? 'تم التحديد' : 'Selected'}
+                          ✓ {isArabic ? 'تم التحديد' : 'Selected'}
                         </span>
                       )}
 
@@ -304,7 +304,7 @@ export default function CardPickerModal({
                             <path d="M4.93 4.93l14.14 14.14" />
                           </svg>
                           <span style={{ fontSize: '11px', fontWeight: 700 }}>
-                            {isRTL ? 'بدون تعديل (أصلي)' : 'Stock / Unchanged'}
+                            {isArabic ? 'بدون تعديل (أصلي)' : 'Stock / Unchanged'}
                           </span>
                         </div>
                       ) : (
@@ -320,7 +320,7 @@ export default function CardPickerModal({
 
                     {isSelected && (
                       <span className="product-badge" style={{ position: 'absolute', top: '8px', right: '8px', background: 'var(--accent)', color: '#fff', fontWeight: 800 }}>
-                        ✓ {isRTL ? 'تم التحديد' : 'Selected'}
+                        ✓ {isArabic ? 'تم التحديد' : 'Selected'}
                       </span>
                     )}
 
@@ -350,7 +350,7 @@ export default function CardPickerModal({
         {/* Footer */}
         <div className="card-picker-footer">
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            {isRTL
+            {isArabic
               ? `إجمالي المعروض: ${filteredItems.length} عنصر (حجم ثابت للبطاقات مع تمرير سلس)`
               : `Showing ${filteredItems.length} items (Fixed-size cards with smooth scroll)`}
           </div>
@@ -360,7 +360,7 @@ export default function CardPickerModal({
             onClick={onClose}
             style={{ padding: '6px 16px', fontSize: '12px' }}
           >
-            {isRTL ? 'إغلاق' : 'Close'}
+            {isArabic ? 'إغلاق' : 'Close'}
           </button>
         </div>
       </div>
