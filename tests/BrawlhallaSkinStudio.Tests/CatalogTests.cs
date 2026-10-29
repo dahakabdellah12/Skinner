@@ -33,7 +33,7 @@ public class CatalogTests
         Assert.True(loaded, catalog.LoadError);
 
         Assert.NotEmpty(catalog.Legends);
-        Assert.Equal(70, catalog.Legends.Count);
+        Assert.Equal(71, catalog.Legends.Count);
         Assert.Equal("Viking", catalog.Legends[0].HeroName);
 
         Assert.NotEmpty(catalog.Costumes);

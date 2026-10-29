@@ -3,7 +3,6 @@ import { useLanguage } from '../i18n/LanguageContext';
 import AssetImage from './AssetImage';
 import CardPickerModal, { ColorEmblem } from './CardPickerModal';
 import { api } from '../services/api';
-import { Dices } from 'lucide-react';
 
 export default function LegendCustomizer({
   legend,
@@ -249,23 +248,14 @@ export default function LegendCustomizer({
     if (initialReplacementCostume?.ownerHero) {
       return initialReplacementCostume.ownerHero;
     }
-    return legend?.heroName || 'Random';
+    return legend?.heroName || (catalog?.legends?.[0]?.heroName || '');
   });
 
-  // Visual Character Cards for Cross-Legend selection (Random + All individual legends, NO 'All Legends')
+  // Visual Character Cards for Cross-Legend selection
   const heroCards = useMemo(() => {
-    const randomCard = {
-      id: 'Random',
-      title: isRTL ? 'Random (عشوائي)' : 'Random (Shuffle)',
-      subtitle: isRTL ? 'سكن عشوائي من أي أسطورة' : 'Picks a random skin from any legend',
-      badge: 'Random',
-      isRandomRoll: true,
-      searchKey: 'random عشوائي راندوم قرعة نرد'
-    };
-
     const currentHeroLower = (legend?.heroName || '').trim().toLowerCase();
 
-    const list = (catalog?.legends || [])
+    return (catalog?.legends || [])
       .map((l) => {
         const isCurrent = (l.heroName || '').toLowerCase() === currentHeroLower;
         const w1 = tWeapon(l.weapon1 || '');
@@ -284,14 +274,11 @@ export default function LegendCustomizer({
         };
       })
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-
-    // Strictly individual characters only (NO "All Legends")
-    return [randomCard, ...list];
   }, [catalog?.legends, legend, tWeapon, isRTL]);
 
   // Selected hero object for thumbnail image
   const selectedHeroObject = useMemo(() => {
-    if (!selectedReplacementHero || selectedReplacementHero === 'Random') return null;
+    if (!selectedReplacementHero) return null;
     return (catalog?.legends || []).find(
       (l) => (l.heroName || '').toLowerCase() === selectedReplacementHero.toLowerCase()
     ) || null;
@@ -299,41 +286,20 @@ export default function LegendCustomizer({
 
   // Label for the selected replacement character
   const currentSelectedHeroDisplayName = useMemo(() => {
-    if (!selectedReplacementHero || selectedReplacementHero === 'Random') {
-      return isRTL ? 'Random (عشوائي)' : 'Random (Shuffle)';
+    if (!selectedReplacementHero) {
+      return '';
     }
     const found = (catalog?.legends || []).find(
       (l) => (l.heroName || '').toLowerCase() === selectedReplacementHero.toLowerCase()
     );
     return found ? (found.displayName || found.heroName) : selectedReplacementHero;
-  }, [selectedReplacementHero, catalog?.legends, isRTL]);
-
-  // Function to roll another random skin across all legends
-  const handleRollRandom = useCallback(() => {
-    const pool = (allCatalogCostumes || []).filter((c) => c && c.costumeName && !c.isDefault);
-    const candidates = pool.length > 0 ? pool : (allCatalogCostumes || []);
-    if (candidates.length === 0) return;
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
-    if (picked) {
-      setSelectedReplacementHero('Random');
-      setSelectedReplacementCostume(picked);
-      const w1 = findMatchingWeaponSkin(weapon1Skins, picked);
-      const w2 = findMatchingWeaponSkin(weapon2Skins, picked);
-      if (w1) setSelectedReplacementWeapon1(w1);
-      if (w2) setSelectedReplacementWeapon2(w2);
-    }
-  }, [allCatalogCostumes, weapon1Skins, weapon2Skins]);
+  }, [selectedReplacementHero, catalog?.legends]);
 
   // Handler for picking a hero from the character cards modal
   const handleSelectHeroFilter = useCallback((hero) => {
     setSelectedReplacementHero(hero);
 
-    if (hero === 'Random') {
-      handleRollRandom();
-      return;
-    }
-
-    // A specific hero was selected (e.g. Cassidy, Bodvar, etc.)
+    // A specific hero was selected (e.g. Cassidy, Bodvar, Random, etc.)
     const heroCostumes = (allCatalogCostumes || []).filter(
       (c) => (c.ownerHero || '').trim().toLowerCase() === hero.trim().toLowerCase()
     );
@@ -345,7 +311,7 @@ export default function LegendCustomizer({
       if (w1) setSelectedReplacementWeapon1(w1);
       if (w2) setSelectedReplacementWeapon2(w2);
     }
-  }, [allCatalogCostumes, handleRollRandom, weapon1Skins, weapon2Skins]);
+  }, [allCatalogCostumes, weapon1Skins, weapon2Skins]);
 
   const [isValidating, setIsValidating] = useState(false);
   const [compatibility, setCompatibility] = useState(null);
@@ -486,14 +452,6 @@ export default function LegendCustomizer({
       ownerHero: legend?.heroName || ''
     };
 
-    const randomCard = {
-      id: '__RANDOM_ROLL__',
-      title: isRTL ? 'اختيار مظهر عشوائي' : 'Roll Random Skin',
-      subtitle: isRTL ? 'يختار سكن عشوائي فوراً' : 'Instantly pick a random skin',
-      isRandomRoll: true,
-      badge: 'Random'
-    };
-
     // Hero name to display name mapping
     const heroMap = new Map();
     (catalog?.legends || []).forEach((l) => {
@@ -505,7 +463,7 @@ export default function LegendCustomizer({
 
     // Filter by selected hero if a specific hero is selected
     let sourceCostumes = allCatalogCostumes || [];
-    if (selHeroLower && selHeroLower !== 'random') {
+    if (selHeroLower) {
       sourceCostumes = sourceCostumes.filter(
         (c) => (c.ownerHero || '').trim().toLowerCase() === selHeroLower
       );
@@ -557,12 +515,7 @@ export default function LegendCustomizer({
       return (a.title || '').localeCompare(b.title || '');
     });
 
-    const prefix = [noneCard];
-    if (selHeroLower === 'random') {
-      prefix.push(randomCard);
-    }
-
-    return [...prefix, ...skins];
+    return [noneCard, ...skins];
   }, [allCatalogCostumes, catalog?.legends, legend, legDisplayName, selectedReplacementHero, isRTL]);
 
   const weapon1Cards = useMemo(() => {
@@ -824,9 +777,7 @@ export default function LegendCustomizer({
               />
             </div>
             <span className="product-badge">
-              {selectedReplacementHero === 'Random'
-                ? (isRTL ? `عشوائي (${displayedReplacementCostume?.ownerHero || ''})` : `Random (${displayedReplacementCostume?.ownerHero || ''})`)
-                : displayedReplacementCostume?.ownerHero && displayedReplacementCostume.ownerHero.toLowerCase() !== (legend?.heroName || '').toLowerCase()
+              {displayedReplacementCostume?.ownerHero && displayedReplacementCostume.ownerHero.toLowerCase() !== (legend?.heroName || '').toLowerCase()
                 ? (isRTL ? `مظهر من ${displayedReplacementCostume.ownerHero}` : `From ${displayedReplacementCostume.ownerHero}`)
                 : (isRTL ? 'المظهر الجديد' : 'New Visual')}
             </span>
@@ -985,19 +936,6 @@ export default function LegendCustomizer({
                   </svg>
                   <span>{isRTL ? 'اختيار شخصية السكن:' : 'Skin Character / Legend:'}</span>
                 </label>
-
-                {selectedReplacementHero === 'Random' && (
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={handleRollRandom}
-                    style={{ padding: '3px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}
-                    title={isRTL ? 'اختيار مظهر عشوائي آخر' : 'Roll another random skin'}
-                  >
-                    <Dices size={13} />
-                    <span>{isRTL ? 'عشوائي آخر' : 'Re-roll'}</span>
-                  </button>
-                )}
               </div>
 
               {/* Visual Card Trigger for Character Selection */}
@@ -1007,33 +945,18 @@ export default function LegendCustomizer({
                 title={isRTL ? 'اضغط لاختيار شخصية السكن من البطاقات' : 'Click to select skin character from cards'}
               >
                 <div className="card-selector-trigger-thumb">
-                  {selectedReplacementHero === 'Random' ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: 'var(--gold, #F5C542)' }}>
-                      <Dices size={24} />
-                    </div>
-                  ) : (
-                    <AssetImage
-                      type="legend"
-                      item={selectedHeroObject || { displayName: currentSelectedHeroDisplayName, heroName: selectedReplacementHero }}
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  )}
+                  <AssetImage
+                    type="legend"
+                    item={selectedHeroObject || { displayName: currentSelectedHeroDisplayName, heroName: selectedReplacementHero }}
+                    style={{ width: '100%', height: '100%' }}
+                  />
                 </div>
                 <div className="card-selector-trigger-info">
                   <div className="card-selector-trigger-title">
-                    {selectedReplacementHero === 'Random' ? (
-                      <span style={{ color: 'var(--gold, #F5C542)', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Dices size={14} />
-                        <span>Random ({isRTL ? 'عشوائي' : 'Shuffle'})</span>
-                      </span>
-                    ) : (
-                      currentSelectedHeroDisplayName
-                    )}
+                    {currentSelectedHeroDisplayName}
                   </div>
                   <div className="card-selector-trigger-sub">
-                    {selectedReplacementHero === 'Random'
-                      ? (isRTL ? 'سكن عشوائي من أي أسطورة' : 'Random skin from any legend')
-                      : (isRTL ? `استعارة سكنات من ${currentSelectedHeroDisplayName}` : `Borrow skins from ${currentSelectedHeroDisplayName}`)}
+                    {isRTL ? `استعارة سكنات من ${currentSelectedHeroDisplayName}` : `Borrow skins from ${currentSelectedHeroDisplayName}`}
                   </div>
                 </div>
                 <div className="card-selector-trigger-badge">

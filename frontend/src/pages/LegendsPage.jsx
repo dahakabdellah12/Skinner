@@ -71,7 +71,7 @@ export default function LegendsPage({
     const normFilter = normalizeWeapon(weaponFilter);
 
     return catalog.legends.filter((legend) => {
-      if (legend.heroName === 'DEFAULT_CHARACTER' || legend.heroName === 'Random') {
+      if (legend.heroName === 'DEFAULT_CHARACTER') {
         return false;
       }
 

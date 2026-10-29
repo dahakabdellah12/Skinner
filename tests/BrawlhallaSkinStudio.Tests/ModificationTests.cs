@@ -318,20 +318,22 @@ public class ModificationTests : IDisposable
     }
 
     [Fact]
-    public void TestDarthVaderSwordAudioModification()
+    public void TestDarthVaderSwordAudioModificationAllowedOnlyOnTargetSwords()
     {
         string audioDir = Path.Combine(_testDir, "audio", "pc");
         Directory.CreateDirectory(audioDir);
 
         string srcSwordBnk = Path.Combine(_realGameDir, "audio", "pc", "WEP_Sword.bnk");
-        string srcSaberBnk = Path.Combine(_realGameDir, "audio", "pc", "WEP_Saber_06.bnk");
+        string srcSaber01Bnk = Path.Combine(_realGameDir, "audio", "pc", "WEP_Saber_01.bnk");
+        string srcSaber06Bnk = Path.Combine(_realGameDir, "audio", "pc", "WEP_Saber_06.bnk");
         string testSwordBnk = Path.Combine(audioDir, "WEP_Sword.bnk");
-        string testSaberBnk = Path.Combine(audioDir, "WEP_Saber_06.bnk");
+        string testSaber01Bnk = Path.Combine(audioDir, "WEP_Saber_01.bnk");
+        string testSaber06Bnk = Path.Combine(audioDir, "WEP_Saber_06.bnk");
 
         File.Copy(srcSwordBnk, testSwordBnk);
-        File.Copy(srcSaberBnk, testSaberBnk);
+        if (File.Exists(srcSaber01Bnk)) File.Copy(srcSaber01Bnk, testSaber01Bnk);
+        if (File.Exists(srcSaber06Bnk)) File.Copy(srcSaber06Bnk, testSaber06Bnk);
 
-        // Also copy Gfx_Weapons.swf or Gfx_DarthVader_Sword.swf if available
         string srcVaderSwf = Path.Combine(_realGameDir, "Gfx_DarthVader_Sword.swf");
         if (File.Exists(srcVaderSwf))
         {
@@ -342,6 +344,16 @@ public class ModificationTests : IDisposable
         {
             File.Copy(srcWeaponsSwf, Path.Combine(_testDir, "Gfx_Weapons.swf"));
         }
+        string srcEzioSwf = Path.Combine(_realGameDir, "Gfx_Ezio.swf");
+        if (File.Exists(srcEzioSwf))
+        {
+            File.Copy(srcEzioSwf, Path.Combine(_testDir, "Gfx_Ezio.swf"));
+        }
+        string srcAsgardSwf = Path.Combine(_realGameDir, "Gfx_AsgardSabers.swf");
+        if (File.Exists(srcAsgardSwf))
+        {
+            File.Copy(srcAsgardSwf, Path.Combine(_testDir, "Gfx_AsgardSabers.swf"));
+        }
 
         var inst = GameDetector.DetectGameInstallation();
         var catalog = new CatalogService();
@@ -350,33 +362,61 @@ public class ModificationTests : IDisposable
         var engine = new ModificationEngine(_testDir, _backupManager, catalog);
 
         var vaderSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordDarthVader", StringComparison.OrdinalIgnoreCase));
-        var targetSword = catalog.WeaponSkins.First(w => w.BaseWeapon.Equals("Sword", StringComparison.OrdinalIgnoreCase) && w.IsDefault);
-
+        
+        // 1. Regular sword (Bödvar default sword) -> Base sound bank WEP_Sword.bnk must NEVER be modified!
+        var bodvarSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordViking", StringComparison.OrdinalIgnoreCase));
         var viking = catalog.Legends.First(l => l.HeroName.Equals("Viking", StringComparison.OrdinalIgnoreCase));
         var vikingCostume = viking.Costumes.First(c => c.IsDefault);
 
-        var req = new ModificationRequest
+        var reqNormal = new ModificationRequest
         {
             TargetLegend = viking,
             TargetCostume = vikingCostume,
-            TargetWeapon1 = targetSword,
+            TargetWeapon1 = bodvarSword,
             ReplacementWeapon1 = vaderSword
         };
 
-        var result = engine.ApplyModification(req);
-        Assert.True(result.Success, string.Join("; ", result.OperationLog));
+        var resultNormal = engine.ApplyModification(reqNormal);
+        Assert.True(resultNormal.Success, string.Join("; ", resultNormal.OperationLog));
+        // Verify audio was NOT modified (normal swords must remain 100% untouched)
+        Assert.DoesNotContain(resultNormal.ModifiedFiles, f => f.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase));
 
-        // Verify that audio/pc/WEP_Sword.bnk was modified
-        Assert.Contains(result.ModifiedFiles, f => f.EndsWith("WEP_Sword.bnk", StringComparison.OrdinalIgnoreCase));
+        // 2. Ezio sword (SwordEzio) -> Has no dedicated sound bank, so base audio must NOT be modified!
+        var ezioSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordEzio", StringComparison.OrdinalIgnoreCase));
+        var ezioLegend = catalog.Legends.First(l => l.HeroName.Equals("Ezio", StringComparison.OrdinalIgnoreCase));
+        var ezioCostume = ezioLegend.Costumes.First(c => c.IsDefault);
 
-        // Verify that WEP_Sword.bnk now has WEP_Sword bank ID and lightsaber events mapped
-        byte[] bytes = File.ReadAllBytes(testSwordBnk);
+        var reqEzio = new ModificationRequest
+        {
+            TargetLegend = ezioLegend,
+            TargetCostume = ezioCostume,
+            TargetWeapon1 = ezioSword,
+            ReplacementWeapon1 = vaderSword
+        };
+
+        var resultEzio = engine.ApplyModification(reqEzio);
+        Assert.True(resultEzio.Success, string.Join("; ", resultEzio.OperationLog));
+        Assert.DoesNotContain(resultEzio.ModifiedFiles, f => f.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase));
+
+        // 3. Dedicated saber sword (SwordAsgardSaber) -> Dedicated bank WEP_Saber_01.bnk is modified, WEP_Sword.bnk untouched!
+        var asgardSword = catalog.WeaponSkins.First(w => w.WeaponSkinName.Equals("SwordAsgardSaber", StringComparison.OrdinalIgnoreCase));
+        var reqAsgard = new ModificationRequest
+        {
+            TargetLegend = viking,
+            TargetCostume = vikingCostume,
+            TargetWeapon1 = asgardSword,
+            ReplacementWeapon1 = vaderSword
+        };
+
+        var resultAsgard = engine.ApplyModification(reqAsgard);
+        Assert.True(resultAsgard.Success, string.Join("; ", resultAsgard.OperationLog));
+        Assert.Contains(resultAsgard.ModifiedFiles, f => f.EndsWith("WEP_Saber_01.bnk", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(resultAsgard.ModifiedFiles, f => f.EndsWith("WEP_Sword.bnk", StringComparison.OrdinalIgnoreCase));
+
+        // Verify that WEP_Saber_01.bnk now has WEP_Saber_01 bank ID
+        byte[] bytes = File.ReadAllBytes(testSaber01Bnk);
         Assert.Equal("BKHD", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
         uint bankId = BitConverter.ToUInt32(bytes, 12);
-        Assert.Equal(ModificationEngine.FnvHash("WEP_Sword"), bankId);
-
-        // Verify backup was made
-        Assert.NotEmpty(result.BackupId);
-        Assert.True(File.Exists(Path.Combine(_testDir, ".studio_backups", result.BackupId, "audio", "pc", "WEP_Sword.bnk")));
+        Assert.Equal(ModificationEngine.FnvHash("WEP_Saber_01"), bankId);
     }
 }

@@ -130,6 +130,16 @@ public class ModificationEngine
         bool hasColorScheme = (request.SelectedColorScheme != null && request.SelectedColorScheme.SwapColors.Count > 0) ||
                               (request.CustomPalette != null && request.CustomPalette.Count > 0);
 
+        // Self-heal: ensure no shared base sound banks remain modified from legacy versions
+        foreach (var baseBank in BaseWeaponSoundBanks)
+        {
+            string relBnk = Path.Combine("audio", "pc", $"{baseBank}.bnk");
+            if (_backupManager.IsFileModified(relBnk))
+            {
+                _backupManager.RestoreFile(relBnk);
+            }
+        }
+
         // Identify all target SWF files that will be modified
         var targetFilesToModify = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (request.TargetCostume != null && !string.IsNullOrWhiteSpace(request.TargetCostume.SwfFile))
@@ -147,7 +157,7 @@ public class ModificationEngine
             {
                 targetFilesToModify.Add(Path.Combine(_gamePath, request.TargetWeapon1.SwfFile));
 
-                if (replW1 != null && HasCustomWeaponSound(replW1))
+                if (replW1 != null && ShouldApplyWeaponAudio(replW1, request.TargetWeapon1))
                 {
                     string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon1);
                     string replBnk = GetWeaponSoundBankPath(replW1);
@@ -167,7 +177,7 @@ public class ModificationEngine
             {
                 targetFilesToModify.Add(Path.Combine(_gamePath, request.TargetWeapon2.SwfFile));
 
-                if (replW2 != null && HasCustomWeaponSound(replW2))
+                if (replW2 != null && ShouldApplyWeaponAudio(replW2, request.TargetWeapon2))
                 {
                     string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon2);
                     string replBnk = GetWeaponSoundBankPath(replW2);
@@ -209,7 +219,7 @@ public class ModificationEngine
                 {
                     ApplyWeaponModification(request.TargetWeapon1, replW1 ?? request.TargetWeapon1, request, result);
 
-                    if (replW1 != null && HasCustomWeaponSound(replW1))
+                    if (replW1 != null && ShouldApplyWeaponAudio(replW1, request.TargetWeapon1))
                     {
                         string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon1);
                         string replBnk = GetWeaponSoundBankPath(replW1);
@@ -230,7 +240,7 @@ public class ModificationEngine
                 {
                     ApplyWeaponModification(request.TargetWeapon2, replW2 ?? request.TargetWeapon2, request, result);
 
-                    if (replW2 != null && HasCustomWeaponSound(replW2))
+                    if (replW2 != null && ShouldApplyWeaponAudio(replW2, request.TargetWeapon2))
                     {
                         string targetBnk = GetWeaponSoundBankPath(request.TargetWeapon2);
                         string replBnk = GetWeaponSoundBankPath(replW2);
@@ -1220,6 +1230,49 @@ public class ModificationEngine
         return weapon;
     }
 
+    public static readonly HashSet<string> BaseWeaponSoundBanks = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "WEP_Sword",
+        "WEP_Hammer",
+        "WEP_Spear",
+        "WEP_RocketLance",
+        "WEP_Pistol",
+        "WEP_Katar",
+        "WEP_Bow",
+        "WEP_Axe",
+        "WEP_Scythe",
+        "WEP_Cannon",
+        "WEP_Orb",
+        "WEP_Greatsword",
+        "WEP_Boots",
+        "WEP_Chakrams",
+        "WEP_Fists",
+        "WEP_Unarmed",
+        "WEP_Explosion"
+    };
+
+    public static bool HasDedicatedSoundBank(WeaponSkinInfo? weapon)
+    {
+        if (weapon == null) return false;
+        if (string.IsNullOrWhiteSpace(weapon.SoundBank)) return false;
+        if (BaseWeaponSoundBanks.Contains(weapon.SoundBank)) return false;
+        if (weapon.SoundBank.Equals($"WEP_{weapon.BaseWeapon}", StringComparison.OrdinalIgnoreCase)) return false;
+        return true;
+    }
+
+    private static bool ShouldApplyWeaponAudio(WeaponSkinInfo? replacement, WeaponSkinInfo? target)
+    {
+        if (replacement == null || target == null) return false;
+        if (!HasCustomWeaponSound(replacement)) return false;
+
+        // CRITICAL FIX: Only apply custom sound effects if the target weapon has its OWN
+        // dedicated custom sound bank (e.g. WEP_Saber_07, WEP_Saber_01, WEP_Pistol_02, etc.).
+        // We NEVER overwrite shared base sound banks (WEP_Sword.bnk, WEP_Hammer.bnk, etc.)
+        // because those banks are globally shared by all regular/normal weapons of that type across all legends.
+        // Overwriting a base sound bank causes all normal weapons in the game to play the special sound effects.
+        return HasDedicatedSoundBank(target);
+    }
+
     private static bool HasCustomWeaponSound(WeaponSkinInfo weapon)
     {
         return !string.IsNullOrWhiteSpace(weapon.SoundBank) && weapon.AttackSoundOverrides.Count > 0;
@@ -1271,14 +1324,43 @@ public class ModificationEngine
         Array.Copy(BitConverter.GetBytes(targetBankId), 0, bytes, 12, 4);
 
         var eventMap = new Dictionary<uint, uint>();
-        foreach (var ovr in replacement.AttackSoundOverrides)
+        if (target.AttackSoundOverrides.Count > 0)
         {
-            var parts = ovr.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 2)
+            var targetEventByBase = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var tovr in target.AttackSoundOverrides)
             {
-                uint origId = FnvHash(parts[0]);
-                uint replId = FnvHash(parts[1]);
-                eventMap[replId] = origId;
+                var tparts = tovr.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (tparts.Length == 2)
+                {
+                    targetEventByBase[tparts[0]] = tparts[1];
+                }
+            }
+
+            foreach (var ovr in replacement.AttackSoundOverrides)
+            {
+                var parts = ovr.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2)
+                {
+                    string targetEventName = targetEventByBase.TryGetValue(parts[0], out var mappedTarget)
+                        ? mappedTarget
+                        : parts[0];
+                    uint targetId = FnvHash(targetEventName);
+                    uint replId = FnvHash(parts[1]);
+                    eventMap[replId] = targetId;
+                }
+            }
+        }
+        else
+        {
+            foreach (var ovr in replacement.AttackSoundOverrides)
+            {
+                var parts = ovr.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2)
+                {
+                    uint origId = FnvHash(parts[0]);
+                    uint replId = FnvHash(parts[1]);
+                    eventMap[replId] = origId;
+                }
             }
         }
 

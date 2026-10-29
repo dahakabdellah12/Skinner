@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import AssetImage from './AssetImage';
-import { Dices } from 'lucide-react';
 
 function uintToHex(val, fallback = '#6b7280') {
   if (val == null || val === undefined) return fallback;
@@ -95,14 +94,14 @@ export default function CardPickerModal({
     if (!q) return items;
 
     const matchesFiltered = items.filter((it) => {
-      if (it.isNone || it.isRandomRoll) return false;
+      if (it.isNone) return false;
       const titleMatch = it.title && it.title.toLowerCase().includes(q);
       const subMatch = it.subtitle && it.subtitle.toLowerCase().includes(q);
       const searchKeyMatch = it.searchKey && it.searchKey.toLowerCase().includes(q);
       return titleMatch || subMatch || searchKeyMatch;
     });
 
-    const specialItems = items.filter((it) => it.isNone || it.isRandomRoll);
+    const specialItems = items.filter((it) => it.isNone);
     return [...specialItems, ...matchesFiltered];
   }, [items, search]);
 
@@ -208,21 +207,12 @@ export default function CardPickerModal({
                   >
                     <div className="card-picker-image-wrap">
                       <div className="card-image" style={{ width: '100%', height: '100%' }}>
-                        {item.isRandomRoll ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', color: 'var(--gold, #F5C542)' }}>
-                            <Dices size={38} style={{ filter: 'drop-shadow(0 4px 12px rgba(245,197,66,0.35))' }} />
-                            <span style={{ fontSize: '12px', fontWeight: 800 }}>
-                              {isRTL ? 'عشوائي' : 'Random'}
-                            </span>
-                          </div>
-                        ) : (
-                          <AssetImage
-                            type="legend"
-                            item={item.rawItem}
-                            style={{ width: '100%', height: '100%' }}
-                            fallbackText={item.title}
-                          />
-                        )}
+                        <AssetImage
+                          type="legend"
+                          item={item.rawItem}
+                          style={{ width: '100%', height: '100%' }}
+                          fallbackText={item.title}
+                        />
                       </div>
 
                       {isSelected && (
@@ -315,13 +305,6 @@ export default function CardPickerModal({
                           </svg>
                           <span style={{ fontSize: '11px', fontWeight: 700 }}>
                             {isRTL ? 'بدون تعديل (أصلي)' : 'Stock / Unchanged'}
-                          </span>
-                        </div>
-                      ) : item.isRandomRoll ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', color: 'var(--gold, #F5C542)' }}>
-                          <Dices size={36} style={{ filter: 'drop-shadow(0 4px 12px rgba(245,197,66,0.35))' }} />
-                          <span style={{ fontSize: '12px', fontWeight: 800 }}>
-                            {isRTL ? 'سكن عشوائي' : 'Random Skin'}
                           </span>
                         </div>
                       ) : (
