@@ -453,9 +453,11 @@ public static class PreviewRenderer
         double vbW = Math.Round(Math.Max(1.0, maxX - minX + margin * 2), 2);
         double vbH = Math.Round(Math.Max(1.0, maxY - minY + margin * 2), 2);
 
+        string viewBoxStr = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{vbX} {vbY} {vbW} {vbH}");
+
         var rootSvg = new XElement(XName.Get("svg", "http://www.w3.org/2000/svg"),
             new XAttribute("xmlns", "http://www.w3.org/2000/svg"),
-            new XAttribute("viewBox", $"{vbX} {vbY} {vbW} {vbH}"),
+            new XAttribute("viewBox", viewBoxStr),
             new XAttribute("width", "100%"),
             new XAttribute("height", "100%"),
             new XAttribute("preserveAspectRatio", "xMidYMid meet"),

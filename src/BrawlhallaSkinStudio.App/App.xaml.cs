@@ -43,6 +43,12 @@ public partial class App : Application
 
     public App()
     {
+        // Enforce InvariantCulture across all application threads so SVG numeric formatting (decimals as dots) is never broken on European/Arabic/other locales
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
+        System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        System.Threading.Thread.CurrentThread.CurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
+
         SafeLog("startup.log", $"[{DateTime.Now:HH:mm:ss.fff}] App constructor PID={Environment.ProcessId}\n");
 
         DispatcherUnhandledException += (object sender, DispatcherUnhandledExceptionEventArgs e) =>

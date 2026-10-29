@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using SwfLib.Data;
@@ -45,8 +46,8 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         _windingRule = windingRule;
 
         _svg = new(xmlns + "svg");
-        _svg.SetAttributeValue("width", size.Width);
-        _svg.SetAttributeValue("height", size.Height);
+        _svg.SetAttributeValue("width", size.Width.ToString(CultureInfo.InvariantCulture));
+        _svg.SetAttributeValue("height", size.Height.ToString(CultureInfo.InvariantCulture));
 
         _group = new XElement(xmlns + "g");
         _svg.Add(_group);
@@ -119,7 +120,7 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         _path.SetAttributeValue("fill", SvgUtils.ColorToHexString(color));
         _path.SetAttributeValue("fill-rule", SvgUtils.WindingRuleToString(_windingRule));
         if (color.Alpha != 255)
-            _path.SetAttributeValue("fill-opacity", color.Alpha / 255.0f);
+            _path.SetAttributeValue("fill-opacity", (color.Alpha / 255.0f).ToString(CultureInfo.InvariantCulture));
         _path.SetAttributeValue("stroke", "none");
     }
 
@@ -167,9 +168,9 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         double strokeWidth = thickness / SWF_UNIT_DIVISOR;
         _path.SetAttributeValue("fill", "none");
         _path.SetAttributeValue("stroke", SvgUtils.ColorToHexString(color));
-        _path.SetAttributeValue("stroke-width", strokeWidth);
+        _path.SetAttributeValue("stroke-width", strokeWidth.ToString(CultureInfo.InvariantCulture));
         if (color.Alpha != 255)
-            _path.SetAttributeValue("stroke-opacity", color.Alpha / 255.0);
+            _path.SetAttributeValue("stroke-opacity", (color.Alpha / 255.0).ToString(CultureInfo.InvariantCulture));
 
         _path.SetAttributeValue("stroke-linecap", startCaps switch
         {
@@ -190,7 +191,7 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         });
         if (joints == JoinStyle.Miter && miterLimit >= 1)
         {
-            _path.SetAttributeValue("stroke-miterlimit", miterLimit);
+            _path.SetAttributeValue("stroke-miterlimit", miterLimit.ToString(CultureInfo.InvariantCulture));
         }
 
         _path.SetAttributeValue("vector-effect", scaleMode switch
@@ -239,7 +240,7 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         _currentDrawCommand = "";
         double x = pos.X / SWF_UNIT_DIVISOR;
         double y = pos.Y / SWF_UNIT_DIVISOR;
-        _pathData.Append($"M{x} {y} ");
+        _pathData.AppendFormat(CultureInfo.InvariantCulture, "M{0:0.##} {1:0.##} ", x, y);
     }
 
     public void LineTo(Vector2I pos)
@@ -251,7 +252,7 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         }
         double x = pos.X / SWF_UNIT_DIVISOR;
         double y = pos.Y / SWF_UNIT_DIVISOR;
-        _pathData.Append($"{x} {y} ");
+        _pathData.AppendFormat(CultureInfo.InvariantCulture, "{0:0.##} {1:0.##} ", x, y);
     }
 
     public void CurveTo(Vector2I anchor, Vector2I to)
@@ -265,7 +266,7 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         double ay = anchor.Y / SWF_UNIT_DIVISOR;
         double x = to.X / SWF_UNIT_DIVISOR;
         double y = to.Y / SWF_UNIT_DIVISOR;
-        _pathData.Append($"{ax} {ay} {x} {y} ");
+        _pathData.AppendFormat(CultureInfo.InvariantCulture, "{0:0.##} {1:0.##} {2:0.##} {3:0.##} ", ax, ay, x, y);
     }
 
     public void FinalizePath()
@@ -304,19 +305,19 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
         // linear
         if (focalPointRatio is null)
         {
-            gradient.SetAttributeValue("x1", -SWF_GRADIENT_SIZE);
-            gradient.SetAttributeValue("x2", SWF_GRADIENT_SIZE);
+            gradient.SetAttributeValue("x1", (-SWF_GRADIENT_SIZE).ToString(CultureInfo.InvariantCulture));
+            gradient.SetAttributeValue("x2", SWF_GRADIENT_SIZE.ToString(CultureInfo.InvariantCulture));
         }
         // radial or focal
         else
         {
-            gradient.SetAttributeValue("r", SWF_GRADIENT_SIZE);
-            gradient.SetAttributeValue("cx", 0);
-            gradient.SetAttributeValue("cy", 0);
+            gradient.SetAttributeValue("r", SWF_GRADIENT_SIZE.ToString(CultureInfo.InvariantCulture));
+            gradient.SetAttributeValue("cx", "0");
+            gradient.SetAttributeValue("cy", "0");
             if (focalPointRatio != 0)
             {
-                gradient.SetAttributeValue("fx", SWF_GRADIENT_SIZE * focalPointRatio);
-                gradient.SetAttributeValue("fy", 0);
+                gradient.SetAttributeValue("fx", (SWF_GRADIENT_SIZE * focalPointRatio.Value).ToString(CultureInfo.InvariantCulture));
+                gradient.SetAttributeValue("fy", "0");
             }
         }
 
@@ -358,10 +359,10 @@ public class SvgShapeExporter(SvgSize size, SvgMatrix transform, SvgColorTransfo
             }
 
             XElement entry = new(xmlns + "stop");
-            entry.SetAttributeValue("offset", lastRatio / 255.0);
+            entry.SetAttributeValue("offset", (lastRatio / 255.0).ToString(CultureInfo.InvariantCulture));
             entry.SetAttributeValue("stop-color", SvgUtils.ColorToHexString(record.Color));
             if (record.Color.Alpha != 255)
-                entry.SetAttributeValue("stop-opacity", record.Color.Alpha / 255.0);
+                entry.SetAttributeValue("stop-opacity", (record.Color.Alpha / 255.0).ToString(CultureInfo.InvariantCulture));
             gradient.Add(entry);
 
             if (lastRatio >= 255) break;
