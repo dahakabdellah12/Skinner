@@ -3,7 +3,8 @@
     Builds and publishes a BrawlCraft release end to end.
 
 .DESCRIPTION
-    1. Reads the version from the App project file.
+    1. Bumps the version across the project when -Version is supplied, then reads the
+       version from the App project file.
     2. Builds the portable package via scripts/release.ps1 (frontend + .NET + ZIP + SHA256SUMS).
     3. Commits the source change and pushes the private source repository with a v<version> tag.
     4. Uploads the package and checksums to a GitHub Release on the public repository.
@@ -23,6 +24,11 @@
 .PARAMETER NotesFile
     Path to a Markdown file with the release notes. Takes precedence over -Notes.
 
+.PARAMETER Version
+    New version in 3.1.4 form. Updates the App .csproj (Version, AssemblyVersion and
+    FileVersion), frontend/package.json, frontend/package-lock.json, installer.iss and the
+    private README before building.
+
 .PARAMETER PublicRepoPath
     Local working copy of the public repository (cloned automatically when missing).
 
@@ -40,11 +46,15 @@
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1 -Notes "Fixes the weapon skin picker."
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1 -Version 3.1.3 -NotesFile .\notes.md
 #>
 
 param(
     [string]$Notes = '',
     [string]$NotesFile = '',
+    [string]$Version = '',
     [string]$PublicRepoPath = (Join-Path $env:TEMP 'opencode\brawlcraft-public'),
     [string]$PublicRepo = 'dahakabdellah12/BrawlCraft',
     [switch]$SkipBuild,
@@ -92,8 +102,40 @@ function Invoke-Git {
 
 Push-Location $root
 try {
-    # ---- version -------------------------------------------------------------
+    # ---- optional version bump ----------------------------------------------
     $csproj = Join-Path $root 'src\BrawlhallaSkinStudio.App\BrawlhallaSkinStudio.App.csproj'
+    if ($Version) {
+        if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw '-Version must use the 3.1.4 format.' }
+        Write-Host "==> Bumping version to $Version" -ForegroundColor Cyan
+
+        $text = Get-Content $csproj -Raw -Encoding UTF8
+        $text = [regex]::Replace($text, '<Version>[^<]*</Version>', "<Version>$Version</Version>")
+        $text = [regex]::Replace($text, '<AssemblyVersion>[^<]*</AssemblyVersion>', "<AssemblyVersion>$Version.0</AssemblyVersion>")
+        $text = [regex]::Replace($text, '<FileVersion>[^<]*</FileVersion>', "<FileVersion>$Version.0</FileVersion>")
+        [System.IO.File]::WriteAllText($csproj, $text, $utf8)
+
+        $packageJson = Join-Path $root 'frontend\package.json'
+        $pkg = Get-Content $packageJson -Raw -Encoding UTF8
+        $pkg = ([regex]'"version"\s*:\s*"[^"]*"').Replace($pkg, "`"version`": `"$Version`"", 1)
+        [System.IO.File]::WriteAllText($packageJson, $pkg, $utf8)
+
+        $packageLock = Join-Path $root 'frontend\package-lock.json'
+        $lock = Get-Content $packageLock -Raw -Encoding UTF8
+        $lock = ([regex]'"version"\s*:\s*"[^"]*"').Replace($lock, "`"version`": `"$Version`"", 2)
+        [System.IO.File]::WriteAllText($packageLock, $lock, $utf8)
+
+        $installer = Join-Path $root 'installer.iss'
+        $iss = Get-Content $installer -Raw -Encoding UTF8
+        $iss = [regex]::Replace($iss, '#define MyAppVersion "[^"]*"', "#define MyAppVersion `"$Version`"")
+        [System.IO.File]::WriteAllText($installer, $iss, $utf8)
+
+        $devReadme = Join-Path $root 'README.md'
+        $devText = Get-Content $devReadme -Raw -Encoding UTF8
+        $devText = [regex]::Replace($devText, 'Current release: \*\*v[0-9.]+\*\*', "Current release: **v$Version**")
+        [System.IO.File]::WriteAllText($devReadme, $devText, $utf8)
+    }
+
+    # ---- version -------------------------------------------------------------
     [xml]$project = Get-Content $csproj
     $version = ($project.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
     if (-not $version) { throw "Could not read <Version> from $csproj" }
