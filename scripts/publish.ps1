@@ -276,15 +276,22 @@ try {
     if ($existingReleaseCode -eq 0) {
         Invoke-Native -Exe 'gh' -Arguments @('release', 'delete', $tag, '-R', $PublicRepo, '--yes') | Out-Null
     }
-    Invoke-Native -Exe 'gh' -Arguments @(
-        'release', 'create', $tag,
-        $zipPath,
-        $sumsPath,
-        '-R', $PublicRepo,
-        '--title', $releaseTitle,
-        '--notes', $Notes,
-        '--latest'
-    ) | Out-Null
+    $notesPath = Join-Path ([System.IO.Path]::GetTempPath()) ("brawlcraft-release-notes-" + [guid]::NewGuid().ToString('N') + '.md')
+    try {
+        [System.IO.File]::WriteAllText($notesPath, $Notes, $utf8)
+        Invoke-Native -Exe 'gh' -Arguments @(
+            'release', 'create', $tag,
+            $zipPath,
+            $sumsPath,
+            '-R', $PublicRepo,
+            '--title', $releaseTitle,
+            '--notes-file', $notesPath,
+            '--latest'
+        ) | Out-Null
+    }
+    finally {
+        if (Test-Path $notesPath) { Remove-Item $notesPath -Force }
+    }
     Write-Host "    https://github.com/$PublicRepo/releases/tag/$tag"
 
     Write-Host ''
