@@ -1175,9 +1175,21 @@ public class WebViewBridge
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-Updater/{CurrentVersion}");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
-            // Preferred channel: an update manifest stored in the public repository.
-            // The public repository has no GitHub Releases at all, so the manifest is
-            // the only update channel; a CDN mirror covers raw.githubusercontent outages.
+            // Primary channel: GitHub Releases on the public repository (binaries only).
+            // Fallback: downloads/latest.json, with a CDN mirror if GitHub is unreachable.
+            try
+            {
+                var releaseResult = await TryReadGitHubReleaseAsync(client, apiUrl, targetRepo, repoUrl, releasesUrl);
+                if (releaseResult != null)
+                {
+                    return releaseResult;
+                }
+            }
+            catch (Exception releaseEx)
+            {
+                App.SafeLog("bridge.log", $"[UPDATE] GitHub Releases check failed ({apiUrl}): {releaseEx.Message}");
+            }
+
             string primaryManifestUrl = $"https://raw.githubusercontent.com/{targetRepo}/master/downloads/latest.json?v={DateTime.UtcNow.Ticks}";
             string mirrorManifestUrl = $"https://cdn.jsdelivr.net/gh/{targetRepo}@master/downloads/latest.json";
             foreach (string manifestUrl in new[] { primaryManifestUrl, mirrorManifestUrl })
@@ -1196,145 +1208,21 @@ public class WebViewBridge
                 }
             }
 
-            var response = await client.GetAsync(apiUrl);
-            if (response.IsSuccessStatusCode)
+            return new
             {
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                string tagName = root.TryGetProperty("tag_name", out var tagProp) ? tagProp.GetString() ?? "" : "";
-                string releaseName = root.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "" : "";
-                string htmlUrl = root.TryGetProperty("html_url", out var urlProp) ? urlProp.GetString() ?? "" : releasesUrl;
-                string releaseNotes = root.TryGetProperty("body", out var bProp) ? bProp.GetString() ?? "" : "";
-                string publishedAt = root.TryGetProperty("published_at", out var pubProp) ? pubProp.GetString() ?? "" : "";
-
-                // Look for a portable .zip or a setup .exe in the release
-                string downloadUrl = htmlUrl;
-                string? assetName = null;
-                long assetSize = 0;
-                string? sha256 = null;
-
-                string? zipDownloadUrl = null;
-                string? zipAssetName = null;
-                long zipAssetSize = 0;
-                string? zipDigest = null;
-
-                string? exeDownloadUrl = null;
-                string? exeAssetName = null;
-                long exeAssetSize = 0;
-                string? exeDigest = null;
-
-                string? checksumsUrl = null;
-
-                if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var asset in assetsProp.EnumerateArray())
-                    {
-                        string aName = asset.TryGetProperty("name", out var anProp) ? anProp.GetString() ?? "" : "";
-                        string bUrl = asset.TryGetProperty("browser_download_url", out var dProp) ? dProp.GetString() ?? "" : "";
-                        long sVal = asset.TryGetProperty("size", out var sProp) ? sProp.GetInt64() : 0;
-                        string? digest = ReadAssetDigest(asset);
-
-                        if (aName.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
-                        {
-                            checksumsUrl = bUrl;
-                        }
-                        else if (aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && zipDownloadUrl == null)
-                        {
-                            zipAssetName = aName;
-                            zipDownloadUrl = bUrl;
-                            zipAssetSize = sVal;
-                            zipDigest = digest;
-                        }
-                        else if (aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && exeDownloadUrl == null)
-                        {
-                            exeAssetName = aName;
-                            exeDownloadUrl = bUrl;
-                            exeAssetSize = sVal;
-                            exeDigest = digest;
-                        }
-                    }
-                }
-
-                // Prefer the portable zip for a seamless in-place update, fall back to the setup exe.
-                if (!string.IsNullOrEmpty(zipDownloadUrl))
-                {
-                    downloadUrl = zipDownloadUrl;
-                    assetName = zipAssetName;
-                    assetSize = zipAssetSize;
-                    sha256 = zipDigest;
-                }
-                else if (!string.IsNullOrEmpty(exeDownloadUrl))
-                {
-                    downloadUrl = exeDownloadUrl;
-                    assetName = exeAssetName;
-                    assetSize = exeAssetSize;
-                    sha256 = exeDigest;
-                }
-
-                // Fall back to the release's SHA256SUMS.txt when GitHub did not expose an asset digest.
-                if (sha256 == null && !string.IsNullOrEmpty(checksumsUrl) && !string.IsNullOrEmpty(assetName))
-                {
-                    try
-                    {
-                        string? sumsText = await TryFetchTextAsync(client, checksumsUrl);
-                        if (sumsText != null)
-                        {
-                            sha256 = FindChecksumForAsset(sumsText, assetName);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        App.SafeLog("bridge.log", $"[UPDATE] Checksum lookup failed: {ex.Message}");
-                    }
-                }
-
-                string latestVerClean = tagName.TrimStart('v', 'V');
-                bool hasUpdate = false;
-                if (Version.TryParse(latestVerClean, out var latestVer) && Version.TryParse(CurrentVersion, out var currVer))
-                {
-                    hasUpdate = latestVer > currVer;
-                }
-
-                return new
-                {
-                    success = true,
-                    hasUpdate,
-                    currentVersion = CurrentVersion,
-                    latestVersion = string.IsNullOrEmpty(latestVerClean) ? CurrentVersion : latestVerClean,
-                    releaseTitle = string.IsNullOrEmpty(releaseName) ? tagName : releaseName,
-                    releaseNotes,
-                    htmlUrl,
-                    downloadUrl,
-                    assetName,
-                    assetSizeFormatted = assetSize > 0 ? $"{assetSize / (1024.0 * 1024.0):F1} MB" : null,
-                    sha256,
-                    verified = sha256 != null,
-                    repo = targetRepo,
-                    repoUrl,
-                    releasesUrl,
-                    publishedAt,
-                    checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-            }
-            else
-            {
-                return new
-                {
-                    success = true,
-                    hasUpdate = false,
-                    currentVersion = CurrentVersion,
-                    latestVersion = CurrentVersion,
-                    releaseTitle = $"BrawlCraft v{CurrentVersion} (Official)",
-                    releaseNotes = "You are running the latest stable release on GitHub.",
-                    htmlUrl = releasesUrl,
-                    downloadUrl = releasesUrl,
-                    repo = targetRepo,
-                    repoUrl,
-                    releasesUrl,
-                    checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-            }
+                success = true,
+                hasUpdate = false,
+                currentVersion = CurrentVersion,
+                latestVersion = CurrentVersion,
+                releaseTitle = $"BrawlCraft v{CurrentVersion} (Official)",
+                releaseNotes = "You are running the latest stable release on GitHub.",
+                htmlUrl = releasesUrl,
+                downloadUrl = releasesUrl,
+                repo = targetRepo,
+                repoUrl,
+                releasesUrl,
+                checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            };
         }
         catch (Exception ex)
         {
@@ -1353,6 +1241,137 @@ public class WebViewBridge
                 checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
         }
+    }
+
+    private async Task<object?> TryReadGitHubReleaseAsync(
+        HttpClient client,
+        string apiUrl,
+        string targetRepo,
+        string repoUrl,
+        string releasesUrl)
+    {
+        using var response = await client.GetAsync(apiUrl);
+        if (!response.IsSuccessStatusCode) return null;
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        string tagName = root.TryGetProperty("tag_name", out var tagProp) ? tagProp.GetString() ?? "" : "";
+        string releaseName = root.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "" : "";
+        string htmlUrl = root.TryGetProperty("html_url", out var urlProp) ? urlProp.GetString() ?? "" : releasesUrl;
+        string releaseNotes = root.TryGetProperty("body", out var bProp) ? bProp.GetString() ?? "" : "";
+        string publishedAt = root.TryGetProperty("published_at", out var pubProp) ? pubProp.GetString() ?? "" : "";
+
+        string downloadUrl = htmlUrl;
+        string? assetName = null;
+        long assetSize = 0;
+        string? sha256 = null;
+
+        string? zipDownloadUrl = null;
+        string? zipAssetName = null;
+        long zipAssetSize = 0;
+        string? zipDigest = null;
+
+        string? exeDownloadUrl = null;
+        string? exeAssetName = null;
+        long exeAssetSize = 0;
+        string? exeDigest = null;
+
+        string? checksumsUrl = null;
+
+        if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var asset in assetsProp.EnumerateArray())
+            {
+                string aName = asset.TryGetProperty("name", out var anProp) ? anProp.GetString() ?? "" : "";
+                string bUrl = asset.TryGetProperty("browser_download_url", out var dProp) ? dProp.GetString() ?? "" : "";
+                long sVal = asset.TryGetProperty("size", out var sProp) ? sProp.GetInt64() : 0;
+                string? digest = ReadAssetDigest(asset);
+
+                if (aName.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    checksumsUrl = bUrl;
+                }
+                else if (aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && zipDownloadUrl == null)
+                {
+                    zipAssetName = aName;
+                    zipDownloadUrl = bUrl;
+                    zipAssetSize = sVal;
+                    zipDigest = digest;
+                }
+                else if (aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && exeDownloadUrl == null)
+                {
+                    exeAssetName = aName;
+                    exeDownloadUrl = bUrl;
+                    exeAssetSize = sVal;
+                    exeDigest = digest;
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(zipDownloadUrl) && string.IsNullOrEmpty(exeDownloadUrl))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(zipDownloadUrl))
+        {
+            downloadUrl = zipDownloadUrl;
+            assetName = zipAssetName;
+            assetSize = zipAssetSize;
+            sha256 = zipDigest;
+        }
+        else
+        {
+            downloadUrl = exeDownloadUrl!;
+            assetName = exeAssetName;
+            assetSize = exeAssetSize;
+            sha256 = exeDigest;
+        }
+
+        if (sha256 == null && !string.IsNullOrEmpty(checksumsUrl) && !string.IsNullOrEmpty(assetName))
+        {
+            try
+            {
+                string? sumsText = await TryFetchTextAsync(client, checksumsUrl);
+                if (sumsText != null)
+                {
+                    sha256 = FindChecksumForAsset(sumsText, assetName);
+                }
+            }
+            catch (Exception ex)
+            {
+                App.SafeLog("bridge.log", $"[UPDATE] Checksum lookup failed: {ex.Message}");
+            }
+        }
+
+        string latestVerClean = tagName.TrimStart('v', 'V');
+        bool hasUpdate = false;
+        if (Version.TryParse(latestVerClean, out var latestVer) && Version.TryParse(CurrentVersion, out var currVer))
+        {
+            hasUpdate = latestVer > currVer;
+        }
+
+        return new
+        {
+            success = true,
+            hasUpdate,
+            currentVersion = CurrentVersion,
+            latestVersion = string.IsNullOrEmpty(latestVerClean) ? CurrentVersion : latestVerClean,
+            releaseTitle = string.IsNullOrEmpty(releaseName) ? tagName : releaseName,
+            releaseNotes,
+            htmlUrl,
+            downloadUrl,
+            assetName,
+            assetSizeFormatted = assetSize > 0 ? $"{assetSize / (1024.0 * 1024.0):F1} MB" : null,
+            sha256,
+            verified = sha256 != null,
+            repo = targetRepo,
+            repoUrl,
+            releasesUrl,
+            publishedAt,
+            checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+        };
     }
 
     private sealed class UpdateManifest
@@ -1416,7 +1435,7 @@ public class WebViewBridge
             latestVersion = manifest.Version,
             releaseTitle = string.IsNullOrWhiteSpace(manifest.Title) ? $"BrawlCraft v{manifest.Version}" : manifest.Title,
             releaseNotes = manifest.Notes ?? "",
-            htmlUrl = $"{repoUrl}#download",
+            htmlUrl = $"{repoUrl}/releases/tag/v{manifest.Version}",
             downloadUrl = manifest.DownloadUrl,
             assetName,
             assetSizeFormatted = manifest.Size > 0 ? $"{manifest.Size / (1024.0 * 1024.0):F1} MB" : null,

@@ -175,8 +175,8 @@ dotnet test tests\BrawlhallaSkinStudio.Tests\BrawlhallaSkinStudio.Tests.csproj
 ## Release
 
 `scripts/publish.ps1` is the one-command release flow. It bumps the version (optional), builds,
-pushes the private source repository, copies the package into the public repository, refreshes
-`downloads/latest.json` and the public README/CHANGELOG, then pushes the public repository.
+pushes the private source repository, creates a GitHub Release on the public repository,
+refreshes `downloads/latest.json` and the public README/CHANGELOG, then pushes the public repository.
 
 ```powershell
 # Full release: bump to 3.1.3, build, tag, publish
@@ -195,7 +195,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1 -SkipBuild -SkipS
 | `-SkipSourcePush` | Do not commit/tag/push the private repository |
 | `-PublicRepoPath <dir>` | Local clone of the public repository (defaults to `%TEMP%\opencode\brawlcraft-public`) |
 
-Requires push access to both repositories. No GitHub CLI is needed.
+Requires push access to both repositories and a logged-in GitHub CLI (`gh auth status`).
 
 The lower-level `scripts/release.ps1` only builds: it reads the version from the App `.csproj`,
 builds the frontend, publishes the application, and creates `release/BrawlCraft-v<version>-Windows.zip`
@@ -206,13 +206,13 @@ executable; otherwise that step is skipped with a warning.
 powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1
 ```
 
-The public repository is documentation-only plus the package in `downloads/`. It deliberately has
-**no GitHub Releases**, because GitHub always adds `Source code (zip)` / `Source code (tar.gz)`
-links to every release and they cannot be hidden. Without releases the download page shows only
-the application.
+The public repository is documentation-only. Users download the portable ZIP from
+[GitHub Releases](https://github.com/dahakabdellah12/BrawlCraft/releases). GitHub always attaches
+`Source code (zip)` / `Source code (tar.gz)` to every release; those archives contain only the
+public page (README, license, changelog) — never the application source.
 
-The updater reads `downloads/latest.json` from the public repository (with a jsDelivr mirror as
-fallback) and requires a matching SHA-256 before installing.
+The updater reads the latest GitHub Release first, then falls back to `downloads/latest.json`
+(with a jsDelivr mirror). Installation is refused unless the SHA-256 matches.
 
 ---
 

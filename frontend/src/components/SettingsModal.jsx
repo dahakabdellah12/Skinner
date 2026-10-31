@@ -162,8 +162,8 @@ export default function SettingsModal({
           currentVersion: res.currentVersion || APP_VERSION,
           latestVersion: res.latestVersion || APP_VERSION,
           releaseTitle: res.releaseTitle || '',
-          downloadUrl: res.downloadUrl || 'https://github.com/dahakabdellah12/BrawlCraft#download',
-          htmlUrl: res.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft#download',
+          downloadUrl: res.downloadUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases/latest',
+          htmlUrl: res.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases/latest',
           assetName: res.assetName || null,
           assetSizeFormatted: res.assetSizeFormatted || null,
           sha256: res.sha256 || null,
@@ -769,10 +769,10 @@ export default function SettingsModal({
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          onClick={() => api.openExternalUrl(updateState.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft#download')}
+                          onClick={() => api.openExternalUrl(updateState.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases/latest')}
                           style={{ fontWeight: 600, padding: '8px 14px' }}
                         >
-                          {isArabic ? 'صفحة التحميل ↗' : 'Download Page ↗'}
+                          {isArabic ? 'صفحة الإصدارات ↗' : 'Releases ↗'}
                         </button>
                       )}
 
