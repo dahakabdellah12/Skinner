@@ -162,8 +162,8 @@ export default function SettingsModal({
           currentVersion: res.currentVersion || APP_VERSION,
           latestVersion: res.latestVersion || APP_VERSION,
           releaseTitle: res.releaseTitle || '',
-          downloadUrl: res.downloadUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases',
-          htmlUrl: res.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases',
+          downloadUrl: res.downloadUrl || 'https://github.com/dahakabdellah12/BrawlCraft#download',
+          htmlUrl: res.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft#download',
           assetName: res.assetName || null,
           assetSizeFormatted: res.assetSizeFormatted || null,
           sha256: res.sha256 || null,
@@ -173,7 +173,7 @@ export default function SettingsModal({
           repoUrl: res.repoUrl || 'https://github.com/dahakabdellah12/BrawlCraft',
           checkedAt: res.checkedAt || new Date().toLocaleTimeString(),
           error: res.networkError
-            ? (isArabic ? 'تعذر الاتصال بـ GitHub Releases. تحقق من اتصال الإنترنت.' : 'Could not reach GitHub Releases. Check internet connection.')
+            ? (isArabic ? 'تعذر الاتصال بخادم التحديثات. تحقق من اتصال الإنترنت.' : 'Could not reach the update server. Check your internet connection.')
             : ''
         });
         if (res.hasUpdate) {
@@ -685,7 +685,7 @@ export default function SettingsModal({
                       <div className="setting-desc" style={{ marginTop: '4px' }}>
                         {updateState.loading ? (
                           <span style={{ color: 'var(--accent-light)' }}>
-                            {isArabic ? 'جاري الاتصال بـ GitHub Releases للتحقق من أحدث إصدار...' : 'Connecting to GitHub Releases to check for updates...'}
+                            {isArabic ? 'جاري التحقق من أحدث إصدار...' : 'Checking for the latest version...'}
                           </span>
                         ) : updateState.checked ? (
                           updateState.hasUpdate ? (
@@ -725,8 +725,8 @@ export default function SettingsModal({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ color: 'var(--success, #22C55E)', fontWeight: 600 }}>
                                 {isArabic
-                                  ? `أنت تستخدم أحدث إصدار مستقر من GitHub v${updateState.currentVersion} ✓`
-                                  : `You are on the latest GitHub release v${updateState.currentVersion} ✓`}
+                                  ? `أنت تستخدم أحدث إصدار v${updateState.currentVersion} ✓`
+                                  : `You are on the latest version v${updateState.currentVersion} ✓`}
                               </span>
                               <span style={{ fontSize: '11px', opacity: 0.75 }}>
                                 ({isArabic ? 'تم الفحص من GitHub:' : 'Checked via GitHub:'} {updateState.checkedAt})
@@ -736,8 +736,8 @@ export default function SettingsModal({
                         ) : (
                           <span>
                             {isArabic
-                              ? 'فحص أحدث الإصدارات المنشورة مباشرة على مستودع GitHub الرسمي.'
-                              : 'Check the official GitHub repository for the latest published release.'}
+                              ? 'التحقق من أحدث إصدار منشور على المستودع الرسمي.'
+                              : 'Check the official repository for the latest published version.'}
                           </span>
                         )}
                       </div>
@@ -769,10 +769,10 @@ export default function SettingsModal({
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          onClick={() => api.openExternalUrl(updateState.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft/releases')}
+                          onClick={() => api.openExternalUrl(updateState.htmlUrl || 'https://github.com/dahakabdellah12/BrawlCraft#download')}
                           style={{ fontWeight: 600, padding: '8px 14px' }}
                         >
-                          {isArabic ? 'سجل الإصدارات ↗' : 'Releases ↗'}
+                          {isArabic ? 'صفحة التحميل ↗' : 'Download Page ↗'}
                         </button>
                       )}
 

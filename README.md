@@ -5,7 +5,7 @@ modifications. It combines a **React 19 + Vite** user interface hosted inside **
 WebView2** with a **C# / .NET 8** engine that reads real game data, performs verified vector edits
 inside SWF packages, and keeps bit-exact backups so every change can be undone.
 
-Current release: **v3.1.1** · Interface languages: **English / العربية** (LTR only)
+Current release: **v3.1.2** · Interface languages: **English / العربية** (LTR only)
 
 ---
 
@@ -183,8 +183,8 @@ executable; otherwise the step is skipped with a warning.
 powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1
 ```
 
-The updater prefers the portable ZIP, falls back to the setup EXE, and requires a matching SHA-256
-before installing.
+The updater reads `downloads/latest.json` from the public repository and requires a matching SHA-256
+before installing. If the manifest is unavailable it falls back to the GitHub Releases API.
 
 ---
 

@@ -32,7 +32,7 @@ public class WebViewBridge
     private static string ResolveCurrentVersion()
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        return version == null ? "3.1.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return version == null ? "3.1.2" : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private readonly CoreWebView2 _webView;
@@ -1175,6 +1175,23 @@ public class WebViewBridge
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-Updater/{CurrentVersion}");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
+            // Preferred channel: an update manifest stored in the public repository.
+            // This keeps the public repository free of GitHub Releases and their
+            // auto-generated "Source code" archives.
+            string manifestUrl = $"https://raw.githubusercontent.com/{targetRepo}/master/downloads/latest.json?v={DateTime.UtcNow.Ticks}";
+            try
+            {
+                var manifest = await TryReadUpdateManifestAsync(client, manifestUrl);
+                if (manifest != null)
+                {
+                    return BuildManifestResult(manifest, targetRepo, repoUrl, releasesUrl);
+                }
+            }
+            catch (Exception manifestEx)
+            {
+                App.SafeLog("bridge.log", $"[UPDATE] Manifest check failed: {manifestEx.Message}");
+            }
+
             var response = await client.GetAsync(apiUrl);
             if (response.IsSuccessStatusCode)
             {
@@ -1334,6 +1351,81 @@ public class WebViewBridge
         }
     }
 
+    private sealed class UpdateManifest
+    {
+        public string? Version { get; set; }
+        public string? Title { get; set; }
+        public string? Notes { get; set; }
+        public string? AssetName { get; set; }
+        public string? DownloadUrl { get; set; }
+        public long Size { get; set; }
+        public string? Sha256 { get; set; }
+        public string? PublishedAt { get; set; }
+    }
+
+    private static async Task<UpdateManifest?> TryReadUpdateManifestAsync(HttpClient client, string url)
+    {
+        if (!IsAllowedGitHubDownloadUrl(url)) return null;
+
+        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        if (!response.IsSuccessStatusCode) return null;
+        if (response.Content.Headers.ContentLength is > 256 * 1024) return null;
+
+        string json = await response.Content.ReadAsStringAsync();
+        if (json.Length > 256 * 1024) return null;
+
+        UpdateManifest? manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<UpdateManifest>(json, _jsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (manifest == null) return null;
+        if (string.IsNullOrWhiteSpace(manifest.Version) || !VersionPattern.IsMatch(manifest.Version)) return null;
+        if (string.IsNullOrWhiteSpace(manifest.DownloadUrl) || !IsAllowedGitHubDownloadUrl(manifest.DownloadUrl)) return null;
+        if (string.IsNullOrWhiteSpace(manifest.Sha256) || !Sha256Pattern.IsMatch(manifest.Sha256)) return null;
+
+        return manifest;
+    }
+
+    private object BuildManifestResult(UpdateManifest manifest, string targetRepo, string repoUrl, string releasesUrl)
+    {
+        bool hasUpdate = false;
+        if (Version.TryParse(manifest.Version, out var latestVer) && Version.TryParse(CurrentVersion, out var currVer))
+        {
+            hasUpdate = latestVer > currVer;
+        }
+
+        string assetName = string.IsNullOrWhiteSpace(manifest.AssetName)
+            ? Path.GetFileName(new Uri(manifest.DownloadUrl!).AbsolutePath)
+            : manifest.AssetName!;
+
+        return new
+        {
+            success = true,
+            hasUpdate,
+            currentVersion = CurrentVersion,
+            latestVersion = manifest.Version,
+            releaseTitle = string.IsNullOrWhiteSpace(manifest.Title) ? $"BrawlCraft v{manifest.Version}" : manifest.Title,
+            releaseNotes = manifest.Notes ?? "",
+            htmlUrl = $"{repoUrl}#download",
+            downloadUrl = manifest.DownloadUrl,
+            assetName,
+            assetSizeFormatted = manifest.Size > 0 ? $"{manifest.Size / (1024.0 * 1024.0):F1} MB" : null,
+            sha256 = manifest.Sha256!.ToLowerInvariant(),
+            verified = true,
+            repo = targetRepo,
+            repoUrl,
+            releasesUrl,
+            publishedAt = manifest.PublishedAt,
+            checkedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+        };
+    }
+
     private static string? ReadAssetDigest(JsonElement asset)
     {
         if (!asset.TryGetProperty("digest", out var digestProp) || digestProp.ValueKind != JsonValueKind.String)
@@ -1388,6 +1480,7 @@ public class WebViewBridge
         if (uri.Scheme != Uri.UriSchemeHttps) return false;
 
         return uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+               || uri.Host.Equals("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
                || uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
                || uri.Host.Equals("github-releases.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
     }
@@ -1452,7 +1545,7 @@ public class WebViewBridge
 
         if (!IsAllowedGitHubDownloadUrl(downloadUrl))
         {
-            throw new ArgumentException("Update download URL must be an HTTPS GitHub release URL.");
+            throw new ArgumentException("Update download URL must be an official HTTPS GitHub URL.");
         }
 
         if (string.IsNullOrWhiteSpace(expectedSha256) || !Sha256Pattern.IsMatch(expectedSha256))
