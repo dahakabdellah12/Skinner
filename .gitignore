@@ -29,3 +29,7 @@ scratch/
 # Runtime / User configs
 .studio_backups/
 .studio_presets/
+
+# Local signing keys (never commit)
+scripts/.signing/
+
