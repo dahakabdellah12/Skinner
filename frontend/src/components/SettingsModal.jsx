@@ -584,7 +584,7 @@ export default function SettingsModal({
                   <div className="setting">
                     <div className="setting-info">
                       <div className="setting-name">{isArabic ? 'اسم التطبيق' : 'Application Name'}</div>
-                      <div className="setting-desc">BrawlCraft — Ultimate Open-Source Cosmetic Studio for Brawlhalla</div>
+                      <div className="setting-desc">BrawlCraft — Ultimate Cosmetic Studio for Brawlhalla</div>
                     </div>
                     <span style={{ fontWeight: 700, color: 'var(--accent-light)', fontSize: '13px' }}>
                       BrawlCraft
@@ -594,30 +594,30 @@ export default function SettingsModal({
                   <div className="setting">
                     <div className="setting-info">
                       <div className="setting-name">{isArabic ? 'رقم الإصدار' : 'Application Version'}</div>
-                      <div className="setting-desc">{isArabic ? 'الإصدار المكتبي المستقر مفتوح المصدر.' : 'Installed open-source desktop release.'}</div>
+                      <div className="setting-desc">{isArabic ? 'الإصدار المكتبي المستقر.' : 'Installed desktop release.'}</div>
                     </div>
                     <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>v{APP_VERSION}</span>
                   </div>
 
                   <div className="setting">
                     <div className="setting-info">
-                      <div className="setting-name">{isArabic ? 'معمارية النواة والترخيص' : 'Architecture & License'}</div>
-                      <div className="setting-desc">.NET 8 (WPF x64) + WebView2 + React 19 · MIT Open Source</div>
+                      <div className="setting-name">{isArabic ? 'المنصة' : 'Platform'}</div>
+                      <div className="setting-desc">.NET 8 (WPF x64) + WebView2 + React 19</div>
                     </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>MIT License</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Windows x64</span>
                   </div>
 
-                  {/* OPEN SOURCE GITHUB ROW — icon only */}
+                  {/* OFFICIAL GITHUB ROW — icon only */}
                   <div className="setting" style={{ alignItems: 'center' }}>
                     <div className="setting-info" style={{ flex: 1 }}>
                       <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <GitHubIcon size={15} />
-                        <span>{isArabic ? 'المستودع المفتوح المصدر' : 'Open Source Repository'}</span>
+                        <span>{isArabic ? 'المستودع الرسمي' : 'Official Repository'}</span>
                       </div>
                       <div className="setting-desc">
                         {isArabic
-                          ? 'كود البرنامج بالكامل مفتوح المصدر ومتاح مجاناً على منصة GitHub للجميع.'
-                          : 'Full source code is publicly available under the MIT License on GitHub.'}
+                          ? 'تابع الإصدارات الرسمية والتحديثات على منصة GitHub.'
+                          : 'Follow official releases and updates on GitHub.'}
                         <div style={{ marginTop: '4px', fontFamily: 'monospace', color: 'var(--accent-light)', fontSize: '12px' }}>
                           github.com/dahakabdellah12/BrawlCraft
                         </div>
@@ -692,7 +692,7 @@ export default function SettingsModal({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <span style={{ color: 'var(--warning, #F59E0B)', fontWeight: 700 }}>
                                 {isArabic
-                                  ? `يتوفر إصدار جديد مفتوح المصدر: v${updateState.latestVersion}!`
+                                  ? `يتوفر إصدار جديد: v${updateState.latestVersion}!`
                                   : `New release available: v${updateState.latestVersion}!`}
                               </span>
                               {updateState.releaseTitle && (

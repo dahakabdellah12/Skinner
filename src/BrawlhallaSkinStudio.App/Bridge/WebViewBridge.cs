@@ -1172,7 +1172,7 @@ public class WebViewBridge
         {
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(10);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-OpenSource-Updater/{CurrentVersion}");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-Updater/{CurrentVersion}");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             var response = await client.GetAsync(apiUrl);
@@ -1304,8 +1304,8 @@ public class WebViewBridge
                     hasUpdate = false,
                     currentVersion = CurrentVersion,
                     latestVersion = CurrentVersion,
-                    releaseTitle = $"BrawlCraft v{CurrentVersion} (Official Open Source)",
-                    releaseNotes = "You are running the latest stable open-source release on GitHub.",
+                    releaseTitle = $"BrawlCraft v{CurrentVersion} (Official)",
+                    releaseNotes = "You are running the latest stable release on GitHub.",
                     htmlUrl = releasesUrl,
                     downloadUrl = releasesUrl,
                     repo = targetRepo,
@@ -1494,7 +1494,7 @@ public class WebViewBridge
             using (var client = new HttpClient())
             {
                 client.Timeout = TimeSpan.FromMinutes(10);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-OpenSource-Updater/{CurrentVersion}");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd($"BrawlCraft-Updater/{CurrentVersion}");
 
                 using var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
                 response.EnsureSuccessStatusCode();

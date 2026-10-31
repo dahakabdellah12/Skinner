@@ -5,7 +5,7 @@ modifications. It combines a **React 19 + Vite** user interface hosted inside **
 WebView2** with a **C# / .NET 8** engine that reads real game data, performs verified vector edits
 inside SWF packages, and keeps bit-exact backups so every change can be undone.
 
-Current release: **v3.1.0** · License: **MIT** · Interface languages: **English / العربية** (LTR only)
+Current release: **v3.1.1** · Interface languages: **English / العربية** (LTR only)
 
 ---
 
@@ -219,4 +219,5 @@ follow Brawlhalla's Terms of Service. Always keep backups — the built-in resto
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Proprietary — all rights reserved. See [LICENSE](LICENSE) for the full terms and
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the components used by the application.
