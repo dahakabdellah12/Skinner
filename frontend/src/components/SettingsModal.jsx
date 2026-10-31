@@ -617,7 +617,7 @@ export default function SettingsModal({
                       <div className="setting-desc">
                         {isArabic
                           ? 'تابع الإصدارات الرسمية والتحديثات على منصة GitHub.'
-                          : 'Follow official releases and updates on GitHub.'}
+                          : 'Follow official builds and updates on GitHub.'}
                         <div style={{ marginTop: '4px', fontFamily: 'monospace', color: 'var(--accent-light)', fontSize: '12px' }}>
                           github.com/dahakabdellah12/BrawlCraft
                         </div>

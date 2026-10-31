@@ -7,19 +7,18 @@
        version from the App project file.
     2. Builds the portable package via scripts/release.ps1 (frontend + .NET + ZIP + SHA256SUMS).
     3. Commits the source change and pushes the private source repository with a v<version> tag.
-    4. Uploads the package and checksums to a GitHub Release on the public repository.
-    5. Refreshes public/downloads/latest.json (used by the built-in updater).
+    4. Copies the package and checksums into public/downloads (no GitHub Releases are used).
+    5. Refreshes public/downloads/latest.json (the built-in updater channel).
     6. Updates version, size and checksum references in the public README and prepends a
        CHANGELOG entry.
     7. Commits and pushes the public repository.
 
-    The public repository intentionally contains no application source code. Release
-    packages live on the GitHub Release (and are referenced by latest.json), so the
-    auto-generated "Source code" archives of the public repository only ever contain
-    documentation and the logo.
+    The public repository intentionally contains no application source code and no GitHub
+    Releases, so GitHub never shows "Source code" download links next to the application.
+    The package itself is served from public/downloads.
 
 .PARAMETER Notes
-    Release notes in Markdown, used for the GitHub Release and the CHANGELOG.
+    Release notes in Markdown, used for the CHANGELOG and downloads/latest.json.
 
 .PARAMETER NotesFile
     Path to a Markdown file with the release notes. Takes precedence over -Notes.
@@ -167,7 +166,7 @@ try {
     $size = (Get-Item $zipPath).Length
     $sizeMb = [string]::Format([System.Globalization.CultureInfo]::InvariantCulture, '{0:F1}', $size / 1MB)
     $publishedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    $downloadUrl = "https://github.com/$PublicRepo/releases/download/$tag/$assetName"
+    $downloadUrl = "https://raw.githubusercontent.com/$PublicRepo/master/downloads/$assetName"
     Write-Host "    package : $assetName ($size bytes)"
     Write-Host "    sha256  : $sha256"
 
@@ -199,7 +198,9 @@ try {
     $downloadsDir = Join-Path $PublicRepoPath 'downloads'
     New-Item -ItemType Directory -Force -Path $downloadsDir | Out-Null
     Get-ChildItem $downloadsDir -Filter 'BrawlCraft-*.zip' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+    Copy-Item $zipPath (Join-Path $downloadsDir $assetName) -Force
     Copy-Item $sumsPath (Join-Path $downloadsDir 'SHA256SUMS.txt') -Force
+    Write-Host "    package copied to downloads/$assetName"
 
     $readmePath = Join-Path $PublicRepoPath 'README.md'
     $readme = Get-Content $readmePath -Raw -Encoding UTF8
@@ -216,7 +217,9 @@ try {
 
     $readme = [regex]::Replace($readme, '\| \*\*Size\*\* \| [^|\r\n]+ \|', "| **Size** | $sizeMb MB |")
     $readme = [regex]::Replace($readme, '\| \*\*SHA-256\*\* \| `[0-9a-fA-F]{64}` \|', "| **SHA-256** | ``$sha256`` |")
-    $readme = [regex]::Replace($readme, 'releases/download/v[\d.]+/', "releases/download/$tag/")
+    # Point every package link at the file in the repository (there are no GitHub Releases).
+    $readme = [regex]::Replace($readme, 'https://(?:raw\.githubusercontent\.com|github\.com)/' + [regex]::Escape($PublicRepo) + '[^\s\)"]*(?:downloads/|releases/download/[^/]+/)BrawlCraft-v[\d.]+-Windows\.zip', $downloadUrl)
+    $readme = [regex]::Replace($readme, 'releases/download/v[\d.]+/SHA256SUMS\.txt', "downloads/SHA256SUMS.txt")
     [System.IO.File]::WriteAllText($readmePath, $readme, $utf8)
 
     # latest.json - primary channel of the built-in updater
@@ -255,22 +258,6 @@ try {
         }
     }
 
-    # ---- GitHub Release ------------------------------------------------------
-    Write-Host '==> Publishing GitHub Release'
-    $notesPath = Join-Path $env:TEMP "brawlcraft-notes-$version.md"
-    [System.IO.File]::WriteAllText($notesPath, $Notes, $utf8)
-
-    $exists = (Invoke-Native -Exe 'gh' -Arguments @('release', 'view', $tag, '--repo', $PublicRepo) -Quiet) -eq 0
-    if ($exists) {
-        Invoke-Native -Exe 'gh' -Arguments @('release', 'edit', $tag, '--repo', $PublicRepo, '--title', $releaseTitle, '--notes-file', $notesPath, '--latest') | Out-Null
-        Write-Host "    updated existing release $tag"
-    }
-    else {
-        Invoke-Native -Exe 'gh' -Arguments @('release', 'create', $tag, '--repo', $PublicRepo, '--title', $releaseTitle, '--notes-file', $notesPath, '--target', 'master', '--latest') | Out-Null
-        Write-Host "    created release $tag"
-    }
-    Invoke-Native -Exe 'gh' -Arguments @('release', 'upload', $tag, $zipPath, $sumsPath, '--repo', $PublicRepo, '--clobber') | Out-Null
-
     # ---- commit public repository -------------------------------------------
     Write-Host '==> Pushing public repository'
     $change = (Invoke-Git -RepoPath $PublicRepoPath -Arguments @('status', '--porcelain')) -join "`n"
@@ -286,8 +273,8 @@ try {
 
     Write-Host ''
     Write-Host "Published $releaseTitle" -ForegroundColor Green
-    Write-Host "  release : https://github.com/$PublicRepo/releases/tag/$tag"
-    Write-Host "  package : $assetName ($sizeMb MB)"
+    Write-Host "  page    : https://github.com/$PublicRepo#download"
+    Write-Host "  package : $downloadUrl"
     Write-Host "  sha256  : $sha256"
 }
 finally {

@@ -5,7 +5,7 @@ modifications. It combines a **React 19 + Vite** user interface hosted inside **
 WebView2** with a **C# / .NET 8** engine that reads real game data, performs verified vector edits
 inside SWF packages, and keeps bit-exact backups so every change can be undone.
 
-Current release: **v3.1.2** · Interface languages: **English / العربية** (LTR only)
+Current release: **v3.1.3** · Interface languages: **English / العربية** (LTR only)
 
 ---
 
@@ -175,7 +175,7 @@ dotnet test tests\BrawlhallaSkinStudio.Tests\BrawlhallaSkinStudio.Tests.csproj
 ## Release
 
 `scripts/publish.ps1` is the one-command release flow. It bumps the version (optional), builds,
-pushes the private source repository, uploads the package to the public GitHub Release, refreshes
+pushes the private source repository, copies the package into the public repository, refreshes
 `downloads/latest.json` and the public README/CHANGELOG, then pushes the public repository.
 
 ```powershell
@@ -195,7 +195,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1 -SkipBuild -SkipS
 | `-SkipSourcePush` | Do not commit/tag/push the private repository |
 | `-PublicRepoPath <dir>` | Local clone of the public repository (defaults to `%TEMP%\opencode\brawlcraft-public`) |
 
-Requires the GitHub CLI (`gh`) authenticated as the repository owner.
+Requires push access to both repositories. No GitHub CLI is needed.
 
 The lower-level `scripts/release.ps1` only builds: it reads the version from the App `.csproj`,
 builds the frontend, publishes the application, and creates `release/BrawlCraft-v<version>-Windows.zip`
@@ -206,11 +206,13 @@ executable; otherwise that step is skipped with a warning.
 powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1
 ```
 
-The public repository is documentation-only: the package is a Release asset and never committed, so
-the auto-generated `Source code` archives of a release contain no application code.
+The public repository is documentation-only plus the package in `downloads/`. It deliberately has
+**no GitHub Releases**, because GitHub always adds `Source code (zip)` / `Source code (tar.gz)`
+links to every release and they cannot be hidden. Without releases the download page shows only
+the application.
 
-The updater reads `downloads/latest.json` from the public repository and requires a matching SHA-256
-before installing. If the manifest is unavailable it falls back to the GitHub Releases API.
+The updater reads `downloads/latest.json` from the public repository (with a jsDelivr mirror as
+fallback) and requires a matching SHA-256 before installing.
 
 ---
 

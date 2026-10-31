@@ -1176,20 +1176,24 @@ public class WebViewBridge
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
             // Preferred channel: an update manifest stored in the public repository.
-            // This keeps the public repository free of GitHub Releases and their
-            // auto-generated "Source code" archives.
-            string manifestUrl = $"https://raw.githubusercontent.com/{targetRepo}/master/downloads/latest.json?v={DateTime.UtcNow.Ticks}";
-            try
+            // The public repository has no GitHub Releases at all, so the manifest is
+            // the only update channel; a CDN mirror covers raw.githubusercontent outages.
+            string primaryManifestUrl = $"https://raw.githubusercontent.com/{targetRepo}/master/downloads/latest.json?v={DateTime.UtcNow.Ticks}";
+            string mirrorManifestUrl = $"https://cdn.jsdelivr.net/gh/{targetRepo}@master/downloads/latest.json";
+            foreach (string manifestUrl in new[] { primaryManifestUrl, mirrorManifestUrl })
             {
-                var manifest = await TryReadUpdateManifestAsync(client, manifestUrl);
-                if (manifest != null)
+                try
                 {
-                    return BuildManifestResult(manifest, targetRepo, repoUrl, releasesUrl);
+                    var manifest = await TryReadUpdateManifestAsync(client, manifestUrl);
+                    if (manifest != null)
+                    {
+                        return BuildManifestResult(manifest, targetRepo, repoUrl, releasesUrl);
+                    }
                 }
-            }
-            catch (Exception manifestEx)
-            {
-                App.SafeLog("bridge.log", $"[UPDATE] Manifest check failed: {manifestEx.Message}");
+                catch (Exception manifestEx)
+                {
+                    App.SafeLog("bridge.log", $"[UPDATE] Manifest check failed ({manifestUrl}): {manifestEx.Message}");
+                }
             }
 
             var response = await client.GetAsync(apiUrl);
@@ -1481,6 +1485,7 @@ public class WebViewBridge
 
         return uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
                || uri.Host.Equals("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
+               || uri.Host.Equals("cdn.jsdelivr.net", StringComparison.OrdinalIgnoreCase)
                || uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
                || uri.Host.Equals("github-releases.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
     }
