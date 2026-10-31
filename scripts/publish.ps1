@@ -238,7 +238,18 @@ try {
     if (Test-Path $changelogPath) {
         $changelog = Get-Content $changelogPath -Raw -Encoding UTF8
         if ($changelog -notmatch "(?m)^## $([regex]::Escape($tag))\b") {
-            $entry = "## $tag - $((Get-Date).ToString('d MMMM yyyy'))`n`n$Notes`n`n"
+            # The release notes usually start with their own title heading. Drop leading
+            # headings and rules so the CHANGELOG entry does not repeat the version title.
+            $changelogNotes = $Notes.TrimStart()
+            while ($true) {
+                $lead = [regex]::Match($changelogNotes, '^(?:#{1,6}[^\r\n]*(?:\r?\n)+|-{3,}[ \t]*(?:\r?\n)+)')
+                if (-not $lead.Success) { break }
+                $changelogNotes = $changelogNotes.Substring($lead.Length).TrimStart()
+            }
+            if (-not $changelogNotes) { $changelogNotes = $Notes }
+            $dash = [string][char]0x2014
+            $date = (Get-Date).ToString('d MMMM yyyy', [System.Globalization.CultureInfo]::InvariantCulture)
+            $entry = "## $tag $dash $date`n`n$changelogNotes`n`n"
             $changelog = [regex]::Replace($changelog, '(?m)^## ', ($entry + '## '), 1)
             [System.IO.File]::WriteAllText($changelogPath, $changelog, $utf8)
         }
