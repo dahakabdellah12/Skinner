@@ -42,6 +42,9 @@ try {
         -c Release -r win-x64 --self-contained false -o $publishDir
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
+    Write-Host '==> Stripping debug symbols'
+    Get-ChildItem -Path $publishDir -Recurse -Filter *.pdb -File | Remove-Item -Force
+
     Write-Host '==> Creating portable archive'
     $releaseDir = Join-Path $root 'release'
     New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
