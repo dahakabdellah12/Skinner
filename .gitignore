@@ -1,35 +1,44 @@
-# .NET Core / C#
-bin/
-obj/
-*.user
-*.userosscache
-*.suo
-*.userprefs
-.vs/
-*.dotCover
+# Rust build artifacts
+/target
 
-# Node / React
-frontend/node_modules/
-frontend/dist/
-frontend/.cache/
-src/**/frontend/dist/
+# Node / Frontend build artifacts
+node_modules/
+.vite/
+
+# WebView2 Runtime Cache
+*.WebView2/
+EBWebView/
+
+# .NET Build artifacts (test_renderer)
+test_renderer/bin/
+test_renderer/obj/
+bin/Release/
+
+# Runtime and Panic Logs
+panic_err.txt
+log_err.txt
+skinner_dev_log.txt
+skinner_diagnostics_report.txt
+brawlcraft_dev_log.txt
+brawlcraft_diagnostics_report.txt
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# Build and Packaging outputs
-release/
-publish/
-installer_output/
-publish_err.txt
-publish_out.txt
+# Scratch / Dev files
 scratch/
+scratch_*.json
+scratch_*.txt
 
-# Runtime / User configs
-.studio_backups/
-.studio_presets/
+# Staging, distribution and release artifacts
+publish/
+dist/
+cache/
+release/*.exe
+release/*.zip
+BrawlCraft.exe
 
-# Local signing keys (never commit)
-scripts/.signing/
-
+# Cryptographic release signing keys (MUST NEVER BE COMMITTED)
+*.key
+*.pem
+*.sec
+release_key.hex
+secrets/

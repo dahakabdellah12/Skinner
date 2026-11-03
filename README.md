@@ -1,251 +1,186 @@
-# BrawlCraft
+<div align="center">
 
-**BrawlCraft** is a native Windows desktop studio for creating and applying Brawlhalla cosmetic
-modifications. It combines a **React 19 + Vite** user interface hosted inside **Microsoft Edge
-WebView2** with a **C# / .NET 8** engine that reads real game data, performs verified vector edits
-inside SWF packages, and keeps bit-exact backups so every change can be undone.
+<img src="assets/logo.png" alt="Skinner Logo" width="180" />
 
-Current release: **v3.1.3** · Interface languages: **English / العربية** (LTR only)
+# Skinner
 
----
+**High-Performance Native Windows Desktop Studio for Brawlhalla Cosmetic Customization**
 
-## Features
+[![Version](https://img.shields.io/badge/version-v3.3.2-blue.svg?style=flat-square)](https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.2)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg?style=flat-square&logo=windows)](https://github.com/dahakabdellah12/Skinner)
+[![Rust](https://img.shields.io/badge/Rust-2021%20edition-DEA584.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg?style=flat-square&logo=react)](https://react.dev/)
+[![Security](https://img.shields.io/badge/Security-Ed25519%20Dalek%20Signed-brightgreen.svg?style=flat-square)](https://github.com/dahakabdellah12/Skinner/releases)
+[![License](https://img.shields.io/badge/license-Proprietary-gray.svg?style=flat-square)](LICENSE)
 
-- **Automatic Game Detection** — finds Brawlhalla through the Steam registry, `libraryfolders.vdf`,
-  and common Steam library locations on every fixed/removable drive, then validates
-  `Brawlhalla.exe`, `Game.swz`, and the loose `.swf` packages.
-- **Authentic Asset Catalog** — decrypts and parses `Game.swz` in place (Well512 PRNG) to load
-  **71 legends**, **500+ costumes**, **500+ weapon skins**, and **70+ color schemes** directly from
-  `HeroTypes.xml`, `costumeTypes.csv`, `weaponSkinTypes.csv`, and `ColorSchemeTypes.xml`.
-- **Legend-First Workflow** — browse the roster with search and weapon filters, open a legend, and
-  customize costume, primary/secondary weapon skins, and color palette in one workbench.
-- **Independent Weapon Cosmetics** — swap primary and secondary weapon skins independently of the
-  selected costume across all 14 weapon classes.
-- **Intra-SWF & Cross-SWF Porting** — remap symbols inside a single SWF (e.g. Bödvar Classic →
-  Beardvar) or inject shapes, sprites, and linkages across character packages.
-- **Palette Baking & Recoloring** — replace baseline defines (`Body1_Define`, `Hair_Define`,
-  `Cloth_Define`) with official color-scheme swaps or custom hex values.
-- **Atomic Backup & Rollback** — SHA-256 fingerprints are recorded before any write, with
-  timestamped snapshots in `.studio_backups/`. Single-file or full restoration returns the
-  installation to a byte-identical pristine state.
-- **Presets** — save, duplicate, export, and import complete cosmetic loadouts as portable JSON.
-- **Diagnostics & Verification** — system health checks, SWF scanner, backup manager, and an in-game
-  verification checklist.
-- **Signed Update Flow** — update checks read the release asset digest (or `SHA256SUMS.txt`) and
-  installation is refused unless the downloaded package matches the published SHA-256.
-- **Bilingual UI, no RTL** — Arabic and English text can be switched at runtime. Layout direction is
-  always LTR.
+</div>
 
 ---
 
-## Architecture
+## Overview
+
+**Skinner** is a lightweight, ultra-fast native Windows desktop studio engineered specifically for exploring, previewing, and applying cosmetic modifications to Brawlhalla.
+
+Combining a memory-safe **Rust** host process, **Microsoft Edge WebView2**, and a modern **React 19** frontend with a high-throughput **.NET 8** vector rendering engine, Skinner gives players complete creative control over character costumes, weapon combinations, and palette schemes with bit-exact atomic rollbacks.
+
+---
+
+## Key Features
+
+### 🚀 Performance & Real-Time Engine
+- **Instant Catalog Loading:** Full `Game.swz` decryption and parsing of all **70 playable Legends, 794 costumes, 2,137 weapon skins, and 81 color schemes in under 250 milliseconds**.
+- **Zero Idle Disk Thrashing:** Intelligent file metadata stat caching eliminates continuous disk reading during background operation.
+- **Sub-Millisecond Process Detection:** Native Win32 `Toolhelp32` process snapshotting detects active game sessions in 0.14 ms with zero child process overhead.
+- **Hardware-Accelerated UI:** 60+ FPS fluid navigation, instant search, and real-time weapon filtering powered by React 19 and Vite.
+
+### 🎨 Cosmetic Customization Workbench
+- **Independent Weapon Loadouts:** Equip primary and secondary weapon skins from any costume across all 14 weapon types (Sword, Hammer, Blasters, Spear, Rocket Lance, Katars, Bow, Axe, Gauntlets, Scythe, Cannon, Orb, Greatsword, Battle Boots).
+- **Intra- & Cross-SWF Asset Porting:** Inject shapes, sprites, and animation linkages across character packages seamlessly.
+- **Palette Baking & Dynamic Recoloring:** Real-time color palette preview chips with instant live indicators.
+- **Loadout Presets:** Save, duplicate, export, and load custom legend loadouts as portable JSON files.
+
+### 🛡️ Bit-Exact Safety & Atomic Rollbacks
+- **Cryptographic Fingerprinting:** Computes SHA-256 hashes prior to applying any modification.
+- **Automatic Snapshots:** Preserves pristine original game files in `.studio_backups/`.
+- **Single-Click Rollback:** Instant "Rollback All" restores game assets to byte-identical official conditions without re-verifying Steam cache.
+
+### 🔒 Cryptographically Authenticated Auto-Updater
+- **Automatic Discovery:** Queries official GitHub Releases asynchronously without slowing down application startup.
+- **Digital Signatures:** Releases verified using **Ed25519 digital signatures** against an embedded official public key.
+- **Mandatory Hash Verification:** Enforces strict SHA-256 checksum matching against signed release manifests.
+- **Safe Windows File-Lock Handoff:** Dedicated update helper resolves `ERROR_SHARING_VIOLATION` locks during in-place portable updates while preserving all user configurations, presets, and backups.
+
+---
+
+## Architecture & Technology Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      FRONTEND LAYER                         │
 │   React 19  •  Vite 8  •  Lucide Icons  •  CSS3 Tokens      │
-│   Roster (LegendsPage) → LegendCustomizer                   │
-│   Modals: Settings, Update, Card Picker, Toasts             │
+│   Roster (LegendsPage) → Customizer Workbench → Presets     │
 └──────────────────────────────▲──────────────────────────────┘
-                               │  JSON-RPC PostWebMessage
-                               │  { action, requestId, payload }
+                               │  JSON-RPC IPC Bridge
+                               │  Virtual Host: brawlcraft://localhost
 ┌──────────────────────────────▼──────────────────────────────┐
-│                    WEBVIEW2 HOST & BRIDGE                   │
-│   Microsoft Edge WebView2 Runtime  •  WebViewBridge.cs      │
-│   Virtual Host: https://appassets.local/                    │
-│   Dev Server:   http://localhost:5173/                      │
+│                    DESKTOP HOST & RUNTIME                   │
+│   Rust 2021  •  Wry 0.57  •  Tao 0.37  •  Win32 API         │
+│   • GameDetector: Steam Registry & libraryfolders.vdf parser│
+│   • SWZ Decryptor: Well512 PRNG + Deflate Decompressor      │
+│   • BackupManager: SHA-256 fingerprinting & Stat Caching    │
+│   • UpdateManager: Ed25519 Dalek & HTTPS Redirect Validator │
 └──────────────────────────────▲──────────────────────────────┘
-                               │
+                               │  Named Pipe IPC
 ┌──────────────────────────────▼──────────────────────────────┐
-│                      BACKEND ENGINE                         │
-│   C#  •  .NET 8  •  WPF Native Shell                        │
-│   • GameDetector & CatalogService (Well512 decryption)      │
-│   • ModificationEngine & SwfLib (vector tag rebinding)      │
-│   • BackupManager (SHA-256 pristine rollbacks)              │
-│   • PreviewRenderer (SVG/SWF previews)                      │
-│   • PresetManager & DiagnosticsService                      │
+│                   VECTOR PREVIEW ENGINE                     │
+│   .NET 8 Core  •  SwfLib  •  BrawlhallaSkinStudio.Core      │
+│   • Vector Tag Rebinding & Shape Extraction                 │
+│   • High-Performance SVG Rasterization & Asset Caching      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-| Layer | Technology | Details |
-|---|---|---|
-| **Frontend UI** | React 19 + Vite 8 | HTML5, CSS3, Lucide Icons, dark theme (`#171717` / `#242424` / `#3B82F6`) |
-| **Native Host** | WPF + Edge WebView2 | `Microsoft.Web.WebView2`, virtual host `appassets.local` |
-| **Communication** | `WebViewBridge` (JSON-RPC) | 41 async actions with correlation IDs |
-| **SWZ Engine** | Well512 PRNG | In-place decryption with dynamic seed key |
-| **SWF Parser** | SwfLib | Shape reading, character re-indexing, symbol linkage mapping |
-| **Integrity** | `BackupManager` | SHA-256 fingerprinting before writes; bounded snapshot history |
-
-### Security model
-
-- Update downloads are restricted to HTTPS URLs on GitHub-controlled hosts.
-- A valid SHA-256 must be published for the asset; missing or mismatched checksums abort installation.
-- ZIP updates are extracted with Zip Slip protection and size/entry-count limits.
-- WebView navigation is restricted to the local virtual host and the dev server. External links open
-  in the default browser and only over HTTP(S); script dialogs are disabled.
-- Repository identifiers, version strings, and checksums are validated before use.
-
 ---
 
-## Project Structure
+## Installation & Download
 
+Skinner is distributed as a self-contained portable Windows x64 package. No installation setup or administrative privileges are required.
+
+### 1. Download Official Release
+Download the latest verified release archive from the official GitHub repository:
+
+👉 **[Download Skinner v3.3.2 (Windows x64)](https://github.com/dahakabdellah12/Skinner/releases/latest)**
+
+### 2. Verify Cryptographic Integrity
+To guarantee authenticity and protect against tampering, verify the archive's SHA-256 checksum against the official manifest:
+
+```powershell
+# Compute local hash
+Get-FileHash -Algorithm SHA256 Skinner-3.3.2-windows-x64.zip
 ```
-BrawlCraft/
-├── frontend/                               <-- React 19 + Vite web UI
-│   ├── package.json                        <-- version 3.1.0
-│   ├── vite.config.js
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx                         <-- global state, roster/customizer flow, updates
-│       ├── version.js                      <-- APP_VERSION (single source for UI version)
-│       ├── i18n/LanguageContext.jsx        <-- Arabic/English text switching (no RTL)
-│       ├── pages/LegendsPage.jsx           <-- legend roster, search, weapon filter
-│       ├── components/
-│       │   ├── LegendCustomizer.jsx        <-- costume / weapon / palette workbench
-│       │   ├── SettingsModal.jsx           <-- diagnostics, presets, backups, updates, about
-│       │   ├── UpdateModal.jsx             <-- update prompt and progress
-│       │   ├── CardPickerModal.jsx, CustomDropdown.jsx, SearchBox.jsx
-│       │   ├── AssetImage.jsx, ErrorBoundary.jsx, TitleBar.jsx, Toast.jsx
-│       │   └── (cached asset previews live in services/assetImageCache.js)
-│       ├── services/api.js                 <-- WebView2 IPC client
-│       └── styles/                         <-- variables.css, global.css, components.css
-├── src/
-│   ├── BrawlhallaSkinStudio.Core/          <-- engine library (.NET 8)
-│   │   ├── Engine/BackupManager.cs
-│   │   ├── Engine/ModificationEngine.cs
-│   │   └── Services/                       <-- GameDetector, CatalogService, PreviewRenderer,
-│   │                                           DiagnosticsService, PresetManager, GameLauncher
-│   └── BrawlhallaSkinStudio.App/           <-- WPF host (.NET 8 Windows)
-│       ├── MainWindow.xaml / MainWindow.xaml.cs
-│       └── Bridge/WebViewBridge.cs         <-- 41 JSON-RPC backend actions
-├── tests/BrawlhallaSkinStudio.Tests/       <-- xUnit suite (33 tests, 4 files)
-├── installer.iss                           <-- Inno Setup 6 installer definition
-├── scripts/release.ps1                     <-- build + publish + zip + SHA256SUMS
-└── BrawlhallaSkinStudio.sln
+
+**Expected SHA-256 Digest (v3.3.2):**
+```text
+ca9db1f8b9597ae2df133053168a8c45a6bf4765f4f2704543e3fc4745c6a97f
+```
+
+**Official Embedded Ed25519 Public Verification Key:**
+```text
+105b8cf237a941fd069f8281a7b3e4e5361b3eddeff10e8626da224054e90f5a
+```
+
+### 3. Launch
+Extract `Skinner-3.3.2-windows-x64.zip` to your preferred folder and launch:
+```text
+Skinner.exe
 ```
 
 ---
 
-## Build & Run
+## Building from Source
 
-### Requirements
+### Prerequisites
+- **Windows 10 / 11 (64-bit)**
+- **Rust Toolchain:** 1.80+ (`stable-x86_64-pc-windows-msvc` or `gnu`)
+- **Node.js:** v20+ with npm
+- **.NET SDK:** 8.0+
+- **Microsoft Edge WebView2 Runtime** (installed by default on Windows 10/11)
 
-- Windows 10/11 x64
-- .NET 8 SDK
-- Node.js 20+
-- Microsoft Edge WebView2 Runtime (included with Windows 11 and modern Windows 10)
-- Brawlhalla installed via Steam for catalog and modification features
+### Build Steps
 
-### Production run
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/dahakabdellah12/Skinner.git
+   cd Skinner
+   ```
 
-```powershell
-dotnet publish src\BrawlhallaSkinStudio.App\BrawlhallaSkinStudio.App.csproj `
-    -c Release -r win-x64 --self-contained false -o publish
+2. **Build the Frontend:**
+   ```bash
+   npm install
+   npm run build
+   ```
 
-.\publish\BrawlCraft.exe
-```
+3. **Compile the Native Executable:**
+   ```bash
+   cargo build --release
+   ```
+   The stripped, optimized executable will be located at:
+   ```text
+   target/release/Skinner.exe
+   ```
 
-### Frontend development (hot reload)
-
-```powershell
-# Terminal 1
-cd frontend
-npm install
-npm run dev
-
-# Terminal 2 — MainWindow automatically connects to http://localhost:5173
-dotnet run --project src\BrawlhallaSkinStudio.App\BrawlhallaSkinStudio.App.csproj
-```
-
-### Lint, build, test
-
-```powershell
-npm --prefix frontend run lint
-npm --prefix frontend run build
-
-dotnet build BrawlhallaSkinStudio.sln
-dotnet test tests\BrawlhallaSkinStudio.Tests\BrawlhallaSkinStudio.Tests.csproj
-```
-
-> Some tests assert against a real Brawlhalla installation. Destructive tests operate on temporary
-> copies and never write to the live game directory.
+4. **Run the Test Suite:**
+   ```bash
+   cargo test
+   ```
+   *Executes all 78 automated integration and cryptographic security tests.*
 
 ---
 
-## Release
+## Automated Test Coverage
 
-`scripts/publish.ps1` is the one-command release flow. It bumps the version (optional), builds,
-pushes the private source repository, creates a GitHub Release on the public repository,
-refreshes `downloads/latest.json` and the public README/CHANGELOG, then pushes the public repository.
+The project maintains comprehensive regression and security test suites:
 
-```powershell
-# Full release: bump to 3.1.3, build, tag, publish
-powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1 -Version 3.1.3 -NotesFile .\notes.md
-
-# Re-publish the current version without touching git
-powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1 -SkipBuild -SkipSourcePush -Notes "Hotfix notes"
-```
-
-| Parameter | Effect |
-|---|---|
-| `-Version 3.1.3` | Bumps the `.csproj` (`Version`, `AssemblyVersion`, `FileVersion`), `frontend/package.json`, `frontend/package-lock.json`, `installer.iss` and this README before building |
-| `-Notes "..."` | Inline release notes (GitHub Release + `CHANGELOG.md`) |
-| `-NotesFile .\notes.md` | Read the notes from a UTF-8 file; takes precedence over `-Notes` |
-| `-SkipBuild` | Reuse the existing artifacts in `release\` |
-| `-SkipSourcePush` | Do not commit/tag/push the private repository |
-| `-PublicRepoPath <dir>` | Local clone of the public repository (defaults to `%TEMP%\opencode\brawlcraft-public`) |
-
-Requires push access to both repositories and a logged-in GitHub CLI (`gh auth status`).
-
-The lower-level `scripts/release.ps1` only builds: it reads the version from the App `.csproj`,
-builds the frontend, publishes the application, and creates `release/BrawlCraft-v<version>-Windows.zip`
-plus `release/SHA256SUMS.txt`. If Inno Setup 6 (`ISCC.exe`) is installed it also compiles the setup
-executable; otherwise that step is skipped with a warning.
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\release.ps1
-```
-
-The public repository is documentation-only. Users download the portable ZIP from
-[GitHub Releases](https://github.com/dahakabdellah12/BrawlCraft/releases). GitHub always attaches
-`Source code (zip)` / `Source code (tar.gz)` to every release; those archives contain only the
-public page (README, license, changelog) — never the application source.
-
-The updater reads the latest GitHub Release first, then falls back to `downloads/latest.json`
-(with a jsDelivr mirror). Installation is refused unless the SHA-256 matches.
+- **Core Engine & Catalog Tests (`tests/game_tests.rs`):** 66 tests covering SWZ decryption, SWF tag modification, character selector animation bindings, weapon skin independence, and atomic rollback safety.
+- **Cryptographic Updater Tests (`tests/updater_tests.rs`):** 12 tests covering Ed25519 signature verification, tampering detection, SHA-256 checksums, URL whitelist boundaries, downgrade rejection, and user data preservation.
 
 ---
 
-## Versioning
+## Security Policy
 
-- Backend version: `<Version>` / `AssemblyVersion` in `src/BrawlhallaSkinStudio.App/BrawlhallaSkinStudio.App.csproj`.
-- Frontend version: `version` in `frontend/package.json`, re-exported by `frontend/src/version.js`.
-- Installer version: `MyAppVersion` in `installer.iss`.
-
-All three must be bumped together for a release; `scripts/publish.ps1 -Version` does this for you.
-
----
-
-## Automated Tests
-
-33 xUnit tests across four suites:
-
-| File | Tests | Coverage |
-|---|---|---|
-| `CatalogTests.cs` | 2 | Game detection, SWZ catalog parsing (71 legends), roster symbols |
-| `LiveGameTests.cs` | 4 | Live file access, isolated copy/engine cycles, SWF path inspection |
-| `ModificationTests.cs` | 10 | Backup/restore, intra- and cross-SWF edits, previews, presets, rejection rules |
-| `SearchUiSymbols.cs` | 17 | Symbol/texture discovery, SVG export, weapon rendering, color mapping, Mordex isolation |
+- **Fail-Closed Verification:** Updates without valid Ed25519 signatures and exact bit-for-bit SHA-256 matching are automatically rejected and deleted.
+- **Sealed WebView Navigation:** All navigation events inside the desktop UI are strictly confined to internal virtual host protocols (`brawlcraft://`), preventing remote code execution or IPC manipulation from external URLs.
+- **Decompression Bombs:** Hard buffer caps (64 MB) protect all archive extraction routines against unbounded memory consumption denial-of-service vectors.
 
 ---
 
 ## Disclaimer
 
-BrawlCraft is an unofficial fan project and is not affiliated with or endorsed by Blue Mammoth Games
-or Ubisoft. Modifications are applied locally to your own installation; use them at your own risk and
-follow Brawlhalla's Terms of Service. Always keep backups — the built-in restore flow makes this easy.
+**Skinner** is an independent, unofficial fan project and is not affiliated with, endorsed by, or associated with Ubisoft or Blue Mammoth Games. Brawlhalla and all associated assets are trademarks or registered trademarks of Blue Mammoth Games / Ubisoft. Modifications are applied locally to your own game installation; always follow Brawlhalla's Terms of Service and maintain backups.
 
-## License
+---
 
-Proprietary — all rights reserved. See [LICENSE](LICENSE) for the full terms and
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the components used by the application.
+## License & Support
+
+- **Repository:** [https://github.com/dahakabdellah12/Skinner](https://github.com/dahakabdellah12/Skinner)
+- **Issues & Bug Reports:** [https://github.com/dahakabdellah12/Skinner/issues](https://github.com/dahakabdellah12/Skinner/issues)
+- **Author:** [dahakabdellah12](https://github.com/dahakabdellah12)

@@ -1,8 +1,8 @@
-#define MyAppName "BrawlCraft"
-#define MyAppVersion "3.1.3"
+#define MyAppName "Skinner"
+#define MyAppVersion "3.3.2"
 #define MyAppPublisher "dahakabdellah12"
-#define MyAppURL "https://github.com/dahakabdellah12/BrawlCraft"
-#define MyAppExeName "BrawlCraft.exe"
+#define MyAppURL "https://github.com/dahakabdellah12/Skinner"
+#define MyAppExeName "Skinner.exe"
 
 [Setup]
 AppId={{91C68AE2-A23F-433E-BDFA-5BA2D4EF6A51}
@@ -17,9 +17,9 @@ DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableProgramGroupPage=yes
 OutputDir=release
-OutputBaseFilename=BrawlCraft-v{#MyAppVersion}-Setup
-SetupIconFile=src\BrawlhallaSkinStudio.App\app.ico
-VersionInfoVersion={#MyAppVersion}
+OutputBaseFilename=Skinner-Setup-{#MyAppVersion}
+SetupIconFile=assets\app.ico
+VersionInfoVersion={#MyAppVersion}.0
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -29,6 +29,8 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

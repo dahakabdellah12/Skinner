@@ -1,0 +1,15 @@
+pub mod anm_engine;
+pub mod backup_manager;
+pub mod bnk_engine;
+pub mod catalog;
+pub mod game_detector;
+pub mod game_launcher;
+pub mod i18n;
+pub mod models;
+pub mod modification_engine;
+pub mod preset_manager;
+pub mod swf_engine;
+pub mod swz;
+pub mod desktop_app;
+pub mod telemetry;
+pub mod updater;

@@ -1,0 +1,762 @@
+import { Button, ScrollView, LineEdit, StandardListView } from "std-widgets.slint";
+
+export struct LegendItem {
+    id: int,
+    name: string,
+    display_name: string,
+    weapons: string,
+    costume_count: int,
+}
+
+export struct CostumeItem {
+    id: int,
+    name: string,
+    display_name: string,
+    is_default: bool,
+    is_crossover: bool,
+    is_metadev: bool,
+}
+
+export struct WeaponItem {
+    id: int,
+    name: string,
+    display_name: string,
+    is_default: bool,
+}
+
+export struct ColorItem {
+    id: int,
+    name: string,
+    display_name: string,
+    indicator_color: color,
+}
+
+export struct PresetItem {
+    id: string,
+    name: string,
+    legend_name: string,
+    costume_name: string,
+    created_at: string,
+}
+
+component HeaderButton inherits Rectangle {
+    in property <string> text;
+    in property <color> btn_bg: #202433;
+    in property <color> btn_hover_bg: #2d3348;
+    in property <color> text_color: #ffffff;
+    callback clicked();
+
+    border-radius: 6px;
+    background: touch.has-hover ? btn_hover_bg : btn_bg;
+    animate background { duration: 150ms; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        alignment: center;
+        Text {
+            text: root.text;
+            color: root.text_color;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component PillButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    callback clicked();
+
+    border-radius: 14px;
+    background: active ? #3b82f6 : (touch.has-hover ? #282e42 : #1e2232);
+    border-width: 1px;
+    border-color: active ? #60a5fa : #2a3045;
+    animate background { duration: 120ms; }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        Text {
+            text: root.text;
+            color: active ? #ffffff : (touch.has-hover ? #f3f4f6 : #9ca3af);
+            font-size: 12px;
+            font-weight: active ? 700 : 500;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component LegendCard inherits Rectangle {
+    in property <LegendItem> item;
+    callback clicked();
+
+    border-radius: 10px;
+    background: touch.has-hover ? #252b3d : #181d2a;
+    border-width: 1px;
+    border-color: touch.has-hover ? #3b82f6 : #23293c;
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 6px;
+
+        HorizontalLayout {
+            alignment: space-between;
+            Text {
+                text: root.item.display_name;
+                font-size: 15px;
+                font-weight: 700;
+                color: #ffffff;
+            }
+            Rectangle {
+                border-radius: 4px;
+                background: #2a334a;
+                HorizontalLayout {
+                    padding-left: 6px;
+                    padding-right: 6px;
+                    padding-top: 2px;
+                    padding-bottom: 2px;
+                    Text {
+                        text: root.item.costume_count + " skins";
+                        font-size: 10px;
+                        color: #93c5fd;
+                        font-weight: 600;
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: root.item.weapons;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component MainWindow inherits Window {
+    title: "Skinner — Brawlhalla Skin Studio";
+    preferred-width: 1280px;
+    preferred-height: 820px;
+    background: #0d1117;
+
+    // Properties
+    in property <string> game_status_text: "Detecting Brawlhalla...";
+    in property <bool> is_game_valid: false;
+    in property <string> version_text: "v3.1.0";
+    in property <string> language_text: "العربية";
+    in property <int> current_view: 0; // 0: Roster, 1: Customizer, 2: Presets, 3: Diagnostics
+    in-out property <string> search_query: "";
+    in property <string> selected_weapon_filter: "All";
+    in property <[LegendItem]> legends_list;
+    in property <[string]> weapon_filters: ["All", "Sword", "Hammer", "Blasters", "Spear", "Rocket Lance", "Katars", "Bow", "Axe", "Gauntlets", "Scythe", "Cannon", "Orb", "Greatsword", "Battle Boots"];
+    
+    // Customizer state
+    in property <string> current_legend_name: "";
+    in property <string> current_legend_weapons: "";
+    in property <string> current_legend_bio: "";
+    in property <[CostumeItem]> current_costumes;
+    in property <int> selected_costume_index: 0;
+    in property <[WeaponItem]> current_weapons1;
+    in property <int> selected_weapon1_index: 0;
+    in property <[WeaponItem]> current_weapons2;
+    in property <int> selected_weapon2_index: 0;
+    in property <[ColorItem]> current_colors;
+    in property <int> selected_color_index: 0;
+
+    // Presets & Diagnostics
+    in property <[PresetItem]> presets_list;
+    in property <[string]> diagnostics_list;
+
+    // Status banner
+    in property <string> status_message: "";
+    in property <bool> is_status_error: false;
+
+    // Callbacks
+    callback select_legend(int);
+    callback select_weapon_filter(string);
+    callback search_changed(string);
+    callback select_costume(int);
+    callback select_weapon1(int);
+    callback select_weapon2(int);
+    callback select_color(int);
+    callback apply_modification();
+    callback rollback_all();
+    callback save_current_preset();
+    callback load_preset(int);
+    callback delete_preset(int);
+    callback launch_game();
+    callback toggle_language();
+    callback show_view(int);
+    callback browse_game_path();
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // Top Navigation Bar
+        Rectangle {
+            height: 60px;
+            background: #161b26;
+
+            HorizontalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+                alignment: space-between;
+
+                // App Branding
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+                    Text {
+                        text: "⚔️ Skinner";
+                        color: #ffffff;
+                        font-size: 19px;
+                        font-weight: 800;
+                        vertical-alignment: center;
+                    }
+                    Rectangle {
+                        border-radius: 4px;
+                        background: #1e293b;
+                        HorizontalLayout {
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            padding-top: 2px;
+                            padding-bottom: 2px;
+                            Text {
+                                text: root.version_text;
+                                color: #38bdf8;
+                                font-size: 11px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                    // Status Badge
+                    Rectangle {
+                        border-radius: 12px;
+                        background: root.is_game_valid ? #064e3b : #7f1d1d;
+                        border-width: 1px;
+                        border-color: root.is_game_valid ? #059669 : #dc2626;
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            padding-top: 4px;
+                            padding-bottom: 4px;
+                            Text {
+                                text: root.game_status_text;
+                                color: root.is_game_valid ? #6ee7b7 : #fca5a5;
+                                font-size: 11px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Header Navigation Actions
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+
+                    HeaderButton {
+                        text: "🎮 Launch Game";
+                        btn_bg: #1e3a8a;
+                        btn_hover_bg: #2563eb;
+                        clicked => { root.launch_game(); }
+                    }
+
+                    HeaderButton {
+                        text: "📁 Presets";
+                        clicked => { root.show_view(2); }
+                    }
+
+                    HeaderButton {
+                        text: "🔧 Diagnostics";
+                        clicked => { root.show_view(3); }
+                    }
+
+                    HeaderButton {
+                        text: "⏪ Rollback All";
+                        btn_bg: #374151;
+                        btn_hover_bg: #4b5563;
+                        clicked => { root.rollback_all(); }
+                    }
+
+                    HeaderButton {
+                        text: root.language_text;
+                        btn_bg: #27272a;
+                        btn_hover_bg: #3f3f46;
+                        clicked => { root.toggle_language(); }
+                    }
+                }
+            }
+        }
+
+        // Status Feedback Banner (if status_message is not empty)
+        if root.status_message != "": Rectangle {
+            height: 36px;
+            background: root.is_status_error ? #450a0a : #064e3b;
+            border-width: 1px;
+            border-color: root.is_status_error ? #b91c1c : #059669;
+
+            HorizontalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+                alignment: center;
+                Text {
+                    text: root.status_message;
+                    color: #ffffff;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // MAIN CONTENT AREA BASED ON CURRENT VIEW
+        // VIEW 0: ROSTER PAGE
+        if root.current_view == 0: VerticalLayout {
+            padding: 20px;
+            spacing: 16px;
+
+            // Search and Filters Bar
+            HorizontalLayout {
+                spacing: 14px;
+                alignment: space-between;
+
+                // Search Box
+                Rectangle {
+                    width: 320px;
+                    height: 40px;
+                    border-radius: 8px;
+                    background: #181d2a;
+                    border-width: 1px;
+                    border-color: #272f44;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        alignment: center;
+                        search_input := LineEdit {
+                            placeholder-text: "Search legend...";
+                            text <=> root.search_query;
+                            edited(text) => { root.search_changed(text); }
+                        }
+                    }
+                }
+
+                // Weapon Filter Pills
+                ScrollView {
+                    HorizontalLayout {
+                        spacing: 8px;
+                        for w_name in root.weapon_filters: PillButton {
+                            text: w_name;
+                            active: root.selected_weapon_filter == w_name;
+                            clicked => { root.select_weapon_filter(w_name); }
+                        }
+                    }
+                }
+            }
+
+            // Legends Grid
+            ScrollView {
+                VerticalLayout {
+                    spacing: 12px;
+                    // Grid emulation using vertical list with card elements
+                    for item[idx] in root.legends_list: LegendCard {
+                        item: item;
+                        clicked => { root.select_legend(idx); }
+                    }
+                }
+            }
+        }
+
+        // VIEW 1: LEGEND CUSTOMIZER WORKBENCH
+        if root.current_view == 1: VerticalLayout {
+            padding: 20px;
+            spacing: 16px;
+
+            // Customizer Header
+            HorizontalLayout {
+                alignment: space-between;
+                spacing: 12px;
+
+                HorizontalLayout {
+                    spacing: 14px;
+                    alignment: start;
+                    HeaderButton {
+                        text: "< Back to Legends";
+                        btn_bg: #272f44;
+                        btn_hover_bg: #374161;
+                        clicked => { root.show_view(0); }
+                    }
+                    Text {
+                        text: root.current_legend_name;
+                        color: #ffffff;
+                        font-size: 22px;
+                        font-weight: 800;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: "(" + root.current_legend_weapons + ")";
+                        color: #94a3b8;
+                        font-size: 15px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: end;
+                    HeaderButton {
+                        text: "💾 Save Preset";
+                        btn_bg: #1e293b;
+                        btn_hover_bg: #334155;
+                        clicked => { root.save_current_preset(); }
+                    }
+                    HeaderButton {
+                        text: "⚡ Apply Modification";
+                        btn_bg: #16a34a;
+                        btn_hover_bg: #22c55e;
+                        text_color: #ffffff;
+                        clicked => { root.apply_modification(); }
+                    }
+                }
+            }
+
+            // Customizer 4-Column Panel
+            HorizontalLayout {
+                spacing: 16px;
+
+                // Column 1: Costumes
+                Rectangle {
+                    background: #151a26;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #232a3d;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 10px;
+                        Text {
+                            text: "Costumes (" + root.current_costumes.length + ")";
+                            color: #38bdf8;
+                            font-size: 15px;
+                            font-weight: 700;
+                        }
+                        ScrollView {
+                            VerticalLayout {
+                                spacing: 6px;
+                                for c[idx] in root.current_costumes: Rectangle {
+                                    height: 38px;
+                                    border-radius: 6px;
+                                    background: idx == root.selected_costume_index ? #2563eb : (c_touch.has-hover ? #21283a : #1a2030);
+                                    border-width: 1px;
+                                    border-color: idx == root.selected_costume_index ? #60a5fa : #242c40;
+
+                                    HorizontalLayout {
+                                        padding-left: 10px;
+                                        padding-right: 10px;
+                                        alignment: space-between;
+                                        Text {
+                                            text: c.display_name;
+                                            color: #ffffff;
+                                            font-size: 13px;
+                                            font-weight: idx == root.selected_costume_index ? 700 : 500;
+                                            vertical-alignment: center;
+                                        }
+                                        if c.is_default: Text {
+                                            text: "Default";
+                                            color: #a5f3fc;
+                                            font-size: 10px;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                    c_touch := TouchArea {
+                                        clicked => { root.select_costume(idx); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Column 2: Weapon 1 Skins
+                Rectangle {
+                    background: #151a26;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #232a3d;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 10px;
+                        Text {
+                            text: "Primary Weapon Skins (" + root.current_weapons1.length + ")";
+                            color: #a855f7;
+                            font-size: 15px;
+                            font-weight: 700;
+                        }
+                        ScrollView {
+                            VerticalLayout {
+                                spacing: 6px;
+                                for w[idx] in root.current_weapons1: Rectangle {
+                                    height: 38px;
+                                    border-radius: 6px;
+                                    background: idx == root.selected_weapon1_index ? #9333ea : (w1_touch.has-hover ? #21283a : #1a2030);
+                                    border-width: 1px;
+                                    border-color: idx == root.selected_weapon1_index ? #c084fc : #242c40;
+
+                                    HorizontalLayout {
+                                        padding-left: 10px;
+                                        padding-right: 10px;
+                                        alignment: space-between;
+                                        Text {
+                                            text: w.display_name;
+                                            color: #ffffff;
+                                            font-size: 13px;
+                                            font-weight: idx == root.selected_weapon1_index ? 700 : 500;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                    w1_touch := TouchArea {
+                                        clicked => { root.select_weapon1(idx); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Column 3: Weapon 2 Skins
+                Rectangle {
+                    background: #151a26;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #232a3d;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 10px;
+                        Text {
+                            text: "Secondary Weapon Skins (" + root.current_weapons2.length + ")";
+                            color: #ec4899;
+                            font-size: 15px;
+                            font-weight: 700;
+                        }
+                        ScrollView {
+                            VerticalLayout {
+                                spacing: 6px;
+                                for w[idx] in root.current_weapons2: Rectangle {
+                                    height: 38px;
+                                    border-radius: 6px;
+                                    background: idx == root.selected_weapon2_index ? #db2777 : (w2_touch.has-hover ? #21283a : #1a2030);
+                                    border-width: 1px;
+                                    border-color: idx == root.selected_weapon2_index ? #f472b6 : #242c40;
+
+                                    HorizontalLayout {
+                                        padding-left: 10px;
+                                        padding-right: 10px;
+                                        alignment: space-between;
+                                        Text {
+                                            text: w.display_name;
+                                            color: #ffffff;
+                                            font-size: 13px;
+                                            font-weight: idx == root.selected_weapon2_index ? 700 : 500;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                    w2_touch := TouchArea {
+                                        clicked => { root.select_weapon2(idx); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Column 4: Color Schemes
+                Rectangle {
+                    background: #151a26;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #232a3d;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 10px;
+                        Text {
+                            text: "Color Palette (" + root.current_colors.length + ")";
+                            color: #eab308;
+                            font-size: 15px;
+                            font-weight: 700;
+                        }
+                        ScrollView {
+                            VerticalLayout {
+                                spacing: 6px;
+                                for col[idx] in root.current_colors: Rectangle {
+                                    height: 38px;
+                                    border-radius: 6px;
+                                    background: idx == root.selected_color_index ? #ca8a04 : (col_touch.has-hover ? #21283a : #1a2030);
+                                    border-width: 1px;
+                                    border-color: idx == root.selected_color_index ? #fde047 : #242c40;
+
+                                    HorizontalLayout {
+                                        padding-left: 10px;
+                                        padding-right: 10px;
+                                        alignment: space-between;
+                                        Text {
+                                            text: col.display_name;
+                                            color: #ffffff;
+                                            font-size: 13px;
+                                            font-weight: idx == root.selected_color_index ? 700 : 500;
+                                            vertical-alignment: center;
+                                        }
+                                        Rectangle {
+                                            width: 18px;
+                                            height: 18px;
+                                            border-radius: 9px;
+                                            background: col.indicator_color;
+                                            border-width: 1px;
+                                            border-color: #ffffff;
+                                        }
+                                    }
+                                    col_touch := TouchArea {
+                                        clicked => { root.select_color(idx); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // VIEW 2: PRESETS DIALOG / VIEW
+        if root.current_view == 2: VerticalLayout {
+            padding: 20px;
+            spacing: 16px;
+
+            HorizontalLayout {
+                alignment: space-between;
+                HeaderButton {
+                    text: "< Back";
+                    clicked => { root.show_view(0); }
+                }
+                Text {
+                    text: "Saved Presets";
+                    color: #ffffff;
+                    font-size: 20px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                Rectangle { width: 60px; }
+            }
+
+            ScrollView {
+                VerticalLayout {
+                    spacing: 10px;
+                    for p[idx] in root.presets_list: Rectangle {
+                        height: 56px;
+                        background: #181d2a;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: #272f44;
+
+                        HorizontalLayout {
+                            padding-left: 16px;
+                            padding-right: 16px;
+                            alignment: space-between;
+                            VerticalLayout {
+                                alignment: center;
+                                Text {
+                                    text: p.name + " (" + p.legend_name + ")";
+                                    color: #ffffff;
+                                    font-size: 14px;
+                                    font-weight: 700;
+                                }
+                                Text {
+                                    text: "Skin: " + p.costume_name + " • " + p.created_at;
+                                    color: #94a3b8;
+                                    font-size: 11px;
+                                }
+                            }
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: center;
+                                HeaderButton {
+                                    text: "Load";
+                                    btn_bg: #1e3a8a;
+                                    btn_hover_bg: #2563eb;
+                                    clicked => { root.load_preset(idx); }
+                                }
+                                HeaderButton {
+                                    text: "Delete";
+                                    btn_bg: #7f1d1d;
+                                    btn_hover_bg: #dc2626;
+                                    clicked => { root.delete_preset(idx); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // VIEW 3: DIAGNOSTICS VIEW
+        if root.current_view == 3: VerticalLayout {
+            padding: 20px;
+            spacing: 16px;
+
+            HorizontalLayout {
+                alignment: space-between;
+                HeaderButton {
+                    text: "< Back";
+                    clicked => { root.show_view(0); }
+                }
+                Text {
+                    text: "System Diagnostics & Health";
+                    color: #ffffff;
+                    font-size: 20px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+                Rectangle { width: 60px; }
+            }
+
+            Rectangle {
+                background: #141824;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: #232a3d;
+
+                ScrollView {
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 8px;
+                        for diag in root.diagnostics_list: Text {
+                            text: diag;
+                            color: #e2e8f0;
+                            font-size: 13px;
+                            font-family: "Consolas";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
