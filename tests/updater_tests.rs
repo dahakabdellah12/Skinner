@@ -4,6 +4,26 @@ use brawlcraft_slint::updater::{
 use ed25519_dalek::{Signer, SigningKey};
 
 #[test]
+fn test_wry_workaround_uri() {
+    use brawlcraft_slint::desktop_app::is_allowed_internal_navigation;
+    assert!(is_allowed_internal_navigation("brawlcraft://localhost/index.html"));
+    assert!(is_allowed_internal_navigation("http://brawlcraft.localhost/index.html"));
+    assert!(is_allowed_internal_navigation("https://brawlcraft.localhost/index.html"));
+    assert!(is_allowed_internal_navigation("about:blank"));
+    assert!(!is_allowed_internal_navigation("http://malicious.com"));
+    assert!(!is_allowed_internal_navigation("https://evil.org"));
+    assert!(!is_allowed_internal_navigation("file:///C:/Windows/System32/cmd.exe"));
+}
+
+#[test]
+fn test_frontend_assets_embed() {
+    use brawlcraft_slint::desktop_app::FrontendAssets;
+    let files: Vec<_> = FrontendAssets::iter().collect();
+    assert!(!files.is_empty());
+    assert!(FrontendAssets::get("index.html").is_some());
+}
+
+#[test]
 fn test_semver_parsing_and_comparison() {
     let v331 = SemVer::parse("3.3.1").unwrap();
     let v332 = SemVer::parse("v3.3.2").unwrap();

@@ -249,6 +249,54 @@ fn get_svg_cache_dir() -> PathBuf {
     cache_dir
 }
 
+pub fn log_startup(stage: u32, name: &str, detail: Option<&str>) {
+    let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    let line = match detail {
+        Some(d) => format!("[{}] [STAGE {:02}] {}: {}\n", now, stage, name, d),
+        None => format!("[{}] [STAGE {:02}] {}\n", now, stage, name),
+    };
+
+    eprint!("{}", line);
+
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        let dir = PathBuf::from(appdata).join("Skinner").join("Logs");
+        if std::fs::create_dir_all(&dir).is_ok() {
+            let log_file = dir.join("startup.log");
+            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(log_file) {
+                let _ = f.write_all(line.as_bytes());
+            }
+        }
+    }
+}
+
+pub fn is_allowed_internal_navigation(url: &str) -> bool {
+    let u = url.trim();
+    u.starts_with("brawlcraft://")
+        || u.starts_with("http://brawlcraft.localhost")
+        || u.starts_with("https://brawlcraft.localhost")
+        || u == "about:blank"
+}
+
+pub fn get_user_data_dir() -> PathBuf {
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        let p = PathBuf::from(appdata).join("Skinner").join("WebView2");
+        let _ = std::fs::create_dir_all(&p);
+        return p;
+    }
+    PathBuf::from("cache/webview2")
+}
+
+pub fn show_native_error_dialog(title: &str, message: &str) {
+    let script = format!(
+        "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; [System.Windows.Forms.MessageBox]::Show('{}', '{}', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)",
+        message.replace('\'', "''"),
+        title.replace('\'', "''")
+    );
+    let _ = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-Command", &script])
+        .output();
+}
+
 static SVG_MEM_CACHE: std::sync::OnceLock<Mutex<std::collections::HashMap<String, String>>> = std::sync::OnceLock::new();
 
 fn get_svg_mem_cache() -> &'static Mutex<std::collections::HashMap<String, String>> {
@@ -527,6 +575,7 @@ fn handle_action(
 ) -> Result<serde_json::Value, String> {
     match action {
         "getSystemInfo" => {
+            log_startup(11, "Backend communication initialized", Some("IPC getSystemInfo processed"));
             if !GameLauncher::is_game_running() && !state.pending_modifications.is_empty() {
                 state.apply_pending_modifications();
             }
@@ -1001,7 +1050,17 @@ fn handle_action(
             }
             Ok(serde_json::json!(true))
         }
-        "logClientError" => Ok(serde_json::json!(true)),
+        "reactMounted" => {
+            log_startup(10, "React application mounted", Some("React DOM mount confirmed via IPC"));
+            Ok(serde_json::json!(true))
+        }
+        "logClientError" => {
+            let msg = payload.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown client error");
+            let detail = payload.get("stack").and_then(|v| v.as_str());
+            log_startup(9, "JavaScript errors detected", Some(msg));
+            crate::telemetry::log("ERROR", "CLIENT_JS", msg, detail);
+            Ok(serde_json::json!(true))
+        }
         "getDevModeState" => {
             let metrics = crate::telemetry::get_metrics();
             let since_id = payload.get("sinceId").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -1107,8 +1166,22 @@ pub fn run_desktop_app() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let window = window_builder.build(&event_loop)?;
-    let window = Arc::new(window);
+    let window = match window_builder.build(&event_loop) {
+        Ok(w) => {
+            log_startup(2, "Window created", Some("Window successfully built and configured"));
+            Arc::new(w)
+        }
+        Err(e) => {
+            let err_msg = format!("Failed to create application window: {}\n\nLogs: %APPDATA%\\Skinner\\Logs\\startup.log", e);
+            log_startup(2, "Window creation failed", Some(&err_msg));
+            show_native_error_dialog("Skinner — Window Creation Failure", &err_msg);
+            return Err(e.into());
+        }
+    };
+
+    let data_dir = get_user_data_dir();
+    log_startup(3, "WebView2 environment initialized", Some(&format!("Data dir: {}", data_dir.display())));
+    let mut web_context = wry::WebContext::new(Some(data_dir));
 
     let init_script = r#"
 window.__pendingRustResponses = [];
@@ -1122,31 +1195,73 @@ window.__onRustResponse = function(raw) {
     let p_clone = proxy.clone();
     let data_clone = Arc::clone(&shared_data);
 
-    let webview = WebViewBuilder::new()
+    log_startup(5, "Custom protocol registered", Some("Registering protocol 'brawlcraft'"));
+
+    let webview = match WebViewBuilder::new_with_web_context(&mut web_context)
         .with_initialization_script(init_script)
         .with_custom_protocol("brawlcraft".into(), |_webview_id, request| {
-            let path = request.uri().path().trim_start_matches('/');
-            let file_path = if path.is_empty() { "index.html" } else { path };
+            let raw_path = request.uri().path();
+            let trimmed = raw_path.trim_start_matches('/');
+            let decoded = percent_encoding::percent_decode_str(trimmed).decode_utf8_lossy();
+            let clean_path = decoded.trim_start_matches("./").trim_start_matches('/');
+            let file_path = if clean_path.is_empty() { "index.html" } else { clean_path };
 
             match FrontendAssets::get(file_path) {
                 Some(content) => {
                     let mime = mime_guess::from_path(file_path).first_or_octet_stream();
-                    Response::builder()
-                        .header(CONTENT_TYPE, mime.as_ref())
+                    let mime_str = if file_path.ends_with(".js") {
+                        "application/javascript; charset=utf-8"
+                    } else if file_path.ends_with(".css") {
+                        "text/css; charset=utf-8"
+                    } else if file_path.ends_with(".html") {
+                        "text/html; charset=utf-8"
+                    } else {
+                        mime.as_ref()
+                    };
+
+                    log_startup(
+                        8,
+                        "Frontend resources loaded",
+                        Some(&format!("'{}' ({}, {} bytes)", file_path, mime_str, content.data.len())),
+                    );
+
+                    let mut builder = Response::builder()
+                        .header(CONTENT_TYPE, mime_str)
+                        .header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+                        .header("Access-Control-Allow-Headers", "*")
                         .header("X-Content-Type-Options", "nosniff")
                         .header("X-Frame-Options", "DENY")
-                        .header("Referrer-Policy", "no-referrer")
-                        .body(content.data)
-                        .unwrap()
+                        .header("Referrer-Policy", "no-referrer");
+
+                    if file_path == "index.html" {
+                        log_startup(7, "Navigation completed", Some("index.html served successfully"));
+                        builder = builder.header(
+                            "Content-Security-Policy",
+                            "default-src 'self' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft:; style-src 'self' 'unsafe-inline' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: https://fonts.googleapis.com; font-src 'self' data: http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: https://fonts.gstatic.com; img-src 'self' data: blob: http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft:; connect-src 'self' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: https://api.github.com https://github.com https://objects.githubusercontent.com;"
+                        );
+                    }
+
+                    builder.body(content.data).unwrap()
                 }
                 None => {
+                    log_startup(
+                        8,
+                        "Frontend resource missing, falling back to index.html",
+                        Some(&format!("Requested: '{}'", file_path)),
+                    );
+
                     if let Some(index) = FrontendAssets::get("index.html") {
                         Response::builder()
                             .header(CONTENT_TYPE, "text/html; charset=utf-8")
+                            .header("Access-Control-Allow-Origin", "*")
                             .header("X-Content-Type-Options", "nosniff")
                             .header("X-Frame-Options", "DENY")
                             .header("Referrer-Policy", "no-referrer")
-                            .header("Content-Security-Policy", "default-src 'self' brawlcraft: data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' brawlcraft: data: blob:; font-src 'self' brawlcraft: data:;")
+                            .header(
+                                "Content-Security-Policy",
+                                "default-src 'self' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft:; style-src 'self' 'unsafe-inline' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: https://fonts.googleapis.com; font-src 'self' data: http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: https://fonts.gstatic.com; img-src 'self' data: blob: http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft:; connect-src 'self' http://brawlcraft.localhost https://brawlcraft.localhost brawlcraft: https://api.github.com https://github.com https://objects.githubusercontent.com;"
+                            )
                             .body(index.data)
                             .unwrap()
                     } else {
@@ -1159,9 +1274,14 @@ window.__onRustResponse = function(raw) {
             }
         })
         .with_url("brawlcraft://localhost/index.html")
-        .with_navigation_handler(|url| {
-            // Security Hardening: strictly confine WebView navigation to internal custom protocol
-            url.starts_with("brawlcraft://")
+        .with_navigation_handler(|url: String| {
+            let allowed = is_allowed_internal_navigation(&url);
+            log_startup(
+                6,
+                "Frontend navigation started",
+                Some(&format!("URL: '{}' (allowed: {})", url, allowed)),
+            );
+            allowed
         })
         .with_ipc_handler(move |req| {
             let body = req.body().to_string();
@@ -1250,7 +1370,19 @@ window.__onRustResponse = function(raw) {
                 }
             });
         })
-        .build(&window)?;
+        .build(&window)
+    {
+        Ok(w) => {
+            log_startup(4, "WebView2 controller created", Some("WebView2 controller attached to window"));
+            w
+        }
+        Err(e) => {
+            let err_msg = format!("Failed to initialize WebView2 runtime: {}\n\nPlease ensure Microsoft Edge WebView2 Runtime is installed.\n\nStartup log location:\n%APPDATA%\\Skinner\\Logs\\startup.log", e);
+            log_startup(4, "WebView2 controller creation failed", Some(&err_msg));
+            show_native_error_dialog("Skinner — WebView2 Initialization Error", &err_msg);
+            return Err(e.into());
+        }
+    };
 
     let win_ref = Arc::clone(&window);
 

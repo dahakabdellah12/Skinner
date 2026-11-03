@@ -230,6 +230,7 @@ dependencies = [
  "image",
  "mime_guess",
  "open",
+ "percent-encoding",
  "quick-xml",
  "rust-embed",
  "serde",

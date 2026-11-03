@@ -78,6 +78,27 @@ function initBridge() {
 // Auto-initialize on load
 if (typeof window !== 'undefined') {
   initBridge();
+
+  window.addEventListener('error', (event) => {
+    try {
+      invoke('logClientError', {
+        message: event.message || 'Window error',
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        stack: event.error?.stack
+      }).catch(() => {});
+    } catch {}
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    try {
+      invoke('logClientError', {
+        message: 'Unhandled Promise Rejection: ' + (event.reason?.message || String(event.reason)),
+        stack: event.reason?.stack
+      }).catch(() => {});
+    } catch {}
+  });
 }
 
 /**
