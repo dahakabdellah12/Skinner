@@ -1,0 +1,25 @@
+{
+  "version": "3.3.2",
+  "name": "Skinner v3.3.2 — Cryptographic Auto-Updater & Security Hardening",
+  "tag_name": "v3.3.2",
+  "release_date": "2026-11-03",
+  "installer_filename": "Skinner-3.3.2-windows-x64.zip",
+  "installer_size": 70197239,
+  "installer_sha256": "50b35f3694fe9ef2623e1ce22d01040861b70999dfbcc10980a0d1e0687b4104",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.2/Skinner-3.3.2-windows-x64.zip",
+  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.2/SHA256SUMS.txt",
+  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.2/SHA256SUMS.txt.sig",
+  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.2",
+  "changelog": [
+    "Production-grade automatic update system powered by GitHub Releases with zero manual downloads required.",
+    "Cryptographic Ed25519 signature verification with embedded official public verification key.",
+    "Mandatory SHA-256 checksum verification against signed release manifests before executable execution.",
+    "Safe Windows update handoff helper resolving ERROR_SHARING_VIOLATION file locking and preserving all user data.",
+    "Strict domain and URL validation restricting asset downloads exclusively to the official dahakabdellah12/Skinner repository.",
+    "Zero idle disk thrashing: metadata stat caching eliminates 300MB/3.5s background disk reads.",
+    "Sub-millisecond native Win32 Toolhelp32 process detection with zero subprocess spawning.",
+    "Robust semantic version comparison supporting numeric precedence and prerelease filtering.",
+    "Zip-bomb and OOM protection capping uncompressed archive buffers across SWZ, ANM, and SWF engines.",
+    "Sealed WebView navigation handler restricting navigation to internal custom protocols."
+  ]
+}

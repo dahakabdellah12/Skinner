@@ -1,0 +1,15 @@
+# Distribution binaries (hosted on GitHub Releases)
+*.zip
+*.exe
+*.msi
+
+# Logs & temp
+*.log
+*.tmp
+skinner_dev_log.txt
+skinner_diagnostics_report.txt
+
+# OS artifacts
+Thumbs.db
+Desktop.ini
+.DS_Store
