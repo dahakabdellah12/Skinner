@@ -249,20 +249,25 @@ fn test_release_metadata_and_asset_hash_consistency() {
         assert_eq!(json["version"].as_str().unwrap(), "3.3.3");
         assert_eq!(json["tag_name"].as_str().unwrap(), "v3.3.3");
 
-        // 2. Compute actual zip hash and size
-        let actual_zip_hash = CryptoVerifier::compute_sha256(zip_path).unwrap();
-        let actual_zip_size = std::fs::metadata(zip_path).unwrap().len();
+        // 2. Compute actual installer hash and size from latest.json target
+        let installer_filename = json["installer_filename"].as_str().unwrap();
+        let installer_path = std::path::Path::new("release").join(installer_filename);
+        assert!(installer_path.is_file(), "Referenced installer file must exist: {:?}", installer_path);
+
+        let actual_installer_hash = CryptoVerifier::compute_sha256(&installer_path).unwrap();
+        let actual_installer_size = std::fs::metadata(&installer_path).unwrap().len();
 
         let json_hash = json["installer_sha256"].as_str().unwrap();
         let json_size = json["installer_size"].as_u64().unwrap();
 
-        assert_eq!(actual_zip_hash, json_hash, "latest.json installer_sha256 must match real zip hash");
-        assert_eq!(actual_zip_size, json_size, "latest.json installer_size must match real zip file size");
+        assert_eq!(actual_installer_hash, json_hash, "latest.json installer_sha256 must match real file hash");
+        assert_eq!(actual_installer_size, json_size, "latest.json installer_size must match real file size");
 
         // 3. Verify SHA256SUMS.txt entries
         let sums_str = std::fs::read_to_string(sums_path).unwrap();
         let sums_map = CryptoVerifier::parse_sha256sums(&sums_str);
 
+        let actual_zip_hash = CryptoVerifier::compute_sha256(zip_path).unwrap();
         let manifest_zip_hash = sums_map.get("Skinner-3.3.3-windows-x64.zip")
             .expect("Skinner-3.3.3-windows-x64.zip must be present in SHA256SUMS.txt");
         assert_eq!(manifest_zip_hash, &actual_zip_hash);

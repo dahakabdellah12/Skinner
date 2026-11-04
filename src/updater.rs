@@ -336,6 +336,8 @@ impl UpdateManager {
             res.release_notes = body.to_string();
         }
 
+        let mut matched_exe = false;
+
         // Parse official assets
         if let Some(assets) = json.get("assets").and_then(|v| v.as_array()) {
             for a in assets {
@@ -345,10 +347,11 @@ impl UpdateManager {
                 if name.ends_with(".exe") {
                     res.asset_name = name.to_string();
                     res.download_url = durl.to_string();
+                    matched_exe = true;
                     if let Some(size) = a.get("size").and_then(|v| v.as_u64()) {
                         res.asset_size_formatted = format!("{:.1} MB", size as f64 / 1_048_576.0);
                     }
-                } else if name.ends_with(".zip") && !res.asset_name.ends_with(".exe") {
+                } else if name.ends_with(".zip") && !matched_exe {
                     res.asset_name = name.to_string();
                     res.download_url = durl.to_string();
                     if let Some(size) = a.get("size").and_then(|v| v.as_u64()) {
@@ -503,6 +506,7 @@ impl UpdateManager {
 
         let expected_hash = sums.get(&info.asset_name)
             .or_else(|| sums.get(&format!("Skinner-Setup-{}.exe", clean_ver)))
+            .or_else(|| sums.get(&format!("Skinner-{}-setup-x64.exe", clean_ver)))
             .or_else(|| sums.get(&format!("Skinner-{}-windows-x64.zip", clean_ver)))
             .ok_or_else(|| format!("Package '{}' not found in authenticated SHA256SUMS manifest!", info.asset_name))?;
 

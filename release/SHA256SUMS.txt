@@ -1,2 +1,4 @@
 04a43ad1327fe0ba579edc4bcf936b61687fd9d430d2aacd133820e96f7eaba7  Skinner.exe
+83e7d6905f032b2841ec835a06c14174eeda8927d7c08ec69195dd9bfb8f2e7e  Skinner-Setup-3.3.3.exe
+83e7d6905f032b2841ec835a06c14174eeda8927d7c08ec69195dd9bfb8f2e7e  Skinner-3.3.3-setup-x64.exe
 4ab234b0e2ea274ba6a2b9bdbf93094c4c68a7148a1a8bed736b1169e6bfe767  Skinner-3.3.3-windows-x64.zip
