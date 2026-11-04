@@ -100,7 +100,7 @@ Get-FileHash -Algorithm SHA256 Skinner-3.3.3-windows-x64.zip
 
 **Expected SHA-256 Digest (v3.3.3):**
 ```text
-417d32427285b62dd8143b6fc4d2b65287b7e5064400bf56829ddee082ee6734
+4ab234b0e2ea274ba6a2b9bdbf93094c4c68a7148a1a8bed736b1169e6bfe767
 ```
 
 **Official Embedded Ed25519 Public Verification Key:**

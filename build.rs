@@ -16,11 +16,20 @@ fn main() {
             let icon_abs = Path::new(&manifest_dir).join("assets").join("app.ico");
             let icon_str = icon_abs.to_string_lossy().replace('\\', "/");
 
+            let pkg_ver = std::env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "3.3.3".into());
+            let v_parts: Vec<&str> = pkg_ver.split('.').collect();
+            let v_commas = format!(
+                "{},{},{},0",
+                v_parts.first().unwrap_or(&"3"),
+                v_parts.get(1).unwrap_or(&"3"),
+                v_parts.get(2).unwrap_or(&"3")
+            );
+
             let rc_content = format!(
                 r#"1 ICON "{}"
 1 VERSIONINFO
-FILEVERSION 3,3,1,0
-PRODUCTVERSION 3,3,1,0
+FILEVERSION {}
+PRODUCTVERSION {}
 FILEOS 0x40004
 FILETYPE 0x1
 {{
@@ -30,11 +39,11 @@ FILETYPE 0x1
         {{
             VALUE "CompanyName", "Skinner"
             VALUE "FileDescription", "Skinner - Ultimate Brawlhalla Skin Studio"
-            VALUE "FileVersion", "3.3.1"
+            VALUE "FileVersion", "{}"
             VALUE "InternalName", "Skinner"
             VALUE "OriginalFilename", "Skinner.exe"
             VALUE "ProductName", "Skinner"
-            VALUE "ProductVersion", "3.3.1"
+            VALUE "ProductVersion", "{}"
         }}
     }}
     BLOCK "VarFileInfo"
@@ -43,7 +52,7 @@ FILETYPE 0x1
     }}
 }}
 "#,
-                icon_str
+                icon_str, v_commas, v_commas, pkg_ver, pkg_ver
             );
 
             if std::fs::write(&rc_path, rc_content).is_ok() {
