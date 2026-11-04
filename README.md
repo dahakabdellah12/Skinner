@@ -6,7 +6,7 @@
 
 **High-Performance Native Windows Desktop Studio for Brawlhalla Cosmetic Customization**
 
-[![Version](https://img.shields.io/badge/version-v3.3.3-blue.svg?style=flat-square)](https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.3)
+[![Version](https://img.shields.io/badge/version-v3.3.4-blue.svg?style=flat-square)](https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.4)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg?style=flat-square&logo=windows)](https://github.com/dahakabdellah12/Skinner)
 [![Rust](https://img.shields.io/badge/Rust-2021%20edition-DEA584.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg?style=flat-square&logo=react)](https://react.dev/)
@@ -88,19 +88,19 @@ Skinner is distributed as a self-contained portable Windows x64 package. No inst
 ### 1. Download Official Release
 Download the latest verified release archive from the official GitHub repository:
 
-👉 **[Download Skinner v3.3.3 (Windows x64)](https://github.com/dahakabdellah12/Skinner/releases/latest)**
+👉 **[Download Skinner v3.3.4 (Windows x64)](https://github.com/dahakabdellah12/Skinner/releases/latest)**
 
 ### 2. Verify Cryptographic Integrity
 To guarantee authenticity and protect against tampering, verify the archive's SHA-256 checksum against the official manifest:
 
 ```powershell
 # Compute local hash
-Get-FileHash -Algorithm SHA256 Skinner-3.3.3-windows-x64.zip
+Get-FileHash -Algorithm SHA256 Skinner-3.3.4-windows-x64.zip
 ```
 
-**Expected SHA-256 Digest (v3.3.3):**
+**Expected SHA-256 Digest (v3.3.4):**
 ```text
-4ab234b0e2ea274ba6a2b9bdbf93094c4c68a7148a1a8bed736b1169e6bfe767
+cd4572618363748c0bf8436f2047995107a65e040396c768a8a0e99801a961a1
 ```
 
 **Official Embedded Ed25519 Public Verification Key:**
@@ -109,7 +109,7 @@ Get-FileHash -Algorithm SHA256 Skinner-3.3.3-windows-x64.zip
 ```
 
 ### 3. Launch
-Extract `Skinner-3.3.3-windows-x64.zip` to your preferred folder and launch:
+Extract `Skinner-3.3.4-windows-x64.zip` to your preferred folder and launch:
 ```text
 Skinner.exe
 ```
