@@ -3,10 +3,10 @@
   "name": "Skinner v3.3.3 \u2014 Skins Catalog Precision Cleanup & Duplicate Pruning",
   "tag_name": "v3.3.3",
   "release_date": "2026-11-04",
-  "installer_filename": "Skinner-3.3.3-windows-x64.zip",
-  "installer_size": 76849322,
-  "installer_sha256": "4ab234b0e2ea274ba6a2b9bdbf93094c4c68a7148a1a8bed736b1169e6bfe767",
-  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/Skinner-3.3.3-windows-x64.zip",
+  "installer_filename": "Skinner-Setup-3.3.3.exe",
+  "installer_size": 54969379,
+  "installer_sha256": "83e7d6905f032b2841ec835a06c14174eeda8927d7c08ec69195dd9bfb8f2e7e",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/Skinner-Setup-3.3.3.exe",
   "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/SHA256SUMS.txt",
   "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/SHA256SUMS.txt.sig",
   "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.3",
@@ -15,6 +15,7 @@
     "Comprehensive deduplication: Resolved stance duplicates for Ransom (CyberVirus) and Seven (Roboengineer) while preserving canonical defaults and distinct variants.",
     "Special multi-variant resolution: Fully removed all Wolf Casey records from Brynn and both Lara Croft records from Diana.",
     "Data Integrity: Preserved distinct visual variants sharing identical names (including ZombieWalker variants on Gnash/Nash).",
+    "Official Windows Setup Installer: Includes Skinner-Setup-3.3.3.exe with desktop shortcut, start menu entry, and clean uninstaller support.",
     "Asset cache purge: Cleaned 16 stale cached SVG assets from disk and sanitized crossover weapon mappings.",
     "100% verified compatibility and seamless cryptographic auto-update handoff."
   ]
