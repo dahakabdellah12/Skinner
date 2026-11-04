@@ -325,11 +325,11 @@ fn test_cross_file_costume_remapping() {
     let mut cat = Catalog::default();
     cat.load_from_installation(&inst).unwrap();
 
-    let ew = cat.costumes.iter().find(|c| c.costume_name == "EpicWitch").unwrap();
+    let ew = cat.costumes.iter().find(|c| c.costume_name == "SugarSkull").unwrap();
     let src_path = std::path::Path::new(&inst.game_path).join(&ew.swf_file);
     if src_path.is_file() {
         let mut pkg = SwfPackage::read_from_file(&src_path).unwrap();
-        // Rename all _EpicWitch to _Witch
+        // Rename all _SugarSkull to _Witch
         let mut renamed = 0;
         for tag in &mut pkg.tags {
             if tag.tag_code == 76 {
@@ -5107,7 +5107,7 @@ fn test_verify_complete_character_skin_catalog() {
     let mut cat = Catalog::default();
     cat.load_from_installation(&inst).unwrap();
 
-    assert!(cat.costumes.len() >= 790, "Expected >= 790 costumes across full game catalog, found {}", cat.costumes.len());
+    assert!(cat.costumes.len() >= 690, "Expected >= 690 costumes across full game catalog, found {}", cat.costumes.len());
 
     let playable_legends: Vec<_> = cat.legends.iter()
         .filter(|l| !l.hero_name.eq_ignore_ascii_case("random") && !l.hero_name.eq_ignore_ascii_case("default_character"))
@@ -5137,7 +5137,7 @@ fn test_verify_complete_character_skin_catalog() {
             }
         }
     }
-    assert!(rendered_costumes >= 780, "Expected >= 780 costumes to render SVG, got {}", rendered_costumes);
+    assert!(rendered_costumes >= 680, "Expected >= 680 costumes to render SVG, got {}", rendered_costumes);
 }
 
 #[test]
@@ -5305,3 +5305,91 @@ fn test_verify_complete_data_pipeline_at_every_stage() {
     let index_str = std::str::from_utf8(&index_file.data).expect("index.html utf8");
     assert!(index_str.contains("<script"), "index.html has script");
 }
+
+#[test]
+fn test_skin_removal_and_duplicate_cleanup() {
+    use brawlcraft_slint::catalog::{Catalog, EXCLUDED_COSTUME_IDS, DUPLICATE_COSTUME_IDS};
+    use brawlcraft_slint::game_detector::GameDetector;
+
+    let inst = GameDetector::detect(None);
+    if !inst.is_valid {
+        return;
+    }
+    let mut cat = Catalog::default();
+    cat.load_from_installation(&inst).unwrap();
+
+    // 1. Verify exact counts
+    assert_eq!(EXCLUDED_COSTUME_IDS.len(), 100, "Must have exactly 100 excluded costume entries");
+    assert_eq!(DUPLICATE_COSTUME_IDS.len(), 2, "Must have exactly 2 duplicate costume entries");
+    assert_eq!(cat.costumes.len(), 692, "Catalog should contain exactly 692 costumes after 102 exclusions");
+
+    // 2. Verify all excluded costumes are absent from catalog and from legend costume lists
+    for &(hero, cid) in EXCLUDED_COSTUME_IDS {
+        assert!(
+            !cat.costumes.iter().any(|c| c.costume_id == cid && c.owner_hero.eq_ignore_ascii_case(hero)),
+            "Costume ID {} for {} must not exist in global costumes",
+            cid, hero
+        );
+        if let Some(legend) = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case(hero)) {
+            assert!(
+                !legend.costumes.iter().any(|c| c.costume_id == cid),
+                "Costume ID {} for {} must not exist in legend {} costumes",
+                cid, hero, legend.display_name
+            );
+        }
+    }
+
+    // 3. Verify duplicate stance exclusions
+    for &(hero, cid) in DUPLICATE_COSTUME_IDS {
+        assert!(
+            !cat.costumes.iter().any(|c| c.costume_id == cid && c.owner_hero.eq_ignore_ascii_case(hero)),
+            "Duplicate Costume ID {} for {} must not exist in global costumes",
+            cid, hero
+        );
+    }
+
+    // 4. Verify Brynn (Wolf Casey: Eivor 589 & EivorMale 590, Barbara 359, EpicBrynn 508)
+    let brynn = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("actualvalk")).expect("Brynn exists");
+    for id in [589, 590, 359, 508] {
+        assert!(!brynn.costumes.iter().any(|c| c.costume_id == id), "Brynn costume {} must be removed", id);
+    }
+
+    // 5. Verify Diana (Lara Croft: Lara 440 & Croft 441, EpicDiana 526)
+    let diana = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("marksman")).expect("Diana exists");
+    for id in [440, 441, 526] {
+        assert!(!diana.costumes.iter().any(|c| c.costume_id == id), "Diana costume {} must be removed", id);
+    }
+
+    // 6. Verify Ransom (CyberVirus, ID 68): Stance 2 (720) removed, canonical default (719) kept
+    let ransom = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("cybervirus")).expect("Ransom exists");
+    assert!(!ransom.costumes.iter().any(|c| c.costume_id == 720), "CyberVirusStance2 must be removed");
+    assert!(ransom.costumes.iter().any(|c| c.costume_id == 719 && c.is_default), "CyberVirus default must be preserved");
+    assert_eq!(ransom.costumes.len(), 4, "Ransom should have exactly 4 costumes remaining");
+
+    // 7. Verify Seven (Roboengineer, ID 61): Stance 2 (640) removed, canonical default (639) kept
+    let seven = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("roboengineer")).expect("Seven exists");
+    assert!(!seven.costumes.iter().any(|c| c.costume_id == 640), "RoboengineerStance2 must be removed");
+    assert!(seven.costumes.iter().any(|c| c.costume_id == 639 && c.is_default), "Roboengineer default must be preserved");
+    assert_eq!(seven.costumes.len(), 5, "Seven should have exactly 5 costumes remaining");
+
+    // 8. Verify Nash (Caveman / Gnash, ID 7): Blue (355) removed, all 16 other skins preserved
+    let gnash = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("caveman")).expect("Nash/Gnash exists");
+    assert!(!gnash.costumes.iter().any(|c| c.costume_id == 355), "Shovel Knight (Blue 355) must be removed from Nash");
+    assert_eq!(gnash.costumes.len(), 16, "Nash should have exactly 16 costumes remaining");
+    // Verify distinct ZombieWalker variants are preserved
+    assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker1"));
+    assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker2"));
+    assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker3"));
+
+    // 9. Verify unaffected legends (e.g. Bödvar, Ulgrim, Onyx) remain completely intact
+    let bodvar = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("viking")).expect("Bodvar exists");
+    assert_eq!(bodvar.costumes.len(), 15, "Bodvar must retain all 15 costumes");
+    assert!(bodvar.costumes.iter().any(|c| c.is_default), "Bodvar default costume must exist");
+
+    let ulgrim = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("dwarf")).expect("Ulgrim exists");
+    assert_eq!(ulgrim.costumes.len(), 11, "Ulgrim must retain all 11 costumes");
+
+    let onyx = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("gargoyle")).expect("Onyx exists");
+    assert_eq!(onyx.costumes.len(), 9, "Onyx must retain all 9 costumes");
+}
+

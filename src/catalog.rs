@@ -5,6 +5,178 @@ use quick_xml::reader::Reader;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+/// Explicitly excluded skin records from Skinner catalog based on character ownership and internal Costume ID.
+pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
+    // Cassidy
+    ("cowgirl", 358), // Globox
+    ("cowgirl", 770), // EpicCowgirl
+    ("cowgirl", 989), // Sandy
+    // Orion
+    ("valkyrie", 354), // BlackKnight
+    ("valkyrie", 557), // EpicOrion
+    // Lord Vraxx
+    ("alien", 401), // Bubblegum
+    ("alien", 707), // DestinyWarlock (Destiny Vraxx)
+    // Nash (Gnash)
+    ("caveman", 355), // Blue (Shovel Knight)
+    // Queen Nai
+    ("witch", 420), // Asuka
+    ("witch", 734), // Mikasa
+    ("witch", 701), // EpicWitch
+    // Lucien
+    ("highwayman", 636), // Nina (Nina Williams)
+    ("highwayman", 709), // DestinyHunter
+    // Hattori
+    ("ninja", 408), // Cena (John Cena)
+    ("ninja", 602), // Zuko
+    ("ninja", 998), // DarthMaul
+    // Sir Roland
+    ("knight", 351), // KingKnight
+    // Scarlet
+    ("steampunk", 665), // TinyTina
+    // Thatch
+    ("thatch", 140), // Shark
+    ("thatch", 683), // Chewbacca
+    // Ada
+    ("cyber", 680), // Mando
+    // Sentinel
+    ("super", 411), // TheRock
+    // Teros
+    ("minotaur", 987), // Patrick (Patrick Star)
+    ("minotaur", 814), // MythicMinotaur (Ascended Teros)
+    // Red Raptor
+    ("sentai", 678), // EpicRaptor
+    // Ember
+    ("elf", 479), // Daryl
+    ("elf", 583), // EpicEmber
+    // Brynn (Barbara, EpicBrynn, and Wolf-Kissed Eivor crossover variants)
+    ("actualvalk", 359), // Barbara
+    ("actualvalk", 508), // EpicBrynn
+    ("actualvalk", 589), // Eivor (Wolf Casey - Wolf-Kissed Eivor)
+    ("actualvalk", 590), // EivorMale (Wolf Casey - Wolf-Kissed Eivor Male)
+    // Asuri
+    ("cat", 642), // Ahsoka
+    ("cat", 736), // Levi
+    ("cat", 511), // Tigress (Tiger)
+    // Barraza
+    ("apoc", 480), // Rick
+    ("apoc", 663), // Krieg
+    // Azoth
+    ("skeleton", 533), // BP4Azoth (Battle Pass 4 Azoth)
+    // Koji
+    ("samurai", 562), // StormShadow
+    ("samurai", 478), // Michonne
+    // Diana (both Lara Croft records + Epic Diana)
+    ("marksman", 440), // Lara (Lara Croft)
+    ("marksman", 441), // Croft (Lara Croft)
+    ("marksman", 526), // EpicDiana
+    // Jhala
+    ("barbarian", 399), // Finn
+    ("barbarian", 537), // Maggie (Magi)
+    ("barbarian", 598), // Simon
+    // Kor
+    ("golem", 400), // Jake
+    ("golem", 603), // Toph
+    // Wu Shang
+    ("monk", 723), // MythicWuShang (Ascended Wu Shang)
+    ("monk", 509), // Po
+    ("monk", 601), // Aang
+    ("monk", 547), // SFChunLi (Street Fighter Chun-Li)
+    // Val
+    ("technoninja", 997), // ObiWan
+    ("technoninja", 429), // Stevonnie (Stephanie)
+    ("technoninja", 522), // Mikey (Michelangelo)
+    ("technoninja", 548), // SFAkuma (Akuma)
+    // Ragnir
+    ("dragon", 523), // Raph (Raphael)
+    ("dragon", 771), // EpicDragon
+    // Cross
+    ("mobster", 681), // HanSolo
+    ("mobster", 575), // SFLuke (Luke)
+    ("mobster", 393), // Hellboy
+    // Mirage
+    ("egyptian", 525), // Donnie (Donatello)
+    // Nix
+    ("reaper", 472), // EpicNix
+    ("reaper", 722), // MythicNix (Ascended Nix)
+    ("reaper", 352), // SpecterKnight
+    // Mordex
+    ("werewolf", 627), // EpicMordex
+    ("werewolf", 510), // TaiLung
+    ("werewolf", 395), // Daimio
+    // Yumiko
+    ("ninetails", 626), // EpicYumiko
+    // Artemis
+    ("spacehunter", 659), // EpicArtemis
+    // Caspian
+    ("thief", 455), // Diamondhead
+    ("thief", 353), // PlagueKnight
+    // Sidra
+    ("corsair", 977), // Arbiter
+    // Xull
+    ("brute", 791), // Shrek
+    ("brute", 428), // Amethyst
+    // Isaiah
+    ("soldier", 682), // KayVess (Key Vess)
+    ("soldier", 976), // MasterChief
+    // Kaya
+    ("inuit", 427), // Pearl
+    // Jiro
+    ("shinobi", 524), // Leo (Leonardo)
+    ("shinobi", 387), // Dullahan
+    // Lin Fei
+    ("wuxia", 571), // SFSakura (Sakura)
+    // Zariel
+    ("celestial", 638), // DevilJin
+    ("celestial", 801), // EpicCelestial
+    // Rayman
+    ("rayman", 986), // Spongebob (SpongeBob)
+    ("rayman", 732), // EpicRayman
+    // Dusk
+    ("elfwar", 394), // Nimue
+    // Fait
+    ("spellwitch", 386), // Enchantress
+    // Thor
+    ("thor", 572), // SFBison (M. Bison)
+    ("thor", 423), // Undertaker
+    // Petra
+    ("ragefighter", 430), // Garnet
+    ("ragefighter", 549), // SFRyu (Ryu)
+    // Volkov
+    ("vamplord", 617), // EpicWarlock (Epic Volkov)
+    // Jaeyun
+    ("sellsword", 536), // Negan
+    // Mako
+    ("actualshark", 718), // Grievous (General Grievous)
+    // Reno
+    ("bountyhunter", 664), // Lilith
+    // Munin
+    ("birdbard", 545), // HuginDuck (Huginn Duck)
+    // Arcadia
+    ("fairyqueen", 758), // Luke (Luke Skywalker)
+    // Ezio
+    ("ezio", 999), // DarthVader (Darth Vader)
+    ("ezio", 599), // Alucard
+    // Tezca
+    ("luchador", 792), // Fiona
+    // Vivi
+    ("assassin", 666), // Megaman (Mega Man)
+];
+
+/// Redundant internal duplicate records to be pruned from the Skinner catalog.
+/// Keeps the authentic canonical record (e.g. CyberVirus 719, Roboengineer 639).
+pub const DUPLICATE_COSTUME_IDS: &[(&str, i32)] = &[
+    ("cybervirus", 720), // CyberVirusStance2
+    ("roboengineer", 640), // RoboengineerStance2
+];
+
+/// Returns true if a costume is excluded from the Skinner catalog.
+pub fn is_excluded_costume(owner_hero: &str, costume_id: i32) -> bool {
+    let o = owner_hero.trim().to_lowercase();
+    EXCLUDED_COSTUME_IDS.iter().any(|(hero, id)| *id == costume_id && *hero == o)
+        || DUPLICATE_COSTUME_IDS.iter().any(|(hero, id)| *id == costume_id && *hero == o)
+}
+
 /// Curated list of supported legends to focus strictly on quality, precision, and zero-defect cosmetic mods.
 /// Keys match hero_name, display_name, or bio (case-insensitive).
 pub const CURATED_HERO_KEYS: &[&str] = &[
@@ -180,6 +352,16 @@ impl Catalog {
         }
     }
 
+    /// Prunes excluded costumes and cleans duplicate records across the catalog,
+    /// ensuring authentic canonical representation while strictly preserving
+    /// all distinct visual skins even if display names are identical.
+    pub fn clean_and_deduplicate_costumes(&mut self) {
+        self.costumes.retain(|c| !is_excluded_costume(&c.owner_hero, c.costume_id));
+
+        let mut seen_ids = HashSet::new();
+        self.costumes.retain(|c| seen_ids.insert((c.owner_hero.to_lowercase(), c.costume_id)));
+    }
+
     pub fn load_from_installation(&mut self, installation: &GameInstallation) -> Result<(), String> {
         if !installation.is_valid {
             self.load_error = "Invalid game installation.".into();
@@ -205,6 +387,7 @@ impl Catalog {
         // 3. Costumes
         if let Some(costume_csv) = files.get("costumeTypes.csv") {
             self.costumes = parse_costumes(costume_csv);
+            self.clean_and_deduplicate_costumes();
         }
 
         // 4. Weapon Skins
@@ -389,6 +572,9 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
         }
 
         let costume_id = get_col(&cols, &col_map, "costumeid").parse().unwrap_or(0);
+        if is_excluded_costume(&owner, costume_id) {
+            continue;
+        }
         let disp_key = get_col(&cols, &col_map, "displaynamekey");
         let def_raw = get_col(&cols, &col_map, "defaultunlocked");
         let default_unlocked = def_raw.eq_ignore_ascii_case("true") || def_raw == "1";

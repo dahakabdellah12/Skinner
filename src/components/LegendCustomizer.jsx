@@ -83,14 +83,6 @@ export default function LegendCustomizer({
     {
       matcher: (c) => {
         const s = `${c.costumeName || ''} ${c.displayName || ''} ${c.bio || ''}`.toLowerCase();
-        return s.includes('chewbacca');
-      },
-      weapon1: 'SwordChewbacca',
-      weapon2: 'PistolChewbacca'
-    },
-    {
-      matcher: (c) => {
-        const s = `${c.costumeName || ''} ${c.displayName || ''} ${c.bio || ''}`.toLowerCase();
         return s.includes('machoman') || s.includes('macho man') || s.includes('macho_man') || s.includes('macho');
       },
       weapon1: 'AxeMachoMan',
@@ -103,14 +95,6 @@ export default function LegendCustomizer({
       },
       weapon1: 'FistsDestinyTitan',
       weapon2: 'CannonDestinyTitan'
-    },
-    {
-      matcher: (c) => {
-        const s = `${c.costumeName || ''} ${c.displayName || ''} ${c.bio || ''}`.toLowerCase();
-        return s.includes('negan');
-      },
-      weapon1: 'SwordNegan',
-      weapon2: 'GreatswordNegan'
     }
   ];
 

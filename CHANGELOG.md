@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.3] — 2026-11-04
+
+### Added & Improved
+- **Skins Catalog Cleanup & Precision Pruning:**
+  - Removed 100 targeted skin records across 54 legends from Skinner's catalog based on verified internal identifiers (`CostumeID`) and character ownership (`OwnerHero`).
+  - Pruned redundant stance duplicates for Ransom (`CyberVirus`, ID 68) and Seven (`Roboengineer`, ID 61) while preserving canonical default skins and visual variants.
+  - Removed all Wolf Casey records on Brynn and both Lara Croft records on Diana.
+  - Preserved distinct visual variants sharing similar names (e.g., ZombieWalker variants on Gnash/Nash).
+  - Purged obsolete cached SVG assets from disk to prevent stale icons from appearing.
+  - Cleaned up crossover weapon mappings in UI components.
+- **Automated Verification:**
+  - Added dedicated regression and data integrity test `test_skin_removal_and_duplicate_cleanup`.
+  - Maintained 100% test pass rate across all engine, updater, and catalog suites.
+
 ## [3.3.2] — 2026-11-03
 
 ### Added

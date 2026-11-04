@@ -1,5 +1,5 @@
 #define MyAppName "Skinner"
-#define MyAppVersion "3.3.2"
+#define MyAppVersion "3.3.3"
 #define MyAppPublisher "dahakabdellah12"
 #define MyAppURL "https://github.com/dahakabdellah12/Skinner"
 #define MyAppExeName "Skinner.exe"

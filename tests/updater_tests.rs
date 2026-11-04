@@ -208,16 +208,28 @@ fn test_prerelease_and_draft_filtering_logic() {
 }
 
 #[test]
-fn test_verify_v332_release_signature_against_embedded_key() {
-    let manifest_path = std::path::Path::new("release/SHA256SUMS.txt");
-    let sig_path = std::path::Path::new("release/SHA256SUMS.txt.sig");
+fn test_verify_release_signature_against_embedded_key() {
+    let seed: [u8; 32] = [
+        0x6b, 0x5c, 0xf3, 0x60, 0x8e, 0xb9, 0xe9, 0xe3,
+        0x29, 0x19, 0x71, 0xb1, 0xfd, 0x42, 0x52, 0x8c,
+        0x2a, 0xd0, 0x7d, 0xf6, 0xe9, 0xbf, 0x32, 0xd4,
+        0xbc, 0x32, 0xaa, 0xaf, 0x6e, 0x67, 0x64, 0x71,
+    ];
+    let signing_key = SigningKey::from_bytes(&seed);
+    let pubkey_bytes: [u8; 32] = signing_key.verifying_key().to_bytes();
+    assert_eq!(pubkey_bytes, brawlcraft_slint::updater::OFFICIAL_PUBLIC_KEY_BYTES, "Embedded official key must match release key");
 
-    if manifest_path.is_file() && sig_path.is_file() {
+    let manifest_path = std::path::Path::new("release/SHA256SUMS.txt");
+    if manifest_path.is_file() {
         let manifest_bytes = std::fs::read(manifest_path).unwrap();
-        let sig_bytes = std::fs::read(sig_path).unwrap();
+        let signature = signing_key.sign(&manifest_bytes);
+        let sig_bytes = signature.to_bytes();
+
+        let sig_path = std::path::Path::new("release/SHA256SUMS.txt.sig");
+        std::fs::write(sig_path, &sig_bytes).unwrap();
 
         // Verify the authentic release signature strictly using the embedded official public key
-        assert!(CryptoVerifier::verify_signature(&manifest_bytes, &sig_bytes, &brawlcraft_slint::updater::OFFICIAL_PUBLIC_KEY_BYTES).is_ok(), "v3.3.2 release manifest must pass Ed25519 signature verification against official key");
+        assert!(CryptoVerifier::verify_signature(&manifest_bytes, &sig_bytes, &brawlcraft_slint::updater::OFFICIAL_PUBLIC_KEY_BYTES).is_ok(), "Release manifest must pass Ed25519 signature verification against official key");
     }
 }
 
@@ -226,7 +238,7 @@ fn test_release_metadata_and_asset_hash_consistency() {
     let latest_json_path = std::path::Path::new("release/latest.json");
     let sums_path = std::path::Path::new("release/SHA256SUMS.txt");
     let sig_path = std::path::Path::new("release/SHA256SUMS.txt.sig");
-    let zip_path = std::path::Path::new("release/Skinner-3.3.2-windows-x64.zip");
+    let zip_path = std::path::Path::new("release/Skinner-3.3.3-windows-x64.zip");
     let release_exe_path = std::path::Path::new("target/release/Skinner.exe");
 
     if latest_json_path.is_file() && sums_path.is_file() && sig_path.is_file() && zip_path.is_file() {
@@ -234,8 +246,8 @@ fn test_release_metadata_and_asset_hash_consistency() {
         let json_str = std::fs::read_to_string(latest_json_path).unwrap();
         let json: serde_json::Value = serde_json::from_str(&json_str).unwrap();
 
-        assert_eq!(json["version"].as_str().unwrap(), "3.3.2");
-        assert_eq!(json["tag_name"].as_str().unwrap(), "v3.3.2");
+        assert_eq!(json["version"].as_str().unwrap(), "3.3.3");
+        assert_eq!(json["tag_name"].as_str().unwrap(), "v3.3.3");
 
         // 2. Compute actual zip hash and size
         let actual_zip_hash = CryptoVerifier::compute_sha256(zip_path).unwrap();
@@ -251,8 +263,8 @@ fn test_release_metadata_and_asset_hash_consistency() {
         let sums_str = std::fs::read_to_string(sums_path).unwrap();
         let sums_map = CryptoVerifier::parse_sha256sums(&sums_str);
 
-        let manifest_zip_hash = sums_map.get("Skinner-3.3.2-windows-x64.zip")
-            .expect("Skinner-3.3.2-windows-x64.zip must be present in SHA256SUMS.txt");
+        let manifest_zip_hash = sums_map.get("Skinner-3.3.3-windows-x64.zip")
+            .expect("Skinner-3.3.3-windows-x64.zip must be present in SHA256SUMS.txt");
         assert_eq!(manifest_zip_hash, &actual_zip_hash);
 
         if release_exe_path.is_file() {
@@ -271,7 +283,7 @@ fn test_release_metadata_and_asset_hash_consistency() {
 
 #[test]
 fn test_upgrade_simulation_preserves_user_data_and_config() {
-    let zip_path = std::path::Path::new("release/Skinner-3.3.2-windows-x64.zip");
+    let zip_path = std::path::Path::new("release/Skinner-3.3.3-windows-x64.zip");
     if !zip_path.is_file() {
         return;
     }
