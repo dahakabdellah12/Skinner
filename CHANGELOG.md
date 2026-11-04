@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.4] — 2026-11-04
+
+### Added & Improved
+- **Final Skins Catalog Cleanup & Duplicate Pruning:**
+  - Removed 13 newly targeted skin records across 12 legends:
+    - Ezio: Anakin Skywalker (`Anakin`, Costume ID 641)
+    - Petra: Ken (`SFKen`, Costume ID 574)
+    - Rayman: Dhalsim (`SFDhalsim`, Costume ID 573)
+    - Jiro: Yoshimitsu (`Yoshimitsu`, Costume ID 637)
+    - Kor: Four Arms (`FourArms`, Costume ID 456)
+    - Koji: Sei Jo-Kai Koji / Shen Sekai Koji (`CyberSam`, Costume ID 376)
+    - Asuri: Puss in Boots (`Puss`, Costume ID 793)
+    - Red Raptor: Eren Yeager (`Eren`, Costume ID 735)
+    - Teros: Roman Reigns (`RomanReigns`, Costume ID 421) and Gruagach / Goroagash (`Gruagach`, Costume ID 396)
+    - Ada: Heatblast (`Heatblast`, Costume ID 454)
+    - Lord Vraxx: Alien Warlord (`AlienWarlord`, Costume ID 309)
+    - Nash (Gnash): Becky Lynch (`Becky`, Costume ID 409)
+  - Pruned redundant internal stance duplicate records across 3 legends:
+    - Priya (`BladeDancer`, ID 67): Pruned `BladeDancerStance2` (Costume ID 964), preserving canonical default (Costume ID 965).
+    - Aurus (`ActualGladiator`, ID 71): Pruned `ActualGladiatorStance2` (Costume ID 785), preserving canonical default (Costume ID 783).
+    - Lady Vera (`Cleric`, ID 69): Pruned `ClericStance2` (Costume ID 738), preserving canonical default (Costume ID 737).
+  - Maintained complete integrity of Nash (`Caveman`, ID 7), preserving all 15 distinct skins including ZombieWalker1, 2, and 3.
+  - Purged obsolete cached SVG files from disk (`BladeDancerStance2`, `ActualGladiatorStance2`, `ClericStance2`).
+- **Updater Asset Packaging:**
+  - Standardized dual installer naming (`Skinner-Setup-3.3.4.exe` and `Skinner-3.3.4-setup-x64.exe`) ensuring seamless automatic installation across all existing clients.
+  - Full Ed25519 cryptographic signing of `SHA256SUMS.txt` manifest.
+
 ## [3.3.3] — 2026-11-04
 
 ### Added & Improved

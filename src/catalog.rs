@@ -17,8 +17,10 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Lord Vraxx
     ("alien", 401), // Bubblegum
     ("alien", 707), // DestinyWarlock (Destiny Vraxx)
+    ("alien", 309), // AlienWarlord
     // Nash (Gnash)
     ("caveman", 355), // Blue (Shovel Knight)
+    ("caveman", 409), // Becky (Becky Lynch)
     // Queen Nai
     ("witch", 420), // Asuka
     ("witch", 734), // Mikasa
@@ -39,13 +41,17 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     ("thatch", 683), // Chewbacca
     // Ada
     ("cyber", 680), // Mando
+    ("cyber", 454), // Heatblast
     // Sentinel
     ("super", 411), // TheRock
     // Teros
     ("minotaur", 987), // Patrick (Patrick Star)
     ("minotaur", 814), // MythicMinotaur (Ascended Teros)
+    ("minotaur", 421), // RomanReigns
+    ("minotaur", 396), // Gruagach (Goroagash)
     // Red Raptor
     ("sentai", 678), // EpicRaptor
+    ("sentai", 735), // Eren
     // Ember
     ("elf", 479), // Daryl
     ("elf", 583), // EpicEmber
@@ -58,6 +64,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     ("cat", 642), // Ahsoka
     ("cat", 736), // Levi
     ("cat", 511), // Tigress (Tiger)
+    ("cat", 793), // Puss (Puss in Boots)
     // Barraza
     ("apoc", 480), // Rick
     ("apoc", 663), // Krieg
@@ -66,6 +73,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Koji
     ("samurai", 562), // StormShadow
     ("samurai", 478), // Michonne
+    ("samurai", 376), // CyberSam (Sei Jo-Kai Koji / Shen Sekai)
     // Diana (both Lara Croft records + Epic Diana)
     ("marksman", 440), // Lara (Lara Croft)
     ("marksman", 441), // Croft (Lara Croft)
@@ -77,6 +85,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Kor
     ("golem", 400), // Jake
     ("golem", 603), // Toph
+    ("golem", 456), // FourArms
     // Wu Shang
     ("monk", 723), // MythicWuShang (Ascended Wu Shang)
     ("monk", 509), // Po
@@ -124,6 +133,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Jiro
     ("shinobi", 524), // Leo (Leonardo)
     ("shinobi", 387), // Dullahan
+    ("shinobi", 637), // Yoshimitsu
     // Lin Fei
     ("wuxia", 571), // SFSakura (Sakura)
     // Zariel
@@ -132,6 +142,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Rayman
     ("rayman", 986), // Spongebob (SpongeBob)
     ("rayman", 732), // EpicRayman
+    ("rayman", 573), // SFDhalsim (Dhalsim)
     // Dusk
     ("elfwar", 394), // Nimue
     // Fait
@@ -142,6 +153,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Petra
     ("ragefighter", 430), // Garnet
     ("ragefighter", 549), // SFRyu (Ryu)
+    ("ragefighter", 574), // SFKen (Ken)
     // Volkov
     ("vamplord", 617), // EpicWarlock (Epic Volkov)
     // Jaeyun
@@ -157,6 +169,7 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Ezio
     ("ezio", 999), // DarthVader (Darth Vader)
     ("ezio", 599), // Alucard
+    ("ezio", 641), // Anakin (Anakin Skywalker)
     // Tezca
     ("luchador", 792), // Fiona
     // Vivi
@@ -168,6 +181,9 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
 pub const DUPLICATE_COSTUME_IDS: &[(&str, i32)] = &[
     ("cybervirus", 720), // CyberVirusStance2
     ("roboengineer", 640), // RoboengineerStance2
+    ("bladedancer", 964), // BladeDancerStance2 (Priya)
+    ("actualgladiator", 785), // ActualGladiatorStance2 (Aurus)
+    ("cleric", 738), // ClericStance2 (Lady Vera)
 ];
 
 /// Returns true if a costume is excluded from the Skinner catalog.

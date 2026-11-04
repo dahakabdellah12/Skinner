@@ -1,22 +1,20 @@
 {
-  "version": "3.3.3",
-  "name": "Skinner v3.3.3 \u2014 Skins Catalog Precision Cleanup & Duplicate Pruning",
-  "tag_name": "v3.3.3",
+  "version": "3.3.4",
+  "name": "Skinner v3.3.4 \u2014 Final Catalog Cleanup, Targeted Removals & Duplicate Fixes",
+  "tag_name": "v3.3.4",
   "release_date": "2026-11-04",
-  "installer_filename": "Skinner-Setup-3.3.3.exe",
-  "installer_size": 54969379,
-  "installer_sha256": "83e7d6905f032b2841ec835a06c14174eeda8927d7c08ec69195dd9bfb8f2e7e",
-  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/Skinner-Setup-3.3.3.exe",
-  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/SHA256SUMS.txt",
-  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.3/SHA256SUMS.txt.sig",
-  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.3",
+  "installer_filename": "Skinner-Setup-3.3.4.exe",
+  "installer_size": 54973675,
+  "installer_sha256": "82d4dd03f19292d425e52e49187a7f9f83b233d1c52fe2ad46f9adeb50b8d7f4",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.4/Skinner-Setup-3.3.4.exe",
+  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.4/SHA256SUMS.txt",
+  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.4/SHA256SUMS.txt.sig",
+  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.4",
   "changelog": [
-    "Skins Catalog Cleanup: Surgically removed 100 targeted skin records across 54 legends from Skinner catalog.",
-    "Comprehensive deduplication: Resolved stance duplicates for Ransom (CyberVirus) and Seven (Roboengineer) while preserving canonical defaults and distinct variants.",
-    "Special multi-variant resolution: Fully removed all Wolf Casey records from Brynn and both Lara Croft records from Diana.",
-    "Data Integrity: Preserved distinct visual variants sharing identical names (including ZombieWalker variants on Gnash/Nash).",
-    "Official Windows Setup Installer: Includes Skinner-Setup-3.3.3.exe with desktop shortcut, start menu entry, and clean uninstaller support.",
-    "Asset cache purge: Cleaned 16 stale cached SVG assets from disk and sanitized crossover weapon mappings.",
-    "100% verified compatibility and seamless cryptographic auto-update handoff."
+    "Final Skin Removals: Precision removal of 13 targeted skin records across 12 legends (Ezio Anakin, Petra Ken, Rayman Dhalsim, Jiro Yoshimitsu, Kor Four Arms, Koji CyberSam, Asuri Puss in Boots, Red Raptor Eren, Teros Roman Reigns & Gruagach, Ada Heatblast, Lord Vraxx Alien Warlord, Nash Becky Lynch).",
+    "Duplicate Stance Fixes: Pruned redundant stance duplicates for Priya (BladeDancer), Aurus (ActualGladiator), and Lady Vera (Cleric) while preserving canonical default costumes.",
+    "Nash Data Integrity: Verified complete roster for Nash (Gnash), removing Becky Lynch and Shovel Knight, while retaining all 15 distinct skins including all ZombieWalker variants.",
+    "Dual Installer Packaging: Distributes both Skinner-Setup-3.3.4.exe and Skinner-3.3.4-setup-x64.exe ensuring seamless automated updates across older clients.",
+    "Cryptographic Verification: All release binaries signed with official Ed25519 digital key and protected by SHA-256 manifests."
   ]
 }

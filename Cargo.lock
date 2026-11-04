@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "brawlcraft-slint"
-version = "3.3.3"
+version = "3.3.4"
 dependencies = [
  "chrono",
  "ed25519-dalek",

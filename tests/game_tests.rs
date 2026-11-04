@@ -5107,7 +5107,7 @@ fn test_verify_complete_character_skin_catalog() {
     let mut cat = Catalog::default();
     cat.load_from_installation(&inst).unwrap();
 
-    assert!(cat.costumes.len() >= 690, "Expected >= 690 costumes across full game catalog, found {}", cat.costumes.len());
+    assert!(cat.costumes.len() >= 670, "Expected >= 670 costumes across full game catalog, found {}", cat.costumes.len());
 
     let playable_legends: Vec<_> = cat.legends.iter()
         .filter(|l| !l.hero_name.eq_ignore_ascii_case("random") && !l.hero_name.eq_ignore_ascii_case("default_character"))
@@ -5137,7 +5137,7 @@ fn test_verify_complete_character_skin_catalog() {
             }
         }
     }
-    assert!(rendered_costumes >= 680, "Expected >= 680 costumes to render SVG, got {}", rendered_costumes);
+    assert!(rendered_costumes >= 660, "Expected >= 660 costumes to render SVG, got {}", rendered_costumes);
 }
 
 #[test]
@@ -5319,9 +5319,9 @@ fn test_skin_removal_and_duplicate_cleanup() {
     cat.load_from_installation(&inst).unwrap();
 
     // 1. Verify exact counts
-    assert_eq!(EXCLUDED_COSTUME_IDS.len(), 100, "Must have exactly 100 excluded costume entries");
-    assert_eq!(DUPLICATE_COSTUME_IDS.len(), 2, "Must have exactly 2 duplicate costume entries");
-    assert_eq!(cat.costumes.len(), 692, "Catalog should contain exactly 692 costumes after 102 exclusions");
+    assert_eq!(EXCLUDED_COSTUME_IDS.len(), 113, "Must have exactly 113 excluded costume entries");
+    assert_eq!(DUPLICATE_COSTUME_IDS.len(), 5, "Must have exactly 5 duplicate costume entries");
+    assert_eq!(cat.costumes.len(), 676, "Catalog should contain exactly 676 costumes after 118 exclusions");
 
     // 2. Verify all excluded costumes are absent from catalog and from legend costume lists
     for &(hero, cid) in EXCLUDED_COSTUME_IDS {
@@ -5360,26 +5360,81 @@ fn test_skin_removal_and_duplicate_cleanup() {
         assert!(!diana.costumes.iter().any(|c| c.costume_id == id), "Diana costume {} must be removed", id);
     }
 
-    // 6. Verify Ransom (CyberVirus, ID 68): Stance 2 (720) removed, canonical default (719) kept
+    // 6. Verify Stance Duplicates Pruning:
+    // Ransom (CyberVirus, ID 68): Stance 2 (720) removed, canonical default (719) kept
     let ransom = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("cybervirus")).expect("Ransom exists");
     assert!(!ransom.costumes.iter().any(|c| c.costume_id == 720), "CyberVirusStance2 must be removed");
     assert!(ransom.costumes.iter().any(|c| c.costume_id == 719 && c.is_default), "CyberVirus default must be preserved");
     assert_eq!(ransom.costumes.len(), 4, "Ransom should have exactly 4 costumes remaining");
 
-    // 7. Verify Seven (Roboengineer, ID 61): Stance 2 (640) removed, canonical default (639) kept
+    // Seven (Roboengineer, ID 61): Stance 2 (640) removed, canonical default (639) kept
     let seven = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("roboengineer")).expect("Seven exists");
     assert!(!seven.costumes.iter().any(|c| c.costume_id == 640), "RoboengineerStance2 must be removed");
     assert!(seven.costumes.iter().any(|c| c.costume_id == 639 && c.is_default), "Roboengineer default must be preserved");
     assert_eq!(seven.costumes.len(), 5, "Seven should have exactly 5 costumes remaining");
 
-    // 8. Verify Nash (Caveman / Gnash, ID 7): Blue (355) removed, all 16 other skins preserved
+    // Priya (BladeDancer, ID 67): Stance 2 (964) removed, canonical default (965) kept
+    let priya = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("bladedancer")).expect("Priya exists");
+    assert!(!priya.costumes.iter().any(|c| c.costume_id == 964), "BladeDancerStance2 must be removed");
+    assert!(priya.costumes.iter().any(|c| c.costume_id == 965 && c.is_default), "BladeDancer default must be preserved");
+    assert_eq!(priya.costumes.len(), 5, "Priya should have exactly 5 costumes remaining");
+
+    // Aurus (ActualGladiator, ID 71): Stance 2 (785) removed, canonical default (783) kept
+    let aurus = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("actualgladiator")).expect("Aurus exists");
+    assert!(!aurus.costumes.iter().any(|c| c.costume_id == 785), "ActualGladiatorStance2 must be removed");
+    assert!(aurus.costumes.iter().any(|c| c.costume_id == 783 && c.is_default), "ActualGladiator default must be preserved");
+    assert_eq!(aurus.costumes.len(), 4, "Aurus should have exactly 4 costumes remaining");
+
+    // Lady Vera (Cleric, ID 69): Stance 2 (738) removed, canonical default (737) kept
+    let vera = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("cleric")).expect("Lady Vera exists");
+    assert!(!vera.costumes.iter().any(|c| c.costume_id == 738), "ClericStance2 must be removed");
+    assert!(vera.costumes.iter().any(|c| c.costume_id == 737 && c.is_default), "Cleric default must be preserved");
+    assert_eq!(vera.costumes.len(), 5, "Lady Vera should have exactly 5 costumes remaining");
+
+    // 7. Verify Nash (Caveman / Gnash, ID 7): Blue (355) and Becky (409) removed, all 15 remaining distinct skins preserved
     let gnash = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("caveman")).expect("Nash/Gnash exists");
     assert!(!gnash.costumes.iter().any(|c| c.costume_id == 355), "Shovel Knight (Blue 355) must be removed from Nash");
-    assert_eq!(gnash.costumes.len(), 16, "Nash should have exactly 16 costumes remaining");
+    assert!(!gnash.costumes.iter().any(|c| c.costume_id == 409), "Becky Lynch (Becky 409) must be removed from Nash");
+    assert_eq!(gnash.costumes.len(), 15, "Nash should have exactly 15 costumes remaining");
     // Verify distinct ZombieWalker variants are preserved
     assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker1"));
     assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker2"));
     assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker3"));
+
+    // 8. Verify specific newly removed crossover skins across characters
+    let ezio = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("ezio")).expect("Ezio exists");
+    assert!(!ezio.costumes.iter().any(|c| c.costume_id == 641), "Anakin must be removed from Ezio");
+
+    let petra = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("ragefighter")).expect("Petra exists");
+    assert!(!petra.costumes.iter().any(|c| c.costume_id == 574), "SFKen must be removed from Petra");
+
+    let rayman = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("rayman")).expect("Rayman exists");
+    assert!(!rayman.costumes.iter().any(|c| c.costume_id == 573), "SFDhalsim must be removed from Rayman");
+
+    let jiro = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("shinobi")).expect("Jiro exists");
+    assert!(!jiro.costumes.iter().any(|c| c.costume_id == 637), "Yoshimitsu must be removed from Jiro");
+
+    let kor = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("golem")).expect("Kor exists");
+    assert!(!kor.costumes.iter().any(|c| c.costume_id == 456), "FourArms must be removed from Kor");
+
+    let koji = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("samurai")).expect("Koji exists");
+    assert!(!koji.costumes.iter().any(|c| c.costume_id == 376), "CyberSam must be removed from Koji");
+
+    let asuri = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("cat")).expect("Asuri exists");
+    assert!(!asuri.costumes.iter().any(|c| c.costume_id == 793), "Puss must be removed from Asuri");
+
+    let raptor = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("sentai")).expect("Red Raptor exists");
+    assert!(!raptor.costumes.iter().any(|c| c.costume_id == 735), "Eren must be removed from Red Raptor");
+
+    let teros = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("minotaur")).expect("Teros exists");
+    assert!(!teros.costumes.iter().any(|c| c.costume_id == 421), "RomanReigns must be removed from Teros");
+    assert!(!teros.costumes.iter().any(|c| c.costume_id == 396), "Gruagach must be removed from Teros");
+
+    let ada = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("cyber")).expect("Ada exists");
+    assert!(!ada.costumes.iter().any(|c| c.costume_id == 454), "Heatblast must be removed from Ada");
+
+    let vraxx = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("alien")).expect("Lord Vraxx exists");
+    assert!(!vraxx.costumes.iter().any(|c| c.costume_id == 309), "AlienWarlord must be removed from Lord Vraxx");
 
     // 9. Verify unaffected legends (e.g. Bödvar, Ulgrim, Onyx) remain completely intact
     let bodvar = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("viking")).expect("Bodvar exists");

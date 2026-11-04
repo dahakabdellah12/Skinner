@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     brawlcraft_slint::desktop_app::log_startup(
         1,
         "Application process started",
-        Some(&format!("PID: {}, Version: 3.3.3", std::process::id())),
+        Some(&format!("PID: {}, Version: 3.3.4", std::process::id())),
     );
 
     std::panic::set_hook(Box::new(|info| {

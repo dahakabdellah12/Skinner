@@ -149,7 +149,7 @@ impl CryptoVerifier {
     pub fn parse_sha256sums(content: &str) -> HashMap<String, String> {
         let mut map = HashMap::new();
         for line in content.lines() {
-            let line = line.trim();
+            let line = line.trim_start_matches('\u{feff}').trim();
             if line.is_empty() || line.starts_with('#') {
                 continue;
             }
