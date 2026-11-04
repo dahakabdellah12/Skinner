@@ -21,6 +21,9 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Nash (Gnash)
     ("caveman", 355), // Blue (Shovel Knight)
     ("caveman", 409), // Becky (Becky Lynch)
+    ("caveman", 482), // ZombieWalker1
+    ("caveman", 483), // ZombieWalker2
+    ("caveman", 484), // ZombieWalker3
     // Queen Nai
     ("witch", 420), // Asuka
     ("witch", 734), // Mikasa

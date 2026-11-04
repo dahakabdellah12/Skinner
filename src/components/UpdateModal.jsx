@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
-import { Download, Pause, Play, X, ArrowUpCircle, ExternalLink } from 'lucide-react';
+import { Download, Pause, Play } from 'lucide-react';
 
 export default function UpdateModal({
   isOpen,
@@ -21,11 +21,6 @@ export default function UpdateModal({
   const progressPercent = updateProgress?.progress || 0;
   const isInstalling = updateProgress?.status === 'installing';
 
-  // Format bytes helper
-  const formatBytes = (bytes) => {
-    if (!bytes || bytes <= 0) return '0 MB';
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
 
   return (
     <div
@@ -62,52 +57,17 @@ export default function UpdateModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--accent, #3B82F6)'
-              }}
-            >
-              <ArrowUpCircle size={24} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                {isArabic
-                  ? `يتوفر تحديث جديد: v${updateInfo.latestVersion}`
-                  : `Software Update Available: v${updateInfo.latestVersion}`}
-              </h2>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {isArabic
-                  ? `الإصدار الحالي: v${updateInfo.currentVersion}`
-                  : `Current installed version: v${updateInfo.currentVersion}`}
-              </span>
-            </div>
+        <div style={{ marginBottom: '18px' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              {isArabic ? 'تحديث جديد' : 'New Update'}
+            </h2>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              {isArabic
+                ? `الإصدار الحالي: v${updateInfo.currentVersion}`
+                : `Current installed version: v${updateInfo.currentVersion}`}
+            </span>
           </div>
-
-          {!isDownloading && (
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '4px',
-                borderRadius: '6px'
-              }}
-              title={isArabic ? 'إغلاق' : 'Close'}
-            >
-              <X size={18} />
-            </button>
-          )}
         </div>
 
         {/* Release Notes / Description */}
@@ -179,13 +139,6 @@ export default function UpdateModal({
               />
             </div>
 
-            {/* Size metrics */}
-            {updateProgress.bytesDownloaded && updateProgress.totalBytes > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                <span>{formatBytes(updateProgress.bytesDownloaded)} / {formatBytes(updateProgress.totalBytes)}</span>
-                <span>{isPaused ? (isArabic ? 'متوقف' : 'Paused') : ''}</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -201,17 +154,6 @@ export default function UpdateModal({
               >
                 {isArabic ? 'لاحقاً' : 'Later'}
               </button>
-              {onViewChangelog && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onViewChangelog}
-                  style={{ padding: '9px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <ExternalLink size={14} />
-                  <span>{isArabic ? 'سجل التغييرات' : 'View Changelog'}</span>
-                </button>
-              )}
               <button
                 type="button"
                 className="btn btn-primary"

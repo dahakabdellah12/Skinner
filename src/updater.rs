@@ -613,17 +613,26 @@ exit
 setlocal
 set PID={pid}
 set INSTALLER={installer}
+set TARGET_DIR={target_dir}
+set TARGET_EXE={target_exe}
 
 :wait_pid
 timeout /t 1 /nobreak >NUL
 tasklist /FI "PID eq %PID%" 2>NUL | findstr /I "%PID%" >NUL
 if not errorlevel 1 goto wait_pid
 
-start "" "%INSTALLER%"
+start /wait "" "%INSTALLER%" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR="%TARGET_DIR%"
+if exist "%TARGET_EXE%" (
+    start "" "%TARGET_EXE%"
+) else (
+    start "" "%TARGET_DIR%\Skinner.exe"
+)
 exit
 "#,
                 pid = my_pid,
-                installer = package_path.to_string_lossy().replace('/', "\\")
+                installer = package_path.to_string_lossy().replace('/', "\\"),
+                target_dir = install_dir.to_string_lossy().replace('/', "\\"),
+                target_exe = current_exe.to_string_lossy().replace('/', "\\")
             )
         };
 

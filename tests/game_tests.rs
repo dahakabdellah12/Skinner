@@ -5319,9 +5319,9 @@ fn test_skin_removal_and_duplicate_cleanup() {
     cat.load_from_installation(&inst).unwrap();
 
     // 1. Verify exact counts
-    assert_eq!(EXCLUDED_COSTUME_IDS.len(), 113, "Must have exactly 113 excluded costume entries");
+    assert_eq!(EXCLUDED_COSTUME_IDS.len(), 116, "Must have exactly 116 excluded costume entries");
     assert_eq!(DUPLICATE_COSTUME_IDS.len(), 5, "Must have exactly 5 duplicate costume entries");
-    assert_eq!(cat.costumes.len(), 676, "Catalog should contain exactly 676 costumes after 118 exclusions");
+    assert_eq!(cat.costumes.len(), 673, "Catalog should contain exactly 673 costumes after 121 exclusions");
 
     // 2. Verify all excluded costumes are absent from catalog and from legend costume lists
     for &(hero, cid) in EXCLUDED_COSTUME_IDS {
@@ -5391,15 +5391,14 @@ fn test_skin_removal_and_duplicate_cleanup() {
     assert!(vera.costumes.iter().any(|c| c.costume_id == 737 && c.is_default), "Cleric default must be preserved");
     assert_eq!(vera.costumes.len(), 5, "Lady Vera should have exactly 5 costumes remaining");
 
-    // 7. Verify Nash (Caveman / Gnash, ID 7): Blue (355) and Becky (409) removed, all 15 remaining distinct skins preserved
+    // 7. Verify Nash (Caveman / Gnash, ID 7): Blue (355), Becky (409), and ZombieWalker 1, 2, 3 (482, 483, 484) removed, all 12 remaining distinct skins preserved
     let gnash = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("caveman")).expect("Nash/Gnash exists");
     assert!(!gnash.costumes.iter().any(|c| c.costume_id == 355), "Shovel Knight (Blue 355) must be removed from Nash");
     assert!(!gnash.costumes.iter().any(|c| c.costume_id == 409), "Becky Lynch (Becky 409) must be removed from Nash");
-    assert_eq!(gnash.costumes.len(), 15, "Nash should have exactly 15 costumes remaining");
-    // Verify distinct ZombieWalker variants are preserved
-    assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker1"));
-    assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker2"));
-    assert!(gnash.costumes.iter().any(|c| c.costume_name == "ZombieWalker3"));
+    assert!(!gnash.costumes.iter().any(|c| c.costume_id == 482), "ZombieWalker1 (482) must be removed from Nash");
+    assert!(!gnash.costumes.iter().any(|c| c.costume_id == 483), "ZombieWalker2 (483) must be removed from Nash");
+    assert!(!gnash.costumes.iter().any(|c| c.costume_id == 484), "ZombieWalker3 (484) must be removed from Nash");
+    assert_eq!(gnash.costumes.len(), 12, "Nash should have exactly 12 costumes remaining");
 
     // 8. Verify specific newly removed crossover skins across characters
     let ezio = cat.legends.iter().find(|l| l.hero_name.eq_ignore_ascii_case("ezio")).expect("Ezio exists");

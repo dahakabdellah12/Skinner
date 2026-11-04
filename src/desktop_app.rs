@@ -533,7 +533,7 @@ fn build_system_info(
         "isValid": inst.is_valid,
         "isGameRunning": GameLauncher::is_game_running(),
         "activeModCount": bm.count_modified_files(),
-        "appVersion": "3.3.4",
+        "appVersion": "3.3.5",
         "totalLegends": cat.legends.len(),
         "totalCostumes": cat.costumes.len(),
         "totalWeaponSkins": cat.weapon_skins.len(),
@@ -974,12 +974,12 @@ fn handle_action(
             }))
         }
         "checkForUpdates" => {
-            let res = crate::updater::UpdateManager::check_for_updates("3.3.4");
+            let res = crate::updater::UpdateManager::check_for_updates("3.3.5");
             Ok(serde_json::to_value(res).unwrap_or(serde_json::Value::Null))
         }
         "installUpdate" => {
             let download_url = payload.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or("");
-            let version = payload.get("version").and_then(|v| v.as_str()).unwrap_or("3.3.4");
+            let version = payload.get("version").and_then(|v| v.as_str()).unwrap_or("3.3.5");
             let asset_name = payload.get("assetName").and_then(|v| v.as_str()).unwrap_or("");
             let manifest_url = payload.get("manifestUrl").and_then(|v| v.as_str()).map(|s| s.to_string());
             let signature_url = payload.get("signatureUrl").and_then(|v| v.as_str()).map(|s| s.to_string());
@@ -990,7 +990,7 @@ fn handle_action(
 
             let release_info = crate::updater::ReleaseInfo {
                 has_update: true,
-                current_version: "3.3.4".to_string(),
+                current_version: "3.3.5".to_string(),
                 latest_version: version.to_string(),
                 release_title: format!("Skinner v{}", version),
                 download_url: download_url.to_string(),
