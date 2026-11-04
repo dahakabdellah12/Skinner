@@ -1,20 +1,19 @@
 {
-  "version": "3.3.4",
-  "name": "Skinner v3.3.4 \u2014 Final Catalog Cleanup, Targeted Removals & Duplicate Fixes",
-  "tag_name": "v3.3.4",
+  "version": "3.3.5",
+  "name": "Skinner v3.3.5 \u2014 Silent In-Place Updates, UI Refinements & Gnash Cleanup",
+  "tag_name": "v3.3.5",
   "release_date": "2026-11-04",
-  "installer_filename": "Skinner-Setup-3.3.4.exe",
-  "installer_size": 54973675,
-  "installer_sha256": "82d4dd03f19292d425e52e49187a7f9f83b233d1c52fe2ad46f9adeb50b8d7f4",
-  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.4/Skinner-Setup-3.3.4.exe",
-  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.4/SHA256SUMS.txt",
-  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.4/SHA256SUMS.txt.sig",
-  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.4",
+  "installer_filename": "Skinner-Setup-3.3.5.exe",
+  "installer_size": 54972046,
+  "installer_sha256": "315dce44287e83873b18813d795b6f702349d49b91a5c71795cc3c1f3f7e5a23",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.5/Skinner-Setup-3.3.5.exe",
+  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.5/SHA256SUMS.txt",
+  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v3.3.5/SHA256SUMS.txt.sig",
+  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v3.3.5",
   "changelog": [
-    "Final Skin Removals: Precision removal of 13 targeted skin records across 12 legends (Ezio Anakin, Petra Ken, Rayman Dhalsim, Jiro Yoshimitsu, Kor Four Arms, Koji CyberSam, Asuri Puss in Boots, Red Raptor Eren, Teros Roman Reigns & Gruagach, Ada Heatblast, Lord Vraxx Alien Warlord, Nash Becky Lynch).",
-    "Duplicate Stance Fixes: Pruned redundant stance duplicates for Priya (BladeDancer), Aurus (ActualGladiator), and Lady Vera (Cleric) while preserving canonical default costumes.",
-    "Nash Data Integrity: Verified complete roster for Nash (Gnash), removing Becky Lynch and Shovel Knight, while retaining all 15 distinct skins including all ZombieWalker variants.",
-    "Dual Installer Packaging: Distributes both Skinner-Setup-3.3.4.exe and Skinner-3.3.4-setup-x64.exe ensuring seamless automated updates across older clients.",
+    "Seamless Silent In-Place Updates: Update process executes silently without Setup wizard dialogs or prompts, and relaunches the application immediately upon completion.",
+    "Streamlined Update Modal: Removed redundant close button and view changelog button, simplified header, and eliminated progress bar 0 artifacts.",
+    "Gnash Catalog Pruning: Removed all three ZombieWalker variant skins (ZombieWalker1, ZombieWalker2, ZombieWalker3) leaving 12 authentic distinct costumes.",
     "Cryptographic Verification: All release binaries signed with official Ed25519 digital key and protected by SHA-256 manifests."
   ]
 }

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.5] — 2026-11-04
+
+### Added & Improved
+- **Update Dialog Simplification:**
+  - Removed close (x) button to streamline modal flow.
+  - Removed redundant "View Changelog" button.
+  - Removed header download icon for a clean, minimalist header.
+  - Simplified dialog title to direct phrase "تحديث جديد" / "New Update".
+  - Cleaned up progress bar metrics to eliminate confusing "0" number artifact.
+- **Seamless Silent In-Place Update & Auto-Relaunch:**
+  - Configured update execution to run Inno Setup silently (`/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR=...`), completely eliminating Setup wizard dialogs and options during auto-updates.
+  - Automatically relaunches the updated Skinner application immediately upon installation completion.
+- **Gnash (Nash) Catalog Pruning:**
+  - Removed all three ZombieWalker variant skins (`ZombieWalker1` ID 482, `ZombieWalker2` ID 483, `ZombieWalker3` ID 484) from Gnash (`caveman`), leaving exactly 12 authentic distinct costumes.
+
 ## [3.3.4] — 2026-11-04
 
 ### Added & Improved
