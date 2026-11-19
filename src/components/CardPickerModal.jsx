@@ -338,7 +338,7 @@ export default function CardPickerModal({
                     key={String(item.id)}
                     className={`card-picker-item ${isSelected ? 'active' : ''}`}
                     onClick={() => {
-                      onSelect(item.id);
+                      if (onSelect) onSelect(item.id, item);
                       onClose();
                     }}
                     title={item.title}
@@ -387,7 +387,7 @@ export default function CardPickerModal({
                     key={String(item.id)}
                     className={`card-picker-item ${isSelected ? 'active' : ''}`}
                     onClick={() => {
-                      onSelect(item.id);
+                      if (onSelect) onSelect(item.id, item);
                       onClose();
                     }}
                     title={item.title}
@@ -429,7 +429,7 @@ export default function CardPickerModal({
                     key={String(item.id)}
                     className={`card-picker-item ${isSelected ? 'active' : ''}`}
                     onClick={() => {
-                      onSelect(item.id);
+                      if (onSelect) onSelect(item.id, item);
                       onClose();
                     }}
                     title={item.title}
@@ -477,7 +477,7 @@ export default function CardPickerModal({
                   key={String(item.id)}
                   className={`card-picker-item ${isSelected ? 'active' : ''}`}
                   onClick={() => {
-                    onSelect(item.id);
+                    if (onSelect) onSelect(item.id, item);
                     onClose();
                   }}
                   title={item.title}

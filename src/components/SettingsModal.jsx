@@ -1118,14 +1118,12 @@ export default function SettingsModal({
           background: #3B82F6;
           border: 1px solid #3B82F6;
           font-weight: 700;
-          box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
         }
 
         .btn-primary:hover:not(:disabled) {
           background: #2563EB;
           border-color: #2563EB;
           color: #ffffff;
-          box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
         }
 
         /* GitHub icon-only button */
@@ -1162,13 +1160,12 @@ export default function SettingsModal({
           border: none;
           cursor: pointer;
           flex-shrink: 0;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          transition: background 0.2s ease;
           padding: 0;
         }
 
         .toggle-switch.on {
           background: #3B82F6;
-          box-shadow: 0 2px 10px rgba(59, 130, 246, 0.45);
         }
 
         .toggle-switch.off {

@@ -1,20 +1,23 @@
 {
-  "version": "4.0.3",
-  "name": "Skinner v4.0.3 — Weapon Skins Unlocked, Notifications Settings & Refined UI",
-  "tag_name": "v4.0.3",
+  "version": "4.0.4",
+  "name": "Skinner v4.0.4 — Crisp KO Previews, Unified Weapon Studio & Performance Polish",
+  "tag_name": "v4.0.4",
   "release_date": "2026-11-19",
-  "installer_filename": "Skinner-Setup-4.0.3.exe",
-  "installer_size": 4243351,
-  "installer_sha256": "5486d9c751eac34c2f71b55367aaf16a6ec261adaf042809961d0c8e49111020",
-  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.3/Skinner-Setup-4.0.3.exe",
-  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.3/SHA256SUMS.txt",
-  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.3/SHA256SUMS.txt.sig",
-  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v4.0.3",
+  "installer_filename": "Skinner-Setup-4.0.4.exe",
+  "installer_size": 51055852,
+  "installer_sha256": "62b2d10845b31a287270f065b8fffac19a399d69b213bc03a97a363f4ab01955",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.4/Skinner-Setup-4.0.4.exe",
+  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.4/SHA256SUMS.txt",
+  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.4/SHA256SUMS.txt.sig",
+  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v4.0.4",
   "changelog": [
-    "Unlocked Weapon Skins: Removed disabled lock on weapon skins tab with keep-alive instant navigation and customizer controls.",
-    "New In-App Notifications Settings: Added dedicated Notifications tab with toggle switch to enable or disable toast alerts.",
-    "Refined Update Icon: Replaced bell icon on Software Updates with universal refresh/update arrows, dedicating bell to notifications.",
-    "Integrated Test Alert Preview: Added instant test notification button in settings to verify alert appearances.",
-    "Cryptographic Verification: All update binaries Ed25519-signed and verified via SHA-256 manifests."
+    "Lockout During Loading: Prevented tab switching and settings modal access while assets are preloading.",
+    "Comprehensive Asset Preload: Preloading expanded across all weapon skins, costumes, legends, and knockout effects.",
+    "Buttery Smooth Window Dragging: Optimized batch IPC scheduling to maintain 60fps window drag and resize responsiveness.",
+    "Crisp Single-Frame KO Previews: Fixed animation frame stacking to render sharp, iconic midpoint frames without smoke distortion.",
+    "Unified Weapon Customizer: Matched layout, cards grid (repeat 2, 1fr), and controls 1:1 with KO Effects Studio.",
+    "Fixed Target Weapon Selection: Fixed CardPickerModal item selection callback bug so target weapon reliably updates.",
+    "Zero Glow Artifacts: Completely removed fuzzy box shadows and glows from toggle switches and primary buttons.",
+    "Cryptographic Verification: All release binaries signed with Ed25519 and verified via SHA-256 manifests."
   ]
 }

@@ -271,12 +271,12 @@ export default function WeaponsPage({
               type="button"
               className="button-secondary"
               onClick={handleBackToGallery}
-              style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ padding: '8px 14px', fontSize: '13px' }}
             >
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
-              <span>{isArabic ? 'الرجوع إلى سكنات الأسلحة' : 'Back to Weapon Skins'}</span>
+              <span>{isArabic ? 'العودة إلى سكنات الأسلحة' : 'Back to Weapon Skins'}</span>
             </button>
 
             <div>
@@ -290,8 +290,8 @@ export default function WeaponsPage({
           </div>
         </div>
 
-        {/* 2 Authentic Showcase Cards (Matching Legend Studio Style) */}
-        <div className="workbench-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+        {/* 2 Authentic Showcase Cards (Matching Legends Studio & KO Effect Studio 1:1) */}
+        <div className="workbench-cards-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
           {/* Card 1: Target Weapon in Game (A) */}
           <div className="store-card">
             <div className="card-image-wrap">
@@ -370,7 +370,7 @@ export default function WeaponsPage({
 
         {/* Configuration Controls Panel (Matching Legend Customizer Structure) */}
         <div className="config-panel">
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px' }}>
             {isArabic ? 'خيارات التخصيص للسلاح' : 'Weapon Customization Configuration'}
           </h3>
 
@@ -574,9 +574,10 @@ export default function WeaponsPage({
             subtitle={isArabic ? `اختر السلاح الذي تملكه وسيتم استبدال مظهره` : `Weapon in inventory to be replaced`}
             items={currentBaseWeaponSkinsCards}
             selectedId={targetWeapon?.weaponSkinId != null && targetWeapon.weaponSkinId !== 0 ? targetWeapon.weaponSkinId : targetWeapon?.weaponSkinName}
-            onSelect={(card) => {
-              if (card?.rawItem) {
-                setTargetWeapon(card.rawItem);
+            onSelect={(selectedId, cardItem) => {
+              const item = cardItem?.rawItem || currentBaseWeaponSkinsCards.find((c) => String(c.id) === String(selectedId))?.rawItem;
+              if (item) {
+                setTargetWeapon(item);
               }
               setActivePicker(null);
             }}
@@ -593,9 +594,10 @@ export default function WeaponsPage({
             subtitle={isArabic ? `اختر سكن السلاح الجديد الذي تريد رؤيته في اللعبة` : `Choose the skin you want to wield in game`}
             items={currentBaseWeaponSkinsCards}
             selectedId={replacementWeapon?.weaponSkinId != null && replacementWeapon.weaponSkinId !== 0 ? replacementWeapon.weaponSkinId : replacementWeapon?.weaponSkinName}
-            onSelect={(card) => {
-              if (card?.rawItem) {
-                setReplacementWeapon(card.rawItem);
+            onSelect={(selectedId, cardItem) => {
+              const item = cardItem?.rawItem || currentBaseWeaponSkinsCards.find((c) => String(c.id) === String(selectedId))?.rawItem;
+              if (item) {
+                setReplacementWeapon(item);
               }
               setActivePicker(null);
             }}
@@ -613,8 +615,13 @@ export default function WeaponsPage({
             subtitle={isArabic ? `اختر الصبغة اللونية الرسمية لتلوين سكن السلاح` : `Choose an authentic game palette for this weapon`}
             items={colorSchemeCards}
             selectedId={selectedColorScheme ? (selectedColorScheme.schemeId || selectedColorScheme.schemeName) : '__NONE__'}
-            onSelect={(card) => {
-              setSelectedColorScheme(card?.rawItem || null);
+            onSelect={(selectedId, cardItem) => {
+              if (selectedId === '__NONE__') {
+                setSelectedColorScheme(null);
+              } else {
+                const item = cardItem?.rawItem || colorSchemeCards.find((c) => String(c.id) === String(selectedId))?.rawItem;
+                setSelectedColorScheme(item || null);
+              }
               setActivePicker(null);
             }}
             type="color"

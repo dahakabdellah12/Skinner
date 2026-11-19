@@ -35,27 +35,34 @@ export const PRELOAD_STAGES = {
     titleAr: 'تجهيز سكنات ومظاهر الشخصيات',
     titleEn: 'Loading Character Skins',
     minPct: 32,
-    maxPct: 52
+    maxPct: 48
+  },
+  WEAPONS: {
+    id: 'weapons',
+    titleAr: 'تجهيز سكنات ومظاهر الأسلحة',
+    titleEn: 'Loading Weapon Skins',
+    minPct: 48,
+    maxPct: 65
   },
   KO_EFFECTS: {
     id: 'ko_effects',
     titleAr: 'تجهيز تأثيرات الإطاحة بالكامل',
     titleEn: 'Loading Knockout (KO) Effects',
-    minPct: 52,
-    maxPct: 76
+    minPct: 65,
+    maxPct: 82
   },
   COLORS: {
     id: 'colors',
     titleAr: 'تجهيز أنظمة الألوان والصبغات',
     titleEn: 'Initializing Color Palettes',
-    minPct: 76,
-    maxPct: 90
+    minPct: 82,
+    maxPct: 92
   },
   INDEXES: {
     id: 'indexes',
     titleAr: 'تهيئة الفهارس ومكونات البحث الفوري',
     titleEn: 'Preparing Application Components',
-    minPct: 90,
+    minPct: 92,
     maxPct: 98
   },
   READY: {
@@ -145,7 +152,29 @@ export function discoverAllAppResources(catalog) {
     });
   }
 
-  // 4. Color Scheme Emblems
+  // 4. All Weapon Skins (Weapons Gallery & Customizer)
+  for (const w of catalog.weaponSkins || []) {
+    if (!w.weaponSkinName || w.weaponSkinName === 'DEFAULT_WEAPON') continue;
+    const hero = w.ownerHero || '';
+    const isPaired = ['Katar', 'Katars', 'Boots', 'BattleBoots', 'Fists', 'Gauntlet', 'Gauntlets', 'Chakram'].includes(w.baseWeapon);
+    const pairedSuffix = isPaired ? '_paired_v2' : '';
+    const weaponKey = `weapon_${w.baseWeapon}_${w.weaponSkinName}_${w.symbolSuffix}_${hero}${pairedSuffix}`;
+    weaponItems.push({
+      cacheKey: weaponKey,
+      queryParams: {
+        type: 'weapon',
+        baseWeapon: w.baseWeapon,
+        symbol: w.symbolSuffix,
+        weaponSkinName: w.weaponSkinName || w.displayName || '',
+        swfFile: w.swfFile,
+        ownerHero: hero,
+        costumeName: '',
+        cacheKey: weaponKey
+      }
+    });
+  }
+
+  // 5. Color Scheme Emblems
   for (const cs of catalog.colorSchemes || []) {
     const icon = getColorIconSymbol(cs);
     const keyId = cs.schemeId ?? cs.schemeName ?? cs.displayName ?? 'none';
@@ -160,7 +189,7 @@ export function discoverAllAppResources(catalog) {
     });
   }
 
-  const totalCount = legendItems.length + costumeItems.length + koItems.length + colorItems.length;
+  const totalCount = legendItems.length + costumeItems.length + weaponItems.length + koItems.length + colorItems.length;
 
   return {
     legendItems,
@@ -269,7 +298,24 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
         : `Preloading costume previews & icons (${proc}/${tot})`
   );
 
-  // --- STAGE 5: Knockout (KO) Effects ---
+  // --- STAGE 5: All Weapon Skins ---
+  emitProgress(
+    PRELOAD_STAGES.WEAPONS,
+    0,
+    resources.weaponItems.length,
+    isArabic ? 'جاري تجهيز سكنات ومظاهر الأسلحة...' : 'Preloading weapon skins & assets...'
+  );
+  await processBatchList(
+    resources.weaponItems,
+    PRELOAD_STAGES.WEAPONS,
+    35,
+    (proc, tot) =>
+      isArabic
+        ? `تجهيز بطاقات وسكنات الأسلحة (${proc}/${tot})`
+        : `Processing & caching weapon skins (${proc}/${tot})`
+  );
+
+  // --- STAGE 6: Knockout (KO) Effects ---
   emitProgress(
     PRELOAD_STAGES.KO_EFFECTS,
     0,
@@ -286,8 +332,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
         : `Processing & caching KO effects (${proc}/${tot})`
   );
 
-
-  // --- STAGE 6: Color Schemes ---
+  // --- STAGE 7: Color Schemes ---
   emitProgress(
     PRELOAD_STAGES.COLORS,
     0,
@@ -304,7 +349,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
         : `Preparing color palette emblems (${proc}/${tot})`
   );
 
-  // --- STAGE 7: Building Component Indexes & Warming Maps ---
+  // --- STAGE 8: Building Component Indexes & Warming Maps ---
   emitProgress(
     PRELOAD_STAGES.INDEXES,
     50,
@@ -315,7 +360,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
   // Small delay to allow browser thread to flush DOM state
   await new Promise((r) => setTimeout(r, 60));
 
-  // --- STAGE 8: Studio Ready ---
+  // --- STAGE 9: Studio Ready ---
   emitProgress(
     PRELOAD_STAGES.READY,
     100,

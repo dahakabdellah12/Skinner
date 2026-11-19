@@ -523,9 +523,14 @@ export default function App() {
     <div className="app-container">
       {/* Windows Custom Title Bar */}
       <TitleBar
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => {
+          if (!loading) setIsSettingsOpen(true);
+        }}
+        isLoading={loading}
         hasPendingUpdate={Boolean(pendingUpdate && !isUpdateModalOpen)}
-        onOpenUpdate={() => setIsUpdateModalOpen(true)}
+        onOpenUpdate={() => {
+          if (!loading) setIsUpdateModalOpen(true);
+        }}
       />
 
       {/* Workspace Body: Sidebar Navigation on Left + Main Content on Right */}
@@ -534,6 +539,7 @@ export default function App() {
         <Sidebar
           activeTab={activeLegend ? 'legends' : activeTab}
           onSelectTab={(tabId) => {
+            if (loading) return;
             if (pageContainerRef.current) {
               if (!activeLegend && activeTab === 'legends') {
                 rosterScrollPos.current = pageContainerRef.current.scrollTop;

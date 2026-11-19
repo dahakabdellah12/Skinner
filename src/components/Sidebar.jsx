@@ -41,13 +41,14 @@ export default function Sidebar({
               key={tab.id}
               type="button"
               disabled={isTabDisabled}
-              className={`sidebar-item ${isActive ? 'active' : ''} ${tab.disabled ? 'sidebar-item-disabled' : ''}`}
+              className={`sidebar-item ${isActive ? 'active' : ''} ${isTabDisabled ? 'sidebar-item-disabled' : ''}`}
+              style={disabled ? { opacity: 0.5, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}
               onClick={() => {
-                if (!tab.disabled && onSelectTab) {
+                if (!isTabDisabled && onSelectTab) {
                   onSelectTab(tab.id);
                 }
               }}
-              title={tab.disabled ? (isArabic ? 'معطل حالياً للتركيز على المنصة وسكنات الشخصيات' : 'Disabled to focus on platform and character skins') : ''}
+              title={disabled ? (isArabic ? 'جاري تجهيز الموارد...' : 'Loading resources...') : tab.disabled ? (isArabic ? 'معطل حالياً' : 'Disabled') : ''}
             >
               <span className="sidebar-item-label">
                 {isArabic ? tab.labelAr : tab.labelEn}

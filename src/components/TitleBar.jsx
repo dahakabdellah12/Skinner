@@ -7,7 +7,8 @@ import { ArrowUpCircle } from 'lucide-react';
 export default function TitleBar({
   onOpenSettings,
   hasPendingUpdate,
-  onOpenUpdate
+  onOpenUpdate,
+  isLoading = false
 }) {
   const { isArabic } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -104,8 +105,14 @@ export default function TitleBar({
         <button
           type="button"
           className="title-bar-settings-btn"
-          onClick={onOpenSettings}
-          title={isArabic ? 'الإعدادات' : 'Settings'}
+          onClick={() => {
+            if (!isLoading && onOpenSettings) {
+              onOpenSettings();
+            }
+          }}
+          disabled={isLoading}
+          style={isLoading ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}
+          title={isLoading ? (isArabic ? 'جاري تجهيز الموارد...' : 'Loading resources...') : (isArabic ? 'الإعدادات' : 'Settings')}
           aria-label="Settings"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">

@@ -308,8 +308,8 @@ fn get_svg_cache_dir() -> &'static Path {
     CACHE_DIR.get_or_init(|| {
         let dir = std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("cache").join("svg")))
-            .unwrap_or_else(|| PathBuf::from("cache/svg"));
+            .and_then(|p| p.parent().map(|d| d.join("cache").join("svg_v4")))
+            .unwrap_or_else(|| PathBuf::from("cache/svg_v4"));
         let _ = std::fs::create_dir_all(&dir);
         dir
     })

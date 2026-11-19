@@ -206,14 +206,12 @@
   font-weight: 700;
   cursor: pointer;
   outline: none;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .button-primary:hover:not(:disabled) {
   background: var(--button-primary-hover, #2563EB);
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
   transform: translateY(-1px);
 }
 
@@ -520,14 +518,12 @@
   background: #3B82F6;
   color: #ffffff;
   border-color: #3B82F6;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
 }
 
 .card-button:hover {
   background: #2563EB !important;
   color: #ffffff !important;
   border-color: #2563EB !important;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5) !important;
 }
 
 .card-button:active {
@@ -1676,7 +1672,6 @@
   background: var(--button-primary, #2563eb);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
 }
 
 .slot-pill-indicator {
@@ -1689,7 +1684,6 @@
 
 .slot-pill-btn.active .slot-pill-indicator {
   background: #ffffff;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
 }
 
 .slot-pill-add-btn {
