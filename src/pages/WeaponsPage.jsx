@@ -35,10 +35,12 @@ const getWeaponOrderIndex = (baseWeapon) => {
 
 export default function WeaponsPage({
   catalog,
+  systemInfo,
   showToast,
   isBusy,
   onApplyModification,
-  onRestartGame
+  onRestartGame,
+  onLaunchGame
 }) {
   const { isArabic, tWeapon } = useLanguage();
 
@@ -521,7 +523,7 @@ export default function WeaponsPage({
               <span>{isArabic ? 'استعادة الأصلية' : 'Restore Original'}</span>
             </button>
 
-            {onRestartGame && (
+            {onRestartGame && systemInfo?.gameRunning && (
               <button
                 className="button-secondary"
                 onClick={onRestartGame}
@@ -532,6 +534,21 @@ export default function WeaponsPage({
                   <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
                 </svg>
                 <span>{isArabic ? 'تحديث اللعبة' : 'Restart Game'}</span>
+              </button>
+            )}
+
+            {onLaunchGame && !systemInfo?.gameRunning && (
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={onLaunchGame}
+                disabled={isBusy}
+                title={isArabic ? 'تشغيل اللعبة الآن' : 'Launch game executable'}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                <span>{isArabic ? 'تشغيل اللعبة' : 'Launch Game'}</span>
               </button>
             )}
 

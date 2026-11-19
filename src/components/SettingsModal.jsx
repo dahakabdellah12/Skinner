@@ -39,6 +39,26 @@ export default function SettingsModal({
     } catch {}
   };
 
+  // Notifications preference (persisted in localStorage)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('skinner_notifications_enabled');
+      return saved !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleNotifications = (val) => {
+    setNotificationsEnabled(val);
+    try {
+      localStorage.setItem('skinner_notifications_enabled', String(val));
+    } catch {}
+    if (val) {
+      showToast?.(isArabic ? 'تم تفعيل إشعارات التطبيق بنجاح ✓' : 'In-app notifications enabled ✓', 'success', true);
+    }
+  };
+
   // Maintenance & Troubleshooting State
   const [repairLoading, setRepairLoading] = useState(false);
   const [cacheLoading, setCacheLoading] = useState(false);
@@ -203,6 +223,9 @@ export default function SettingsModal({
     language: {
       title: isArabic ? 'لغة الواجهة' : 'Language'
     },
+    notifications: {
+      title: isArabic ? 'إعدادات الإشعارات' : 'Notifications'
+    },
     maintenance: {
       title: isArabic ? 'الصيانة والاستعادة' : 'Maintenance & Reset'
     },
@@ -280,6 +303,19 @@ export default function SettingsModal({
 
             <button
               type="button"
+              className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
+              onClick={() => handleTabChange('notifications')}
+            >
+              <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z" />
+                </svg>
+              </span>
+              <span className="nav-text">{isArabic ? 'الإشعارات' : 'Notifications'}</span>
+            </button>
+
+            <button
+              type="button"
               className={`nav-item ${activeTab === 'maintenance' ? 'active' : ''}`}
               onClick={() => handleTabChange('maintenance')}
             >
@@ -299,7 +335,7 @@ export default function SettingsModal({
             >
               <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z" />
+                  <path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6c0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6c0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4l-4-4v3z"/>
                 </svg>
               </span>
               <span className="nav-text">{isArabic ? 'التحديثات' : 'Updates'}</span>
@@ -437,6 +473,81 @@ export default function SettingsModal({
                         </button>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* TAB: NOTIFICATIONS */}
+            {activeTab === 'notifications' && (
+              <section className="settings-page" style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                <div className="card-group">
+                  {/* Notifications toggle */}
+                  <div className="setting" style={{ alignItems: 'center' }}>
+                    <div className="setting-info" style={{ flex: 1 }}>
+                      <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/>
+                        </svg>
+                        <span>{isArabic ? 'إشعارات وتنبيهات التطبيق' : 'In-App Toast Notifications'}</span>
+                      </div>
+                      <div className="setting-desc" style={{ marginTop: '4px' }}>
+                        {isArabic
+                          ? 'إظهار التنبيهات ورسائل النجاح والتحذيرات المنبثقة أسفل الشاشة عند تطبيق المودات أو إتمام العمليات.'
+                          : 'Show interactive popup banners, alerts, and operation success toasts at the bottom of the screen.'}
+                      </div>
+                    </div>
+                    {/* Toggle switch */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={notificationsEnabled}
+                      onClick={() => handleToggleNotifications(!notificationsEnabled)}
+                      className={`toggle-switch ${notificationsEnabled ? 'on' : 'off'}`}
+                      title={notificationsEnabled
+                        ? (isArabic ? 'انقر لتعطيل الإشعارات' : 'Click to disable notifications')
+                        : (isArabic ? 'انقر لتفعيل الإشعارات' : 'Click to enable notifications')}
+                    >
+                      <span className="toggle-thumb" />
+                    </button>
+                  </div>
+
+                  {/* Test Notification Row */}
+                  <div className="setting" style={{ alignItems: 'center' }}>
+                    <div className="setting-info" style={{ flex: 1 }}>
+                      <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={16} style={{ color: 'var(--accent)' }} />
+                        <span>{isArabic ? 'تجربة ظهور الإشعار' : 'Test In-App Notification'}</span>
+                      </div>
+                      <div className="setting-desc" style={{ marginTop: '4px' }}>
+                        {isArabic
+                          ? 'معاينة فورية لطريقة عرض الإشعار المنبثق في أسفل الشاشة للتأكد من مظهره.'
+                          : 'Trigger a quick preview alert to test notification banner appearance.'}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        if (!notificationsEnabled) {
+                          showToast?.(
+                            isArabic ? 'تنبيه: الإشعارات معطلة حالياً، قم بتفعيل الزر أولاً لتظهر لك.' : 'Notice: Notifications are currently disabled. Turn on the switch above to view.',
+                            'info',
+                            true
+                          );
+                        } else {
+                          showToast?.(
+                            isArabic ? 'هذا إشعار تجريبي من سكينر! تعمل الإشعارات المنبثقة بنجاح ✓' : 'This is a test notification from Skinner! In-app toasts working properly ✓',
+                            'success'
+                          );
+                        }
+                      }}
+                      disabled={isBusy}
+                      style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px' }}
+                    >
+                      {isArabic ? 'إرسال إشعار تجريبي' : 'Send Test Alert'}
+                    </button>
                   </div>
                 </div>
               </section>
@@ -614,7 +725,7 @@ export default function SettingsModal({
                     <div className="setting-info" style={{ flex: 1 }}>
                       <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/>
+                          <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6c0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6c0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4l-4-4v3z"/>
                         </svg>
                         <span>{isArabic ? 'تحديثات البرنامج التلقائية' : 'Automatic In-App Updates'}</span>
                       </div>
@@ -632,8 +743,8 @@ export default function SettingsModal({
                       onClick={() => handleToggleAutoUpdate(!autoUpdateEnabled)}
                       className={`toggle-switch ${autoUpdateEnabled ? 'on' : 'off'}`}
                       title={autoUpdateEnabled
-                        ? (isArabic ? 'انقر لتعطيل الإشعارات التلقائية' : 'Click to disable auto-notifications')
-                        : (isArabic ? 'انقر لتفعيل الإشعارات التلقائية' : 'Click to enable auto-notifications')}
+                        ? (isArabic ? 'انقر لتعطيل التحديثات التلقائية' : 'Click to disable auto-updates')
+                        : (isArabic ? 'انقر لتفعيل التحديثات التلقائية' : 'Click to enable auto-updates')}
                     >
                       <span className="toggle-thumb" />
                     </button>

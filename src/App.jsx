@@ -69,7 +69,14 @@ export default function App() {
     }
   }, [activeLegend?.heroName, handleSaveCustomization]);
 
-  const showToast = useCallback((message, type = 'info') => {
+  const showToast = useCallback((message, type = 'info', force = false) => {
+    try {
+      const saved = localStorage.getItem('skinner_notifications_enabled');
+      if (saved === 'false' && !force) {
+        return;
+      }
+    } catch { }
+
     setToast({
       message,
       isSuccess: type === 'success',
@@ -527,7 +534,6 @@ export default function App() {
         <Sidebar
           activeTab={activeLegend ? 'legends' : activeTab}
           onSelectTab={(tabId) => {
-            if (tabId === 'weapons') return;
             if (pageContainerRef.current) {
               if (!activeLegend && activeTab === 'legends') {
                 rosterScrollPos.current = pageContainerRef.current.scrollTop;
@@ -668,7 +674,8 @@ export default function App() {
                 />
               </div>
 
-              {activeTab === 'weapons' && (
+              {/* Keep-Alive Mounted Weapons Page (Zero Tab Switch Delay) */}
+              <div style={{ display: activeTab === 'weapons' ? 'block' : 'none', minHeight: '100%' }}>
                 <WeaponsPage
                   catalog={catalog}
                   systemInfo={systemInfo}
@@ -676,8 +683,9 @@ export default function App() {
                   isBusy={isBusy}
                   onApplyModification={handleApplyModification}
                   onRestartGame={handleRestartGame}
+                  onLaunchGame={handleLaunchGame}
                 />
-              )}
+              </div>
             </>
           )}
         </div>

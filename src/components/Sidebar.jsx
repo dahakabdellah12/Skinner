@@ -16,9 +16,9 @@ export const SIDEBAR_TABS = [
   },
   {
     id: 'weapons',
-    labelAr: 'سكنات الأسلحة (معطل)',
-    labelEn: 'Weapon Skins (Disabled)',
-    disabled: true
+    labelAr: 'سكنات الأسلحة',
+    labelEn: 'Weapon Skins',
+    disabled: false
   }
 ];
 

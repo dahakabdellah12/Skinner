@@ -1,22 +1,20 @@
 {
-  "version": "4.0.2",
-  "name": "Skinner v4.0.2 — UI Refinements, Clean Modal, Flat Dark Theme & Focused Presets",
-  "tag_name": "v4.0.2",
+  "version": "4.0.3",
+  "name": "Skinner v4.0.3 — Weapon Skins Unlocked, Notifications Settings & Refined UI",
+  "tag_name": "v4.0.3",
   "release_date": "2026-11-19",
-  "installer_filename": "Skinner-Setup-4.0.2.exe",
-  "installer_size": 4242998,
-  "installer_sha256": "bed60162c5da5a1530bc3f47f2b5a9439f12dc28098593afbae889780809bfb7",
-  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.2/Skinner-Setup-4.0.2.exe",
-  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.2/SHA256SUMS.txt",
-  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.2/SHA256SUMS.txt.sig",
-  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v4.0.2",
+  "installer_filename": "Skinner-Setup-4.0.3.exe",
+  "installer_size": 4243351,
+  "installer_sha256": "5486d9c751eac34c2f71b55367aaf16a6ec261adaf042809961d0c8e49111020",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.3/Skinner-Setup-4.0.3.exe",
+  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.3/SHA256SUMS.txt",
+  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.3/SHA256SUMS.txt.sig",
+  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v4.0.3",
   "changelog": [
-    "Three-Dots Preset Options Menu: Re-introduced dedicated ... button for slot renaming, duplicating, resetting defaults, and deleting.",
-    "Clean Minimalist Rename Modal: Removed close X and pencil icon, added comfortable button spacing.",
-    "Borderless Settings Close Button: Removed perimeter outline around settings close button.",
-    "Minimal Sidebar Navigation: Removed icons and blue box interactions, retaining only a crisp edge accent indicator.",
-    "Removed Redundant KO Effects Dropdown: Cleaned gallery header to focus purely on instant search.",
-    "Perfect Button Alignment: Vertically centered maintenance diagnostic repair button with sibling controls.",
-    "Completely Removed App Glow: Replaced fuzzy radial gradients and blue button halos with sleek flat dark theme styling."
+    "Unlocked Weapon Skins: Removed disabled lock on weapon skins tab with keep-alive instant navigation and customizer controls.",
+    "New In-App Notifications Settings: Added dedicated Notifications tab with toggle switch to enable or disable toast alerts.",
+    "Refined Update Icon: Replaced bell icon on Software Updates with universal refresh/update arrows, dedicating bell to notifications.",
+    "Integrated Test Alert Preview: Added instant test notification button in settings to verify alert appearances.",
+    "Cryptographic Verification: All update binaries Ed25519-signed and verified via SHA-256 manifests."
   ]
 }
