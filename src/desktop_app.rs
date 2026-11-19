@@ -487,6 +487,18 @@ pub fn prepare_render_request(req: &mut serde_json::Value, state: &SharedAppData
                     let symbol = obj.get("symbol").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     let weapon_skin_name = obj.get("weaponSkinName").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     let swf_file = obj.get("swfFile").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let icon = obj.get("icon").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                    if !icon.is_empty() {
+                        if let Some(cost) = state.catalog.costumes.iter().find(|c| c.icon_name.eq_ignore_ascii_case(&icon)) {
+                            if !cost.base_colors.is_empty() {
+                                base_sources.push(&cost.base_colors);
+                            }
+                            if owner_hero.is_empty() {
+                                owner_hero = cost.owner_hero.clone();
+                            }
+                        }
+                    }
 
                     // Infer hero from SWF file if not explicitly supplied (e.g. Gfx_Sellsword.swf -> Sellsword)
                     if owner_hero.is_empty() && swf_file.starts_with("Gfx_") && !swf_file.starts_with("Gfx_Weapons") {

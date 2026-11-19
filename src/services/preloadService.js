@@ -14,62 +14,55 @@ export const PRELOAD_STAGES = {
     titleAr: 'تهيئة النظام والتحقق من التثبيت',
     titleEn: 'Initializing Application',
     minPct: 0,
-    maxPct: 8
+    maxPct: 10
   },
   CATALOG: {
     id: 'catalog',
     titleAr: 'تحميل بيانات اللعبة والكتالوج',
     titleEn: 'Loading Catalog Data',
-    minPct: 8,
-    maxPct: 18
+    minPct: 10,
+    maxPct: 25
   },
   LEGENDS: {
     id: 'legends',
     titleAr: 'تجهيز صور وأصول الأساطير',
     titleEn: 'Loading Legends Assets',
-    minPct: 18,
-    maxPct: 32
+    minPct: 25,
+    maxPct: 50
   },
   COSTUMES: {
     id: 'costumes',
     titleAr: 'تجهيز سكنات ومظاهر الشخصيات',
     titleEn: 'Loading Character Skins',
-    minPct: 32,
-    maxPct: 48
-  },
-  WEAPONS: {
-    id: 'weapons',
-    titleAr: 'تجهيز سكنات ومظاهر الأسلحة',
-    titleEn: 'Loading Weapon Skins',
-    minPct: 48,
-    maxPct: 65
+    minPct: 50,
+    maxPct: 75
   },
   KO_EFFECTS: {
     id: 'ko_effects',
     titleAr: 'تجهيز تأثيرات الإطاحة بالكامل',
     titleEn: 'Loading Knockout (KO) Effects',
-    minPct: 65,
-    maxPct: 82
+    minPct: 75,
+    maxPct: 90
   },
   COLORS: {
     id: 'colors',
     titleAr: 'تجهيز أنظمة الألوان والصبغات',
     titleEn: 'Initializing Color Palettes',
-    minPct: 82,
-    maxPct: 92
+    minPct: 90,
+    maxPct: 97
   },
   INDEXES: {
     id: 'indexes',
     titleAr: 'تهيئة الفهارس ومكونات البحث الفوري',
     titleEn: 'Preparing Application Components',
-    minPct: 92,
-    maxPct: 98
+    minPct: 97,
+    maxPct: 99
   },
   READY: {
     id: 'ready',
     titleAr: 'اكتمل التجهيز بنجاح! جاهز للاستخدام',
     titleEn: 'Finalizing Startup & Studio Ready',
-    minPct: 98,
+    minPct: 99,
     maxPct: 100
   }
 };
@@ -83,7 +76,7 @@ export function discoverAllAppResources(catalog) {
     return {
       legendItems: [],
       costumeItems: [],
-      weaponItems: [],
+      koItems: [],
       colorItems: [],
       totalCount: 0
     };
@@ -92,7 +85,6 @@ export function discoverAllAppResources(catalog) {
   const legendItems = [];
   const costumeItems = [];
   const koItems = [];
-  const weaponItems = [];
   const colorItems = [];
 
   // 1. Playable Legends portraits
@@ -152,29 +144,7 @@ export function discoverAllAppResources(catalog) {
     });
   }
 
-  // 4. All Weapon Skins (Weapons Gallery & Customizer)
-  for (const w of catalog.weaponSkins || []) {
-    if (!w.weaponSkinName || w.weaponSkinName === 'DEFAULT_WEAPON') continue;
-    const hero = w.ownerHero || '';
-    const isPaired = ['Katar', 'Katars', 'Boots', 'BattleBoots', 'Fists', 'Gauntlet', 'Gauntlets', 'Chakram'].includes(w.baseWeapon);
-    const pairedSuffix = isPaired ? '_paired_v2' : '';
-    const weaponKey = `weapon_${w.baseWeapon}_${w.weaponSkinName}_${w.symbolSuffix}_${hero}${pairedSuffix}`;
-    weaponItems.push({
-      cacheKey: weaponKey,
-      queryParams: {
-        type: 'weapon',
-        baseWeapon: w.baseWeapon,
-        symbol: w.symbolSuffix,
-        weaponSkinName: w.weaponSkinName || w.displayName || '',
-        swfFile: w.swfFile,
-        ownerHero: hero,
-        costumeName: '',
-        cacheKey: weaponKey
-      }
-    });
-  }
-
-  // 5. Color Scheme Emblems
+  // 4. Color Scheme Emblems
   for (const cs of catalog.colorSchemes || []) {
     const icon = getColorIconSymbol(cs);
     const keyId = cs.schemeId ?? cs.schemeName ?? cs.displayName ?? 'none';
@@ -189,13 +159,12 @@ export function discoverAllAppResources(catalog) {
     });
   }
 
-  const totalCount = legendItems.length + costumeItems.length + weaponItems.length + koItems.length + colorItems.length;
+  const totalCount = legendItems.length + costumeItems.length + koItems.length + colorItems.length;
 
   return {
     legendItems,
     costumeItems,
     koItems,
-    weaponItems,
     colorItems,
     totalCount
   };
@@ -298,24 +267,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
         : `Preloading costume previews & icons (${proc}/${tot})`
   );
 
-  // --- STAGE 5: All Weapon Skins ---
-  emitProgress(
-    PRELOAD_STAGES.WEAPONS,
-    0,
-    resources.weaponItems.length,
-    isArabic ? 'جاري تجهيز سكنات ومظاهر الأسلحة...' : 'Preloading weapon skins & assets...'
-  );
-  await processBatchList(
-    resources.weaponItems,
-    PRELOAD_STAGES.WEAPONS,
-    35,
-    (proc, tot) =>
-      isArabic
-        ? `تجهيز بطاقات وسكنات الأسلحة (${proc}/${tot})`
-        : `Processing & caching weapon skins (${proc}/${tot})`
-  );
-
-  // --- STAGE 6: Knockout (KO) Effects ---
+  // --- STAGE 5: Knockout (KO) Effects ---
   emitProgress(
     PRELOAD_STAGES.KO_EFFECTS,
     0,
@@ -332,7 +284,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
         : `Processing & caching KO effects (${proc}/${tot})`
   );
 
-  // --- STAGE 7: Color Schemes ---
+  // --- STAGE 6: Color Schemes ---
   emitProgress(
     PRELOAD_STAGES.COLORS,
     0,

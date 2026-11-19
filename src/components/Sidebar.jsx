@@ -13,12 +13,6 @@ export const SIDEBAR_TABS = [
     labelAr: 'تأثيرات الإطاحة',
     labelEn: 'KO Effects',
     disabled: false
-  },
-  {
-    id: 'weapons',
-    labelAr: 'سكنات الأسلحة',
-    labelEn: 'Weapon Skins',
-    disabled: false
   }
 ];
 

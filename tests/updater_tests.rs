@@ -238,7 +238,7 @@ fn test_release_metadata_and_asset_hash_consistency() {
     let latest_json_path = std::path::Path::new("release/latest.json");
     let sums_path = std::path::Path::new("release/SHA256SUMS.txt");
     let sig_path = std::path::Path::new("release/SHA256SUMS.txt.sig");
-    let zip_path = std::path::Path::new("release/Skinner-4.0.4-windows-x64.zip");
+    let zip_path = std::path::Path::new("release/Skinner-4.0.5-windows-x64.zip");
     let release_exe_path = std::path::Path::new("target/release/Skinner.exe");
 
     if latest_json_path.is_file() && sums_path.is_file() && sig_path.is_file() && zip_path.is_file() {
@@ -246,8 +246,8 @@ fn test_release_metadata_and_asset_hash_consistency() {
         let json_str = std::fs::read_to_string(latest_json_path).unwrap();
         let json: serde_json::Value = serde_json::from_str(&json_str).unwrap();
 
-        assert_eq!(json["version"].as_str().unwrap(), "4.0.4");
-        assert_eq!(json["tag_name"].as_str().unwrap(), "v4.0.4");
+        assert_eq!(json["version"].as_str().unwrap(), "4.0.5");
+        assert_eq!(json["tag_name"].as_str().unwrap(), "v4.0.5");
 
         // 2. Compute actual installer hash and size from latest.json target
         let installer_filename = json["installer_filename"].as_str().unwrap();
@@ -268,8 +268,8 @@ fn test_release_metadata_and_asset_hash_consistency() {
         let sums_map = CryptoVerifier::parse_sha256sums(&sums_str);
 
         let actual_zip_hash = CryptoVerifier::compute_sha256(zip_path).unwrap();
-        let manifest_zip_hash = sums_map.get("Skinner-4.0.4-windows-x64.zip")
-            .expect("Skinner-4.0.4-windows-x64.zip must be present in SHA256SUMS.txt");
+        let manifest_zip_hash = sums_map.get("Skinner-4.0.5-windows-x64.zip")
+            .expect("Skinner-4.0.5-windows-x64.zip must be present in SHA256SUMS.txt");
         assert_eq!(manifest_zip_hash, &actual_zip_hash);
 
         if release_exe_path.is_file() {

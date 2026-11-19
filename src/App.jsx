@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TitleBar from './components/TitleBar';
 import LegendsPage from './pages/LegendsPage';
-import WeaponsPage from './pages/WeaponsPage';
 import KoEffectsPage from './pages/KoEffectsPage';
 import Sidebar from './components/Sidebar';
 import LegendCustomizer from './components/LegendCustomizer';
@@ -670,19 +669,6 @@ export default function App() {
               {/* Keep-Alive Mounted KO Effects Page (Zero Tab Switch Delay) */}
               <div style={{ display: activeTab === 'ko_effects' ? 'block' : 'none', minHeight: '100%' }}>
                 <KoEffectsPage
-                  catalog={catalog}
-                  systemInfo={systemInfo}
-                  showToast={showToast}
-                  isBusy={isBusy}
-                  onApplyModification={handleApplyModification}
-                  onRestartGame={handleRestartGame}
-                  onLaunchGame={handleLaunchGame}
-                />
-              </div>
-
-              {/* Keep-Alive Mounted Weapons Page (Zero Tab Switch Delay) */}
-              <div style={{ display: activeTab === 'weapons' ? 'block' : 'none', minHeight: '100%' }}>
-                <WeaponsPage
                   catalog={catalog}
                   systemInfo={systemInfo}
                   showToast={showToast}

@@ -1359,6 +1359,7 @@ export default function LegendCustomizer({
               <AssetImage
                 type="costume"
                 item={displayedTargetCostume}
+                colorScheme={selectedColorScheme}
                 style={{ width: '100%', height: '100%' }}
                 fallbackText=""
               />
@@ -1554,7 +1555,7 @@ export default function LegendCustomizer({
               title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار الزي' : 'Click to open visual cards picker'}
             >
               <div className="card-selector-trigger-thumb">
-                <AssetImage type="costume" item={selectedTargetCostume} style={{ width: '100%', height: '100%' }} />
+                <AssetImage type="costume" item={selectedTargetCostume} colorScheme={selectedColorScheme} style={{ width: '100%', height: '100%' }} />
               </div>
               <div className="card-selector-trigger-info">
                 <div className="card-selector-trigger-title">

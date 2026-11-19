@@ -78,19 +78,27 @@ function toHex6(val) {
  * Instantly recolors cached base SVG in < 0.5ms so changing colors never shows loading spinners or delay.
  */
 export function instantRecolorSvg(baseSvg, colorScheme, baseColors = {}) {
-  if (!baseSvg || typeof baseSvg !== 'string' || !colorScheme) return baseSvg;
+  if (!baseSvg || typeof baseSvg !== 'string' || !colorScheme) return null;
 
   const swapColors = colorScheme.swapColors;
-  if (!swapColors) return baseSvg;
+  if (!swapColors) return null;
 
   let hasKeys = false;
   for (const _ in swapColors) {
     hasKeys = true;
     break;
   }
-  if (!hasKeys) return baseSvg;
+  if (!hasKeys) return null;
 
   const hexMap = new Map();
+  const normBaseColors = {};
+  if (baseColors && typeof baseColors === 'object') {
+    for (const [k, v] of Object.entries(baseColors)) {
+      if (k && v != null) {
+        normBaseColors[k.toLowerCase()] = v;
+      }
+    }
+  }
 
   for (const [key, targetVal] of Object.entries(swapColors)) {
     const targetHex = toHex6(targetVal);
@@ -102,7 +110,7 @@ export function instantRecolorSvg(baseSvg, colorScheme, baseColors = {}) {
       hexMap.set(STD_WEAPON[kLow].toLowerCase(), targetHex);
     }
 
-    const baseVal = baseColors[key] ?? baseColors[kLow];
+    const baseVal = normBaseColors[kLow] ?? baseColors[key];
     if (baseVal != null) {
       const baseHex = toHex6(baseVal);
       if (baseHex) {
@@ -112,13 +120,20 @@ export function instantRecolorSvg(baseSvg, colorScheme, baseColors = {}) {
     }
   }
 
-  if (hexMap.size === 0) return baseSvg;
+  if (hexMap.size === 0) return null;
 
-  return baseSvg.replace(/(fill|stroke|stop-color)="([^"]+)"/gi, (match, attr, color) => {
+  let replacedCount = 0;
+  const result = baseSvg.replace(/(fill|stroke|stop-color)="([^"]+)"/gi, (match, attr, color) => {
     const cleanColor = color.trim().toUpperCase();
     if (hexMap.has(cleanColor)) {
-      return `${attr}="${hexMap.get(cleanColor)}"`;
+      const target = hexMap.get(cleanColor);
+      if (cleanColor !== target) {
+        replacedCount++;
+      }
+      return `${attr}="${target}"`;
     }
     return match;
   });
+
+  return replacedCount > 0 ? result : null;
 }
