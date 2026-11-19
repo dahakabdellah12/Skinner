@@ -1,21 +1,22 @@
 {
-  "version": "4.0.0",
-  "name": "Skinner v4.0.0 — Multi-Slot Character Customization, High-Res Midpoint KO Effects & Authentic Game Catalog",
-  "tag_name": "v4.0.0",
+  "version": "4.0.1",
+  "name": "Skinner v4.0.1 — Sleek Studio UI, Authentic KO Effects, Instant Navigation & Polished Presets",
+  "tag_name": "v4.0.1",
   "release_date": "2026-11-19",
-  "installer_filename": "Skinner-Setup-4.0.0.exe",
-  "installer_size": 44793492,
-  "installer_sha256": "85c5fcda9d82950f78ae9267b7f176027b7ea466c7a25c9aa518ca7af880bda4",
-  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.0/Skinner-Setup-4.0.0.exe",
-  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.0/SHA256SUMS.txt",
-  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.0/SHA256SUMS.txt.sig",
-  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v4.0.0",
+  "installer_filename": "Skinner-Setup-4.0.1.exe",
+  "installer_size": 4242081,
+  "installer_sha256": "5657a4e16ea56d325c716d484bae2dfda481ecc0b69579304e2cf14dc155f266",
+  "download_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.1/Skinner-Setup-4.0.1.exe",
+  "manifest_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.1/SHA256SUMS.txt",
+  "signature_url": "https://github.com/dahakabdellah12/Skinner/releases/download/v4.0.1/SHA256SUMS.txt.sig",
+  "html_url": "https://github.com/dahakabdellah12/Skinner/releases/tag/v4.0.1",
   "changelog": [
-    "Multi-Slot Character Studio (Skin 1, Skin 2...): Create and switch between distinct modification setups per legend with persistent storage.",
-    "Crisp High-Res Midpoint KO Effect Previews: Renders exactly one peak action frame from the middle of the effect duration, eliminating distortion.",
-    "Missing & Ghost KO Effects Pruned: Dynamically filtered out non-existent effect symbols from the catalog.",
-    "Comprehensive Active Tab Preloading: Optimized loading screen to batch preload all active tabs for instant responsiveness.",
-    "100% Authentic Game Catalog Names: Replaced corrupted/internal identifiers with authentic in-game strings across all skins, weapons, and KO effects.",
-    "Cryptographic Verification: All release binaries signed with official Ed25519 digital key and protected by SHA-256 manifests."
+    "Sleek Settings-Style Preset Dropdown: Clean, compact slot selector replacing crowded button pills.",
+    "Dedicated In-App Slot Rename Modal: Elegant dark-glass dialog replacing system browser prompts.",
+    "Full-Fidelity Authentic KO Effects: Restored complete composite SVG rendering with crisp visuals for all 49 knockout effects.",
+    "Fixed Sidebar & Scrollbar Layout: Beautiful vertical dock sidebar on the left and smooth full-height scrolling.",
+    "Instant Zero-Lag Tab Switching: Keep-alive DOM preservation eliminates frame drops between Legends and KO Effects.",
+    "Smooth Window Dragging on Startup: Balanced asset batch chunking and UI thread yielding prevents window drag stutter.",
+    "Ed25519 Cryptographic Verification: All binaries signed and secured with SHA-256 integrity checks."
   ]
 }

@@ -1807,3 +1807,332 @@
   color: #fca5a5;
 }
 
+/* ==========================================================================
+   AUTHENTIC SIDEBAR DOCK NAVIGATION
+   ========================================================================== */
+.sidebar-container {
+  width: 210px;
+  min-width: 210px;
+  max-width: 210px;
+  background-color: #0c0d10;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 10px;
+  gap: 8px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: 100%;
+  user-select: none;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.sidebar-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f3f4f6;
+}
+
+.sidebar-item.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  font-weight: 600;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px 8px 8px 4px;
+}
+
+.sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.sidebar-item.active .sidebar-icon {
+  opacity: 1;
+  color: #60a5fa;
+}
+
+.sidebar-item-disabled {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(1);
+}
+
+.sidebar-item-label {
+  display: block;
+  line-height: 1.35;
+  white-space: pre-line;
+  flex: 1;
+}
+
+/* ==========================================================================
+   SLOT DROPDOWN (SETTINGS-STYLE MUKHTASARA)
+   ========================================================================== */
+.slot-select-dropdown {
+  position: relative;
+  min-width: 180px;
+  max-width: 260px;
+  user-select: none;
+}
+
+.slot-select-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 7px 12px;
+  background: #18191c;
+  color: var(--text-primary, #ffffff);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 10px;
+}
+
+.slot-select-button:hover,
+.slot-select-dropdown.open .slot-select-button {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  background: #1e2025;
+}
+
+.slot-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 230px;
+  background: #18191c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+  padding: 6px;
+  display: none;
+  z-index: 1050;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.slot-select-dropdown.open .slot-select-menu {
+  display: block;
+  animation: slotMenuFadeIn 0.15s ease-out;
+}
+
+.slot-option-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #d1d5db;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.slot-option-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.slot-option-item.selected {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.slot-option-check {
+  font-size: 13px;
+  font-weight: 700;
+  color: #60a5fa;
+  margin-left: 8px;
+}
+
+.slot-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slot-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.slot-action-danger {
+  color: #f87171;
+}
+
+.slot-action-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+/* ==========================================================================
+   IN-APP RENAME MODAL DIALOG
+   ========================================================================== */
+.rename-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: modalFadeIn 0.18s ease-out;
+}
+
+.rename-modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: #18191c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.rename-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rename-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rename-modal-close {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.rename-modal-close:hover {
+  color: #ffffff;
+}
+
+.rename-modal-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0f1013;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.rename-modal-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.rename-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.rename-btn-cancel {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #d1d5db;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rename-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.rename-btn-save {
+  padding: 8px 20px;
+  background: #3b82f6;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+}
+
+.rename-btn-save:hover {
+  background: #2563eb;
+}
+

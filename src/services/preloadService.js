@@ -209,7 +209,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
   /**
    * Process an array of items in batches via batchGetAssetSvgs
    */
-  const processBatchList = async (items, stage, chunkSize = 75, formatDesc) => {
+  const processBatchList = async (items, stage, chunkSize = 35, formatDesc) => {
     const stageTotal = items.length;
     let stageProcessed = 0;
 
@@ -229,6 +229,9 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
       stageProcessed += chunk.length;
       totalProcessed += chunk.length;
       emitProgress(stage, stageProcessed, stageTotal, desc);
+
+      // Micro-yield between batches to let Tao/Wry pump Windows drag & mouse events smoothly
+      await new Promise((resolve) => setTimeout(resolve, 16));
     }
   };
 
@@ -242,7 +245,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
   await processBatchList(
     resources.legendItems,
     PRELOAD_STAGES.LEGENDS,
-    50,
+    35,
     (proc, tot) =>
       isArabic
         ? `تجهيز بطاقات وأصول الأساطير (${proc}/${tot})`
@@ -259,7 +262,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
   await processBatchList(
     resources.costumeItems,
     PRELOAD_STAGES.COSTUMES,
-    65,
+    35,
     (proc, tot) =>
       isArabic
         ? `تجهيز ومعالجة أزياء الأساطير (${proc}/${tot})`
@@ -276,7 +279,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
   await processBatchList(
     resources.koItems,
     PRELOAD_STAGES.KO_EFFECTS,
-    45,
+    25,
     (proc, tot) =>
       isArabic
         ? `معالجة وتخزين تأثيرات الإطاحة (${proc}/${tot})`
@@ -294,7 +297,7 @@ export async function executeFullAppPreload({ catalog, isArabic, onProgress }) {
   await processBatchList(
     resources.colorItems,
     PRELOAD_STAGES.COLORS,
-    65,
+    40,
     (proc, tot) =>
       isArabic
         ? `تجهيز أيقونات الصبغات وشفرات الألوان (${proc}/${tot})`

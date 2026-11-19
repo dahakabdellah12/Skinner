@@ -528,10 +528,25 @@ export default function App() {
           activeTab={activeLegend ? 'legends' : activeTab}
           onSelectTab={(tabId) => {
             if (tabId === 'weapons') return;
+            if (pageContainerRef.current) {
+              if (!activeLegend && activeTab === 'legends') {
+                rosterScrollPos.current = pageContainerRef.current.scrollTop;
+              }
+            }
             if (activeLegend) {
               setActiveLegend(null);
             }
             setActiveTab(tabId);
+            if (tabId === 'legends' && pageContainerRef.current) {
+              const saved = rosterScrollPos.current;
+              requestAnimationFrame(() => {
+                if (pageContainerRef.current) {
+                  pageContainerRef.current.scrollTop = saved;
+                }
+              });
+            } else if (pageContainerRef.current) {
+              pageContainerRef.current.scrollTop = 0;
+            }
           }}
           catalog={catalog}
           disabled={loading}
@@ -624,36 +639,46 @@ export default function App() {
                 isBusy={isBusy}
               />
             </ErrorBoundary>
-          ) : activeTab === 'weapons' ? (
-            <WeaponsPage
-              catalog={catalog}
-              systemInfo={systemInfo}
-              showToast={showToast}
-              isBusy={isBusy}
-              onApplyModification={handleApplyModification}
-              onRestartGame={handleRestartGame}
-            />
-          ) : activeTab === 'ko_effects' ? (
-            <KoEffectsPage
-              catalog={catalog}
-              systemInfo={systemInfo}
-              showToast={showToast}
-              isBusy={isBusy}
-              onApplyModification={handleApplyModification}
-              onRestartGame={handleRestartGame}
-              onLaunchGame={handleLaunchGame}
-            />
           ) : (
-            <LegendsPage
-              catalog={catalog}
-              systemInfo={systemInfo}
-              onSelectLegend={handleSelectLegend}
-              onSelectGamePath={handleSelectGamePath}
-              search={rosterSearch}
-              setSearch={setRosterSearch}
-              weaponFilter={rosterWeaponFilter}
-              setWeaponFilter={setRosterWeaponFilter}
-            />
+            <>
+              {/* Keep-Alive Mounted Legends Page (Zero Tab Switch Delay) */}
+              <div style={{ display: activeTab === 'legends' ? 'block' : 'none', minHeight: '100%' }}>
+                <LegendsPage
+                  catalog={catalog}
+                  systemInfo={systemInfo}
+                  onSelectLegend={handleSelectLegend}
+                  onSelectGamePath={handleSelectGamePath}
+                  search={rosterSearch}
+                  setSearch={setRosterSearch}
+                  weaponFilter={rosterWeaponFilter}
+                  setWeaponFilter={setRosterWeaponFilter}
+                />
+              </div>
+
+              {/* Keep-Alive Mounted KO Effects Page (Zero Tab Switch Delay) */}
+              <div style={{ display: activeTab === 'ko_effects' ? 'block' : 'none', minHeight: '100%' }}>
+                <KoEffectsPage
+                  catalog={catalog}
+                  systemInfo={systemInfo}
+                  showToast={showToast}
+                  isBusy={isBusy}
+                  onApplyModification={handleApplyModification}
+                  onRestartGame={handleRestartGame}
+                  onLaunchGame={handleLaunchGame}
+                />
+              </div>
+
+              {activeTab === 'weapons' && (
+                <WeaponsPage
+                  catalog={catalog}
+                  systemInfo={systemInfo}
+                  showToast={showToast}
+                  isBusy={isBusy}
+                  onApplyModification={handleApplyModification}
+                  onRestartGame={handleRestartGame}
+                />
+              )}
+            </>
           )}
         </div>
         </main>
