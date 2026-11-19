@@ -55,9 +55,7 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(55, 65, 81, 0.28), transparent 70%),
-              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(31, 41, 55, 0.22), transparent 60%),
-              #121316;
+  background-color: #121316;
 }
 
 .page-container {

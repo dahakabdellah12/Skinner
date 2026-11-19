@@ -448,7 +448,7 @@ export default function SettingsModal({
                 {!confirmResetStock ? (
                   <div className="card-group" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {/* Item 1: Auto-Repair & Diagnostic */}
-                    <div className="setting" style={{ alignItems: 'flex-start' }}>
+                    <div className="setting" style={{ alignItems: 'center' }}>
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Wrench size={16} style={{ color: 'var(--accent)' }} />
@@ -466,14 +466,14 @@ export default function SettingsModal({
                         className="btn btn-primary"
                         onClick={handleRunDiagnosticRepair}
                         disabled={repairLoading || isBusy}
-                        style={{ whiteSpace: 'nowrap', fontWeight: 700, minWidth: '130px', padding: '9px 18px', marginTop: '2px' }}
+                        style={{ whiteSpace: 'nowrap', fontWeight: 700, minWidth: '130px', padding: '9px 18px' }}
                       >
                         {repairLoading ? (isArabic ? 'جاري الفحص...' : 'Diagnosing...') : (isArabic ? 'فحص وإصلاح الآن' : 'Run Auto-Repair')}
                       </button>
                     </div>
 
                     {/* Item 2: Clear Visual Cache */}
-                    <div className="setting" style={{ alignItems: 'flex-start' }}>
+                    <div className="setting" style={{ alignItems: 'center' }}>
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Sparkles size={16} style={{ color: 'var(--accent)' }} />
@@ -491,14 +491,14 @@ export default function SettingsModal({
                         className="btn btn-secondary"
                         onClick={handleClearCache}
                         disabled={cacheLoading || isBusy}
-                        style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px', marginTop: '2px' }}
+                        style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px' }}
                       >
                         {cacheLoading ? (isArabic ? 'جاري التفريغ...' : 'Clearing...') : (isArabic ? 'تفريغ الكاش' : 'Clear Cache')}
                       </button>
                     </div>
 
                     {/* Item 3: Restore Original Game Files */}
-                    <div className="setting" style={{ alignItems: 'flex-start' }}>
+                    <div className="setting" style={{ alignItems: 'center' }}>
                       <div className="setting-info" style={{ flex: 1 }}>
                         <div className="setting-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <RotateCcw size={16} style={{ color: 'var(--accent)' }} />
@@ -516,7 +516,7 @@ export default function SettingsModal({
                         className="btn btn-secondary"
                         onClick={() => setConfirmResetStock(true)}
                         disabled={isBusy || repairLoading}
-                        style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px', marginTop: '2px' }}
+                        style={{ whiteSpace: 'nowrap', fontWeight: 600, minWidth: '130px', padding: '9px 18px' }}
                       >
                         {isArabic ? 'إعادة كل شيء للأصل' : 'Restore Stock'}
                       </button>

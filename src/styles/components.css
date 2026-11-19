@@ -288,14 +288,14 @@
   background: var(--button-primary, #3B82F6) !important;
   border: 1px solid var(--button-primary, #3B82F6) !important;
   font-weight: 700 !important;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4) !important;
+  box-shadow: none !important;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--button-primary-hover, #2563EB) !important;
   border-color: var(--button-primary-hover, #2563EB) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5) !important;
+  box-shadow: none !important;
 }
 
 .btn-secondary {
@@ -349,7 +349,7 @@
   transform: translateY(-4px);
   background: rgba(36, 39, 48, 0.82);
   border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
 }
 
 .card-image-wrap {
@@ -1465,7 +1465,7 @@
 .card-picker-item:hover {
   transform: translateY(-3px);
   border-color: rgba(255, 255, 255, 0.45);
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6);
 }
 
 .card-picker-item.active {
@@ -1836,48 +1836,34 @@
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: 12px;
   width: 100%;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: transparent;
+  border-left: 3px solid transparent;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  background: transparent !important;
   color: #9ca3af;
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: all 0.18s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
   outline: none;
+  border-radius: 0;
 }
 
 .sidebar-item:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent !important;
   color: #f3f4f6;
 }
 
 .sidebar-item.active {
-  background: rgba(59, 130, 246, 0.12);
-  color: #60a5fa;
+  background: transparent !important;
+  color: #ffffff;
   font-weight: 600;
   border-left: 3px solid #3b82f6;
-  border-radius: 4px 8px 8px 4px;
-}
-
-.sidebar-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  color: inherit;
-  opacity: 0.85;
-}
-
-.sidebar-item.active .sidebar-icon {
-  opacity: 1;
-  color: #60a5fa;
+  border-radius: 0;
 }
 
 .sidebar-item-disabled {
@@ -2098,12 +2084,12 @@
 .rename-modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 16px;
+  margin-top: 10px;
 }
 
 .rename-btn-cancel {
-  padding: 8px 16px;
+  padding: 8px 18px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -2120,7 +2106,7 @@
 }
 
 .rename-btn-save {
-  padding: 8px 20px;
+  padding: 8px 22px;
   background: #3b82f6;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -2129,10 +2115,33 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+  box-shadow: none !important;
 }
 
 .rename-btn-save:hover {
   background: #2563eb;
+}
+
+/* Settings Modal Close Button: Pure clean icon with no perimeter or box */
+.settings-close-btn {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #9ca3af !important;
+  padding: 6px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.settings-close-btn:hover {
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  opacity: 1;
 }
 

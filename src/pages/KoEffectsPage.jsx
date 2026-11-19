@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import SearchBox from '../components/SearchBox';
-import CustomDropdown from '../components/CustomDropdown';
 import AssetImage from '../components/AssetImage';
 import KoEffectCustomizer from '../components/KoEffectCustomizer';
 
@@ -17,9 +16,8 @@ export default function KoEffectsPage({
 }) {
   const { isArabic } = useLanguage();
 
-  // Search & Category Filter state
+  // Search state
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
 
   // Selected KO Effect for entering the studio
   const [activeKoEffect, setActiveKoEffect] = useState(null);
@@ -28,46 +26,15 @@ export default function KoEffectsPage({
     return catalog?.koEffects || [];
   }, [catalog?.koEffects]);
 
-  // Category filter options
-  const categoryOptions = useMemo(() => {
-    const rawCategories = new Set();
-    for (const k of allKoEffects) {
-      if (k.category) {
-        rawCategories.add(k.category);
-      }
-    }
-
-    const firstOpt = { value: 'All', label: isArabic ? 'جميع التأثيرات (الكل)' : 'All KO Effects' };
-    const rest = Array.from(rawCategories).map((cat) => {
-      let label = cat;
-      if (isArabic) {
-        if (cat === 'Default') label = 'الافتراضي';
-        else if (cat === 'Crossover') label = 'كروس أوفر';
-        else if (cat === 'Battle Pass') label = 'باتل باس';
-        else if (cat === 'Seasonal') label = 'مواسم وفعاليات';
-        else if (cat === 'Store') label = 'المتجر والتصاميم';
-      }
-      return { value: cat, label };
-    });
-
-    return [firstOpt, ...rest];
-  }, [allKoEffects, isArabic]);
-
   // Filtered KO Effects for the Roster Gallery
   const filteredKoEffects = useMemo(() => {
     const q = search ? search.trim().toLowerCase() : '';
-    const isAll = categoryFilter === 'All' || !categoryFilter;
-    const normFilter = categoryFilter.toLowerCase();
-
+    if (!q) return allKoEffects;
     return allKoEffects.filter((k) => {
-      if (!isAll && (k.category || '').toLowerCase() !== normFilter) {
-        return false;
-      }
-      if (!q) return true;
       const corpus = `${k.displayName || ''} ${k.koEffectName || ''} ${k.animClass || ''} ${k.category || ''}`.toLowerCase();
       return corpus.includes(q);
     });
-  }, [allKoEffects, search, categoryFilter]);
+  }, [allKoEffects, search]);
 
   // Handle entering customizer
   const handleSelectEffect = useCallback((ko) => {
@@ -107,16 +74,6 @@ export default function KoEffectsPage({
             onChange={setSearch}
             placeholder={isArabic ? 'بحث سريع عن تأثير إطاحة (Ctrl + K)...' : 'Quick search KO effects (Ctrl + K)...'}
           />
-
-          <div style={{ width: '200px' }}>
-            <CustomDropdown
-              options={categoryOptions}
-              value={categoryFilter}
-              onChange={setCategoryFilter}
-              placeholder={isArabic ? 'التصنيف' : 'Category'}
-              showSearch={false}
-            />
-          </div>
         </div>
 
         <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>

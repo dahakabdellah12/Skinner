@@ -471,25 +471,30 @@ export default function LegendCustomizer({
   const [compatibility, setCompatibility] = useState(null);
   const [activePicker, setActivePicker] = useState(null);
 
-  // Slot Dropdown & In-App Rename Modal state
+  // Slot Dropdown, Three-Dots Menu & In-App Rename Modal state
+  const [isSlotDropdownOpen, setIsSlotDropdownOpen] = useState(false);
   const [isSlotMenuOpen, setIsSlotMenuOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renameInputValue, setRenameInputValue] = useState('');
+  const slotDropdownRef = useRef(null);
   const slotMenuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (slotDropdownRef.current && !slotDropdownRef.current.contains(e.target)) {
+        setIsSlotDropdownOpen(false);
+      }
       if (slotMenuRef.current && !slotMenuRef.current.contains(e.target)) {
         setIsSlotMenuOpen(false);
       }
     };
-    if (isSlotMenuOpen) {
+    if (isSlotDropdownOpen || isSlotMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSlotMenuOpen]);
+  }, [isSlotDropdownOpen, isSlotMenuOpen]);
 
   // Handle switching slots
   const handleSelectSlot = useCallback((index) => {
@@ -1150,23 +1155,23 @@ export default function LegendCustomizer({
           </div>
         </div>
 
-        {/* Right side: Sleek Skin Preset Dropdown (مستدلة نظيفة كالإعدادات) */}
-        <div className="slot-switcher-bar">
+        {/* Right side: Sleek Skin Preset Dropdown + Three-Dots Options Menu */}
+        <div className="slot-switcher-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Preset Selector Dropdown */}
           <div
-            className={`slot-select-dropdown ${isSlotMenuOpen ? 'open' : ''}`}
-            ref={slotMenuRef}
+            className={`slot-select-dropdown ${isSlotDropdownOpen ? 'open' : ''}`}
+            ref={slotDropdownRef}
           >
             <button
               type="button"
               className="slot-select-button"
-              onClick={() => setIsSlotMenuOpen(!isSlotMenuOpen)}
+              onClick={() => {
+                setIsSlotDropdownOpen(!isSlotDropdownOpen);
+                setIsSlotMenuOpen(false);
+              }}
               title={isArabic ? 'سكنات وتخصيصات الشخصية' : 'Skin Presets'}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#60a5fa' }}>
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {slots[activeSlotIndex]?.name || (isArabic ? `سكن ${activeSlotIndex + 1}` : `Skin ${activeSlotIndex + 1}`)}
                 </span>
@@ -1190,7 +1195,7 @@ export default function LegendCustomizer({
                     className={`slot-option-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => {
                       handleSelectSlot(idx);
-                      setIsSlotMenuOpen(false);
+                      setIsSlotDropdownOpen(false);
                     }}
                   >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1208,7 +1213,7 @@ export default function LegendCustomizer({
                 type="button"
                 className="slot-action-btn"
                 onClick={() => {
-                  setIsSlotMenuOpen(false);
+                  setIsSlotDropdownOpen(false);
                   handleAddSlot();
                 }}
               >
@@ -1217,76 +1222,129 @@ export default function LegendCustomizer({
                 </svg>
                 <span>{isArabic ? 'إضافة سكن جديد' : 'New Skin Preset'}</span>
               </button>
-
-              {/* Action: Rename current slot */}
-              <button
-                type="button"
-                className="slot-action-btn"
-                onClick={() => {
-                  setIsSlotMenuOpen(false);
-                  setRenameInputValue(slots[activeSlotIndex]?.name || (isArabic ? `سكن ${activeSlotIndex + 1}` : `Skin ${activeSlotIndex + 1}`));
-                  setIsRenameModalOpen(true);
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                <span>{isArabic ? 'إعادة تسمية الخانة' : 'Rename Slot'}</span>
-              </button>
-
-              {/* Action: Duplicate current slot */}
-              <button
-                type="button"
-                className="slot-action-btn"
-                onClick={() => {
-                  setIsSlotMenuOpen(false);
-                  handleDuplicateSlot();
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-                <span>{isArabic ? 'نسخ هذا التعديل (Duplicate)' : 'Duplicate Skin Slot'}</span>
-              </button>
-
-              {/* Action: Reset to defaults */}
-              <button
-                type="button"
-                className="slot-action-btn"
-                onClick={() => {
-                  setIsSlotMenuOpen(false);
-                  handleResetCurrentSlot();
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                </svg>
-                <span>{isArabic ? 'إعادة تعيين للافتراضي' : 'Reset to Defaults'}</span>
-              </button>
-
-              {/* Action: Delete slot (if more than 1) */}
-              {slots.length > 1 && (
-                <>
-                  <div className="slot-menu-divider" />
-                  <button
-                    type="button"
-                    className="slot-action-btn slot-action-danger"
-                    onClick={() => {
-                      setIsSlotMenuOpen(false);
-                      handleDeleteSlot(activeSlotIndex);
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                    <span>{isArabic ? 'حذف هذه الخانة' : 'Delete Slot'}</span>
-                  </button>
-                </>
-              )}
             </div>
+          </div>
+
+          {/* Three-dots menu button for active slot options */}
+          <div className="slot-menu-wrapper" ref={slotMenuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="slot-menu-btn"
+              onClick={() => {
+                setIsSlotMenuOpen(!isSlotMenuOpen);
+                setIsSlotDropdownOpen(false);
+              }}
+              title={isArabic ? 'خيارات الخانة الحالية' : 'Slot Options'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '34px',
+                height: '34px',
+                background: '#18191c',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                color: '#9ca3af',
+                cursor: 'pointer'
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+
+            {isSlotMenuOpen && (
+              <div
+                className="slot-context-menu"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  minWidth: '220px',
+                  background: '#18191c',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '10px',
+                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7)',
+                  padding: '6px',
+                  zIndex: 1060
+                }}
+              >
+                <div className="slot-menu-header">
+                  <span>{slots[activeSlotIndex]?.name || (isArabic ? `سكن ${activeSlotIndex + 1}` : `Skin ${activeSlotIndex + 1}`)}</span>
+                </div>
+
+                {/* Rename */}
+                <button
+                  type="button"
+                  className="slot-action-btn"
+                  onClick={() => {
+                    setIsSlotMenuOpen(false);
+                    setRenameInputValue(slots[activeSlotIndex]?.name || (isArabic ? `سكن ${activeSlotIndex + 1}` : `Skin ${activeSlotIndex + 1}`));
+                    setIsRenameModalOpen(true);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                  <span>{isArabic ? 'إعادة تسمية الخانة' : 'Rename Slot'}</span>
+                </button>
+
+                {/* Duplicate */}
+                <button
+                  type="button"
+                  className="slot-action-btn"
+                  onClick={() => {
+                    setIsSlotMenuOpen(false);
+                    handleDuplicateSlot();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <span>{isArabic ? 'نسخ هذا التعديل (Duplicate)' : 'Duplicate Skin Slot'}</span>
+                </button>
+
+                {/* Reset Defaults */}
+                <button
+                  type="button"
+                  className="slot-action-btn"
+                  onClick={() => {
+                    setIsSlotMenuOpen(false);
+                    handleResetCurrentSlot();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  <span>{isArabic ? 'إعادة تعيين الخانة للافتراضي' : 'Reset Slot Defaults'}</span>
+                </button>
+
+                {/* Delete (if slots > 1) */}
+                {slots.length > 1 && (
+                  <>
+                    <div className="slot-menu-divider" />
+                    <button
+                      type="button"
+                      className="slot-action-btn slot-action-danger"
+                      onClick={() => {
+                        setIsSlotMenuOpen(false);
+                        handleDeleteSlot(activeSlotIndex);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      <span>{isArabic ? 'حذف هذه الخانة' : 'Delete Slot'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1831,19 +1889,8 @@ export default function LegendCustomizer({
           >
             <div className="rename-modal-header">
               <div className="rename-modal-title">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#60a5fa' }}>
-                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
                 <span>{isArabic ? 'إعادة تسمية الخانة' : 'Rename Skin Slot'}</span>
               </div>
-              <button
-                type="button"
-                className="rename-modal-close"
-                onClick={() => setIsRenameModalOpen(false)}
-                title={isArabic ? 'إغلاق' : 'Close'}
-              >
-                ✕
-              </button>
             </div>
 
             <form
