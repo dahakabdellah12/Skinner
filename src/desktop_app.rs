@@ -25,6 +25,8 @@ use wry::{
 #[folder = "frontend_dist/"]
 pub struct FrontendAssets; // Embedded complete legend & cosmetic catalog production UI
 
+pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Debug)]
 pub enum UserEvent {
     EvalScript(String),
@@ -32,6 +34,46 @@ pub enum UserEvent {
     Maximize,
     Close,
     Drag,
+}
+
+type IpcTask = Box<dyn FnOnce() + Send + 'static>;
+
+struct IpcThreadPool {
+    sender: std::sync::mpsc::Sender<IpcTask>,
+}
+
+impl IpcThreadPool {
+    fn new(size: usize) -> Self {
+        let (sender, receiver) = std::sync::mpsc::channel::<IpcTask>();
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        for i in 0..size {
+            let rx = Arc::clone(&receiver);
+            let _ = std::thread::Builder::new()
+                .name(format!("skinner-ipc-{}", i))
+                .spawn(move || {
+                    loop {
+                        let task = {
+                            let lock = rx.lock().unwrap();
+                            lock.recv()
+                        };
+                        match task {
+                            Ok(t) => t(),
+                            Err(_) => break,
+                        }
+                    }
+                });
+        }
+
+        Self { sender }
+    }
+
+    fn execute<F>(&self, f: F)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        let _ = self.sender.send(Box::new(f));
+    }
 }
 
 pub struct RendererClient {
@@ -58,26 +100,35 @@ impl RendererClient {
     }
 
     fn find_renderer_exe() -> Option<PathBuf> {
-        let mut candidates = vec![
-            PathBuf::from("bin/renderer/test_renderer.exe"),
-            PathBuf::from("brawlcraft-slint/bin/renderer/test_renderer.exe"),
-        ];
+        static CACHED_EXE: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
+        CACHED_EXE.get_or_init(|| {
+            let mut candidates = vec![
+                PathBuf::from("bin/renderer/test_renderer.exe"),
+                PathBuf::from("bin/renderer/win-x64/test_renderer.exe"),
+                PathBuf::from("brawlcraft-slint/bin/renderer/test_renderer.exe"),
+                PathBuf::from("brawlcraft-slint/bin/renderer/win-x64/test_renderer.exe"),
+            ];
 
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(parent) = exe.parent() {
-                candidates.push(parent.join("bin/renderer/test_renderer.exe"));
-                candidates.push(parent.join("test_renderer.exe"));
-                if let Some(grandparent) = parent.parent() {
-                    candidates.push(grandparent.join("bin/renderer/test_renderer.exe"));
-                    if let Some(great) = grandparent.parent() {
-                        candidates.push(great.join("bin/renderer/test_renderer.exe"));
-                        candidates.push(great.join("brawlcraft-slint/bin/renderer/test_renderer.exe"));
+            if let Ok(exe) = std::env::current_exe() {
+                if let Some(parent) = exe.parent() {
+                    candidates.push(parent.join("bin/renderer/test_renderer.exe"));
+                    candidates.push(parent.join("bin/renderer/win-x64/test_renderer.exe"));
+                    candidates.push(parent.join("test_renderer.exe"));
+                    if let Some(grandparent) = parent.parent() {
+                        candidates.push(grandparent.join("bin/renderer/test_renderer.exe"));
+                        candidates.push(grandparent.join("bin/renderer/win-x64/test_renderer.exe"));
+                        if let Some(great) = grandparent.parent() {
+                            candidates.push(great.join("bin/renderer/test_renderer.exe"));
+                            candidates.push(great.join("bin/renderer/win-x64/test_renderer.exe"));
+                            candidates.push(great.join("brawlcraft-slint/bin/renderer/test_renderer.exe"));
+                            candidates.push(great.join("brawlcraft-slint/bin/renderer/win-x64/test_renderer.exe"));
+                        }
                     }
                 }
             }
-        }
 
-        candidates.into_iter().find(|p| p.is_file())
+            candidates.into_iter().find(|p| p.is_file())
+        }).clone()
     }
 
     pub fn ensure_started(&mut self) -> bool {
@@ -147,9 +198,13 @@ impl RendererClient {
 
             let mut resp_line = String::new();
             if reader.read_line(&mut resp_line).is_ok() && !resp_line.is_empty() {
-                if let Ok(resp_val) = serde_json::from_str::<serde_json::Value>(&resp_line) {
-                    if let Some(svg) = resp_val.get("svg").and_then(|s| s.as_str()) {
-                        return Some(svg.to_string());
+                #[derive(serde::Deserialize)]
+                struct FastRenderResp {
+                    svg: Option<String>,
+                }
+                if let Ok(resp_val) = serde_json::from_str::<FastRenderResp>(&resp_line) {
+                    if let Some(svg) = resp_val.svg {
+                        return Some(svg);
                     }
                 }
                 return None;
@@ -207,10 +262,14 @@ $d.Filter = 'Brawlhalla.exe|Brawlhalla.exe|All Executables (*.exe)|*.exe'
 $d.Title = 'Select Brawlhalla Executable'
 if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.FileName }
 "#;
-    let output = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", script])
-        .output()
-        .ok()?;
+    let mut cmd = std::process::Command::new("powershell");
+    cmd.args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", script]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    let output = cmd.output().ok()?;
     let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if text.is_empty() {
         None
@@ -228,10 +287,14 @@ $d.Title = 'Select Developer Log Destination'
 $d.FileName = 'skinner_dev_log.txt'
 if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.FileName }
 "#;
-    let output = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", script])
-        .output()
-        .ok()?;
+    let mut cmd = std::process::Command::new("powershell");
+    cmd.args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", script]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    let output = cmd.output().ok()?;
     let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if text.is_empty() {
         None
@@ -240,13 +303,16 @@ if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output 
     }
 }
 
-fn get_svg_cache_dir() -> PathBuf {
-    let cache_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join("cache").join("svg")))
-        .unwrap_or_else(|| PathBuf::from("cache/svg"));
-    let _ = std::fs::create_dir_all(&cache_dir);
-    cache_dir
+fn get_svg_cache_dir() -> &'static Path {
+    static CACHE_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    CACHE_DIR.get_or_init(|| {
+        let dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("cache").join("svg")))
+            .unwrap_or_else(|| PathBuf::from("cache/svg"));
+        let _ = std::fs::create_dir_all(&dir);
+        dir
+    })
 }
 
 pub fn log_startup(stage: u32, name: &str, detail: Option<&str>) {
@@ -292,20 +358,28 @@ pub fn show_native_error_dialog(title: &str, message: &str) {
         message.replace('\'', "''"),
         title.replace('\'', "''")
     );
-    let _ = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", &script])
-        .output();
+    let mut cmd = std::process::Command::new("powershell");
+    cmd.args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    let _ = cmd.output();
 }
 
 static SVG_MEM_CACHE: std::sync::OnceLock<Mutex<std::collections::HashMap<String, String>>> = std::sync::OnceLock::new();
 
 fn get_svg_mem_cache() -> &'static Mutex<std::collections::HashMap<String, String>> {
-    SVG_MEM_CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::with_capacity(512)))
+    SVG_MEM_CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::with_capacity(4096)))
 }
 
 pub fn get_cached_svg_fast(key: &str) -> Option<String> {
     if let Ok(cache) = get_svg_mem_cache().lock() {
         if let Some(svg) = cache.get(key) {
+            if svg == "__FAILED__" {
+                return None;
+            }
             return Some(svg.clone());
         }
     }
@@ -314,10 +388,16 @@ pub fn get_cached_svg_fast(key: &str) -> Option<String> {
     if disk_path.is_file() {
         if let Ok(svg) = std::fs::read_to_string(&disk_path) {
             let trimmed = svg.trim();
+            if trimmed == "__FAILED__" {
+                if let Ok(mut cache) = get_svg_mem_cache().lock() {
+                    cache.insert(key.to_string(), "__FAILED__".to_string());
+                }
+                return None;
+            }
             if !trimmed.is_empty() {
                 let res = trimmed.to_string();
                 if let Ok(mut cache) = get_svg_mem_cache().lock() {
-                    if cache.len() >= 600 {
+                    if cache.len() >= 6000 {
                         cache.clear();
                     }
                     cache.insert(key.to_string(), res.clone());
@@ -334,7 +414,7 @@ pub fn put_cached_svg_fast(key: &str, svg: &str) {
     let disk_path = cache_dir.join(format!("{}.svg", sanitize_cache_key(key)));
     let _ = std::fs::write(&disk_path, svg);
     if let Ok(mut cache) = get_svg_mem_cache().lock() {
-        if cache.len() >= 600 {
+        if cache.len() >= 6000 {
             cache.clear();
         }
         cache.insert(key.to_string(), svg.to_string());
@@ -356,6 +436,21 @@ fn sanitize_cache_key(key: &str) -> String {
 pub fn prepare_render_request(req: &mut serde_json::Value, state: &SharedAppData) {
     if let Some(obj) = req.as_object_mut() {
         obj.insert("gamePath".into(), serde_json::json!(state.installation.game_path));
+
+        if let Some(t) = obj.get("type").and_then(|v| v.as_str()) {
+            if t.eq_ignore_ascii_case("koEffect") || t.eq_ignore_ascii_case("ko") {
+                if obj.get("animFile").is_none() {
+                    if let Some(sf) = obj.get("swfFile").cloned() {
+                        obj.insert("animFile".into(), sf);
+                    }
+                }
+                if obj.get("animClass").is_none() {
+                    if let Some(sym) = obj.get("symbol").cloned() {
+                        obj.insert("animClass".into(), sym);
+                    }
+                }
+            }
+        }
 
         let is_hammer_stub = obj.get("baseWeapon").and_then(|v| v.as_str()).map(|s| s.eq_ignore_ascii_case("Hammer")).unwrap_or(false)
             && (obj.get("symbol").and_then(|v| v.as_str()).map(|s| s.eq_ignore_ascii_case("Stub")).unwrap_or(false)
@@ -533,7 +628,7 @@ fn build_system_info(
         "isValid": inst.is_valid,
         "isGameRunning": GameLauncher::is_game_running(),
         "activeModCount": bm.count_modified_files(),
-        "appVersion": "3.3.5",
+        "appVersion": APP_VERSION,
         "totalLegends": cat.legends.len(),
         "totalCostumes": cat.costumes.len(),
         "totalWeaponSkins": cat.weapon_skins.len(),
@@ -557,7 +652,7 @@ fn build_catalog_response(cat: &Catalog) -> serde_json::Value {
         "weaponSkins": cat.weapon_skins,
         "colorSchemes": cat.color_schemes,
         "weaponTypes": weapon_types_list,
-        "koEffects": [],
+        "koEffects": cat.ko_effects,
         "sidekicks": [],
         "podiums": [],
         "trailEffects": [],
@@ -565,7 +660,30 @@ fn build_catalog_response(cat: &Catalog) -> serde_json::Value {
     })
 }
 
+static CATALOG_JSON_CACHE: std::sync::OnceLock<Mutex<Option<serde_json::Value>>> = std::sync::OnceLock::new();
 
+fn get_catalog_json_cache() -> &'static Mutex<Option<serde_json::Value>> {
+    CATALOG_JSON_CACHE.get_or_init(|| Mutex::new(None))
+}
+
+pub fn get_cached_catalog_response(cat: &Catalog) -> serde_json::Value {
+    let cache = get_catalog_json_cache();
+    if let Ok(mut lock) = cache.lock() {
+        if let Some(ref val) = *lock {
+            return val.clone();
+        }
+        let val = build_catalog_response(cat);
+        *lock = Some(val.clone());
+        return val;
+    }
+    build_catalog_response(cat)
+}
+
+pub fn invalidate_catalog_json_cache() {
+    if let Ok(mut lock) = get_catalog_json_cache().lock() {
+        *lock = None;
+    }
+}
 
 fn handle_action(
     state: &mut SharedAppData,
@@ -585,7 +703,7 @@ fn handle_action(
                 &state.backup_manager,
             ))
         }
-        "getCatalog" => Ok(build_catalog_response(&state.catalog)),
+        "getCatalog" => Ok(get_cached_catalog_response(&state.catalog)),
         "validateModification" => {
             let req: ModificationRequest =
                 serde_json::from_value(payload).map_err(|e| e.to_string())?;
@@ -665,6 +783,15 @@ fn handle_action(
                 }
             }
         }
+        "restoreLegend" => {
+            let legend_name = payload
+                .get("legendName")
+                .and_then(|v| v.as_str())
+                .or_else(|| payload.as_str())
+                .unwrap_or("");
+            let restored = state.backup_manager.restore_legend(legend_name, &state.catalog).unwrap_or(0);
+            Ok(serde_json::json!(restored))
+        }
         "restoreCostume" => {
             let swf_file = payload
                 .get("swfFile")
@@ -675,6 +802,43 @@ fn handle_action(
                 let _ = state.backup_manager.restore_file("Gfx_Hands.swf");
             }
             Ok(serde_json::json!(restored))
+        }
+        "restoreKoEffects" => {
+            let mut count = 0;
+            if state.backup_manager.is_file_modified("SFX_KO.swf") {
+                if state.backup_manager.restore_file("SFX_KO.swf").unwrap_or(false) {
+                    count += 1;
+                }
+            }
+            if state.backup_manager.is_file_modified("SFX_KO2.swf") {
+                if state.backup_manager.restore_file("SFX_KO2.swf").unwrap_or(false) {
+                    count += 1;
+                }
+            }
+            if state.backup_manager.is_file_modified("audio/pc/UI.bnk") {
+                if state.backup_manager.restore_file("audio/pc/UI.bnk").unwrap_or(false) {
+                    count += 1;
+                }
+            }
+            Ok(serde_json::json!(count))
+        }
+        "restoreKoEffect" => {
+            let swf_file = payload
+                .get("swfFile")
+                .and_then(|v| v.as_str())
+                .unwrap_or("SFX_KO.swf");
+            let mut count = 0;
+            if state.backup_manager.is_file_modified(swf_file) {
+                if state.backup_manager.restore_file(swf_file).unwrap_or(false) {
+                    count += 1;
+                }
+            }
+            if state.backup_manager.is_file_modified("audio/pc/UI.bnk") {
+                if state.backup_manager.restore_file("audio/pc/UI.bnk").unwrap_or(false) {
+                    count += 1;
+                }
+            }
+            Ok(serde_json::json!(count))
         }
         "restoreAll" => {
             let count = state.backup_manager.restore_all().unwrap_or(0);
@@ -829,30 +993,28 @@ fn handle_action(
             Ok(serde_json::Value::Null)
         }
         "batchGetAssetSvgs" => {
-            let items = payload.get("items")
-                .and_then(|v| v.as_array())
-                .cloned()
-                .unwrap_or_default();
+            let items = payload.get("items").and_then(|v| v.as_array());
 
             let mut results = serde_json::Map::new();
             let mut to_render = Vec::new();
 
-            for item in items {
-                let cache_key = item.get("cacheKey")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                if cache_key.is_empty() {
-                    continue;
-                }
+            if let Some(items) = items {
+                for item in items {
+                    let cache_key = item.get("cacheKey")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    if cache_key.is_empty() {
+                        continue;
+                    }
 
-                if let Some(svg) = get_cached_svg_fast(&cache_key) {
-                    results.insert(cache_key, serde_json::json!(svg));
-                    continue;
-                }
+                    if let Some(svg) = get_cached_svg_fast(cache_key) {
+                        results.insert(cache_key.to_string(), serde_json::json!(svg));
+                        continue;
+                    }
 
-                if let Some(query) = item.get("queryParams").cloned() {
-                    to_render.push((cache_key, query));
+                    if let Some(query) = item.get("queryParams").cloned() {
+                        to_render.push((cache_key.to_string(), query));
+                    }
                 }
             }
 
@@ -861,16 +1023,38 @@ fn handle_action(
                     for (cache_key, mut req) in to_render {
                         prepare_render_request(&mut req, state);
                         if let Some(svg) = client.render(&req) {
-                            if !svg.trim().is_empty() {
-                                put_cached_svg_fast(&cache_key, &svg);
-                                results.insert(cache_key, serde_json::json!(svg));
+                            let trimmed = svg.trim();
+                            if !trimmed.is_empty() {
+                                put_cached_svg_fast(&cache_key, trimmed);
+                                results.insert(cache_key, serde_json::json!(trimmed));
+                            } else {
+                                put_cached_svg_fast(&cache_key, "__FAILED__");
                             }
+                        } else {
+                            put_cached_svg_fast(&cache_key, "__FAILED__");
                         }
                     }
                 }
             }
 
             Ok(serde_json::Value::Object(results))
+        }
+        "getCacheStats" => {
+            let mem_count = if let Ok(cache) = get_svg_mem_cache().lock() {
+                cache.len()
+            } else {
+                0
+            };
+            let disk_count = if let Ok(entries) = std::fs::read_dir(get_svg_cache_dir()) {
+                entries.filter_map(|e| e.ok()).filter(|e| e.path().extension().map_or(false, |ext| ext == "svg")).count()
+            } else {
+                0
+            };
+            Ok(serde_json::json!({
+                "memCount": mem_count,
+                "diskCount": disk_count,
+                "capacity": 6000
+            }))
         }
         "getVerificationSteps" => Ok(serde_json::json!([
             "1. Ensure Brawlhalla is launched to the Main Menu.",
@@ -919,12 +1103,14 @@ fn handle_action(
                 state.installation = detected;
                 let mut cat = Catalog::default();
                 let _ = cat.load_from_installation(&state.installation);
+                invalidate_catalog_json_cache();
                 state.catalog = cat;
+                let cat_json = get_cached_catalog_response(&state.catalog);
                 state.backup_manager = BackupManager::new(&state.installation.game_path);
                 Ok(serde_json::json!({
                     "success": true,
                     "systemInfo": build_system_info(&state.installation, &state.catalog, &state.backup_manager),
-                    "catalog": build_catalog_response(&state.catalog)
+                    "catalog": cat_json
                 }))
             } else {
                 let err_msg = if state.installation.validation_messages.is_empty() {
@@ -960,6 +1146,7 @@ fn handle_action(
                 state.installation = detected;
                 let mut cat = Catalog::default();
                 let _ = cat.load_from_installation(&state.installation);
+                invalidate_catalog_json_cache();
                 state.catalog = cat;
             }
             let _ = state.backup_manager.repair_sfx_files();
@@ -974,12 +1161,12 @@ fn handle_action(
             }))
         }
         "checkForUpdates" => {
-            let res = crate::updater::UpdateManager::check_for_updates("3.3.5");
+            let res = crate::updater::UpdateManager::check_for_updates(APP_VERSION);
             Ok(serde_json::to_value(res).unwrap_or(serde_json::Value::Null))
         }
         "installUpdate" => {
             let download_url = payload.get("downloadUrl").and_then(|v| v.as_str()).unwrap_or("");
-            let version = payload.get("version").and_then(|v| v.as_str()).unwrap_or("3.3.5");
+            let version = payload.get("version").and_then(|v| v.as_str()).unwrap_or(APP_VERSION);
             let asset_name = payload.get("assetName").and_then(|v| v.as_str()).unwrap_or("");
             let manifest_url = payload.get("manifestUrl").and_then(|v| v.as_str()).map(|s| s.to_string());
             let signature_url = payload.get("signatureUrl").and_then(|v| v.as_str()).map(|s| s.to_string());
@@ -990,7 +1177,7 @@ fn handle_action(
 
             let release_info = crate::updater::ReleaseInfo {
                 has_update: true,
-                current_version: "3.3.5".to_string(),
+                current_version: APP_VERSION.to_string(),
                 latest_version: version.to_string(),
                 release_title: format!("Skinner v{}", version),
                 download_url: download_url.to_string(),
@@ -1123,7 +1310,7 @@ fn handle_action(
                 "logs": logs
             }))
         }
-        _ => Err(format!("Unknown action '{}'", action)),
+                _ => Err(format!("Unknown action '{}'", action)),
     }
 }
 
@@ -1194,6 +1381,8 @@ window.__onRustResponse = function(raw) {
 
     let p_clone = proxy.clone();
     let data_clone = Arc::clone(&shared_data);
+    let ipc_pool = Arc::new(IpcThreadPool::new(4));
+    let pool_clone = Arc::clone(&ipc_pool);
 
     log_startup(5, "Custom protocol registered", Some("Registering protocol 'brawlcraft'"));
 
@@ -1286,9 +1475,60 @@ window.__onRustResponse = function(raw) {
         .with_ipc_handler(move |req| {
             let body = req.body().to_string();
             let p_inner = p_clone.clone();
-            let data_inner = Arc::clone(&data_clone);
 
-            std::thread::spawn(move || {
+            // ZERO-LATENCY NATIVE WINDOW CONTROLS FAST-PATH
+            // Instantly execute window commands without thread overhead or waiting for global mutex
+            if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&body) {
+                if let Some(action) = json_val.get("action").and_then(|v| v.as_str()) {
+                    let req_id = json_val.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                    match action {
+                        "windowClose" => {
+                            let _ = p_inner.send_event(UserEvent::Close);
+                            return;
+                        }
+                        "windowMinimize" => {
+                            let _ = p_inner.send_event(UserEvent::Minimize);
+                            if !req_id.is_empty() {
+                                let script = format!(
+                                    "if (typeof window.__onRustResponse === 'function') {{{{ window.__onRustResponse({{\"id\":\"{}\",\"success\":true,\"data\":true,\"error\":null}}); }}}}",
+                                    req_id
+                                );
+                                let _ = p_inner.send_event(UserEvent::EvalScript(script));
+                            }
+                            return;
+                        }
+                        "windowMaximize" => {
+                            let _ = p_inner.send_event(UserEvent::Maximize);
+                            if !req_id.is_empty() {
+                                let script = format!(
+                                    "if (typeof window.__onRustResponse === 'function') {{{{ window.__onRustResponse({{\"id\":\"{}\",\"success\":true,\"data\":true,\"error\":null}}); }}}}",
+                                    req_id
+                                );
+                                let _ = p_inner.send_event(UserEvent::EvalScript(script));
+                            }
+                            return;
+                        }
+                        "windowDrag" => {
+                            let _ = p_inner.send_event(UserEvent::Drag);
+                            return;
+                        }
+                        "isWindowMaximized" => {
+                            if !req_id.is_empty() {
+                                let script = format!(
+                                    "if (typeof window.__onRustResponse === 'function') {{{{ window.__onRustResponse({{\"id\":\"{}\",\"success\":true,\"data\":false,\"error\":null}}); }}}}",
+                                    req_id
+                                );
+                                let _ = p_inner.send_event(UserEvent::EvalScript(script));
+                            }
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            let data_inner = Arc::clone(&data_clone);
+            pool_clone.execute(move || {
                 if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&body) {
                     let req_id = json_val
                         .get("id")
@@ -1315,6 +1555,44 @@ window.__onRustResponse = function(raw) {
                                     "id": req_id,
                                     "success": true,
                                     "data": svg,
+                                    "error": serde_json::Value::Null
+                                });
+                                if let Ok(resp_str) = serde_json::to_string(&response_obj) {
+                                    if let Ok(safe_js_str) = serde_json::to_string(&resp_str) {
+                                        let script = format!(
+                                            "if (typeof window.__onRustResponse === 'function') {{ window.__onRustResponse({}); }}",
+                                            safe_js_str
+                                        );
+                                        let _ = p_inner.send_event(UserEvent::EvalScript(script));
+                                    }
+                                }
+                                return;
+                            }
+                        }
+                    }
+
+                    // Fast-path: satisfy fully cached batch asset requests instantly without waiting for application lock
+                    if action == "batchGetAssetSvgs" {
+                        if let Some(items) = payload.get("items").and_then(|v| v.as_array()) {
+                            let mut results = serde_json::Map::new();
+                            let mut all_hit = true;
+                            for item in items {
+                                let cache_key = item.get("cacheKey").and_then(|v| v.as_str()).unwrap_or("");
+                                if cache_key.is_empty() {
+                                    continue;
+                                }
+                                if let Some(svg) = get_cached_svg_fast(cache_key) {
+                                    results.insert(cache_key.to_string(), serde_json::json!(svg));
+                                } else {
+                                    all_hit = false;
+                                    break;
+                                }
+                            }
+                            if all_hit && !results.is_empty() {
+                                let response_obj = serde_json::json!({
+                                    "id": req_id,
+                                    "success": true,
+                                    "data": serde_json::Value::Object(results),
                                     "error": serde_json::Value::Null
                                 });
                                 if let Ok(resp_str) = serde_json::to_string(&response_obj) {
@@ -1407,6 +1685,7 @@ window.__onRustResponse = function(raw) {
             }
             Event::UserEvent(UserEvent::Close) => {
                 *control_flow = ControlFlow::Exit;
+                std::process::exit(0);
             }
             Event::UserEvent(UserEvent::Drag) => {
                 let _ = win_ref.drag_window();
@@ -1416,6 +1695,7 @@ window.__onRustResponse = function(raw) {
                 ..
             } => {
                 *control_flow = ControlFlow::Exit;
+                std::process::exit(0);
             }
             _ => {}
         }

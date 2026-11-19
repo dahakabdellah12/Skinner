@@ -23,6 +23,58 @@ fn is_definition_tag(tag_code: u16) -> bool {
     matches!(tag_code, 2 | 6 | 10 | 11 | 14 | 20 | 21 | 22 | 32 | 33 | 35 | 36 | 37 | 39 | 46 | 48 | 75 | 83 | 84)
 }
 
+fn offset_sprite_inner_ids(data: &mut [u8], offset: u16) {
+    if data.len() < 4 { return; }
+    let mut inner_offset = 4;
+    while inner_offset + 2 <= data.len() {
+        let h = u16::from_le_bytes([data[inner_offset], data[inner_offset + 1]]);
+        let code = h >> 6;
+        let mut len = (h & 0x3F) as usize;
+        let header_size = if len == 0x3F {
+            if inner_offset + 6 > data.len() { break; }
+            len = u32::from_le_bytes([
+                data[inner_offset + 2],
+                data[inner_offset + 3],
+                data[inner_offset + 4],
+                data[inner_offset + 5],
+            ]) as usize;
+            6
+        } else {
+            2
+        };
+
+        let body_start = inner_offset + header_size;
+        let next_tag = body_start + len;
+        if next_tag > data.len() { break; }
+
+        if code == 26 {
+            let flags = data[body_start];
+            let has_char = (flags & 0x02) != 0;
+            if has_char && body_start + 4 <= next_tag {
+                let c = u16::from_le_bytes([data[body_start + 3], data[body_start + 4]]);
+                let nc = c.saturating_add(offset);
+                data[body_start + 3] = (nc & 0xFF) as u8;
+                data[body_start + 4] = ((nc >> 8) & 0xFF) as u8;
+            }
+        } else if code == 70 {
+            if body_start + 4 <= next_tag {
+                let flags1 = data[body_start];
+                let flags2 = data[body_start + 1];
+                let has_char = (flags1 & 0x02) != 0;
+                let has_class = (flags2 & 0x08) != 0;
+                if has_char && !has_class && body_start + 4 <= next_tag {
+                    let c = u16::from_le_bytes([data[body_start + 4], data[body_start + 5]]);
+                    let nc = c.saturating_add(offset);
+                    data[body_start + 4] = (nc & 0xFF) as u8;
+                    data[body_start + 5] = ((nc >> 8) & 0xFF) as u8;
+                }
+            }
+        }
+        if code == 0 { break; }
+        inner_offset = next_tag;
+    }
+}
+
 pub fn is_weapon_symbol_for(prefix: &str, base_weapon: &str) -> bool {
     let p = prefix.to_lowercase();
     let bw = base_weapon.to_lowercase();
@@ -400,6 +452,188 @@ impl SwfPackage {
         }
 
         Ok(remapped_count)
+    }
+
+    /// Replaces the internal animation and frames of a target sprite (e.g. a_SmokeTrailEndBlue, ID 46)
+    /// with the animation and frames of another sprite within the same SWF.
+    /// This preserves the target's unique character ID in SymbolClass, completely avoiding
+    /// ActionScript 3 / AVM2 duplicate ID collisions that cause effects to disappear in-game.
+    pub fn replace_sprite_animation(
+        &mut self,
+        target_symbol: &str,
+        replacement_symbol: &str,
+    ) -> Result<bool, String> {
+        let (target_id, repl_id) = {
+            let sym_tag = self.tags.iter().find(|t| t.tag_code == 76)
+                .ok_or_else(|| "SymbolClass tag not found".to_string())?;
+            let syms = parse_symbol_class(&sym_tag.data)?;
+            let tid = syms.iter().find(|(_, name)| name.eq_ignore_ascii_case(target_symbol)).map(|(id, _)| *id)
+                .ok_or_else(|| format!("Target symbol '{}' not found in SymbolClass", target_symbol))?;
+            let rid = syms.iter().find(|(_, name)| name.eq_ignore_ascii_case(replacement_symbol)).map(|(id, _)| *id)
+                .ok_or_else(|| format!("Replacement symbol '{}' not found in SymbolClass", replacement_symbol))?;
+            (tid, rid)
+        };
+
+        if target_id == repl_id {
+            return Ok(true);
+        }
+
+        let repl_data = self.tags.iter()
+            .find(|t| t.tag_code == 39 && t.data.len() >= 4 && u16::from_le_bytes([t.data[0], t.data[1]]) == repl_id)
+            .map(|t| t.data.clone())
+            .ok_or_else(|| format!("DefineSprite for replacement ID {} not found", repl_id))?;
+
+        let target_tag = self.tags.iter_mut()
+            .find(|t| t.tag_code == 39 && t.data.len() >= 4 && u16::from_le_bytes([t.data[0], t.data[1]]) == target_id)
+            .ok_or_else(|| format!("DefineSprite for target ID {} not found", target_id))?;
+
+        let mut new_data = repl_data;
+        new_data[0] = (target_id & 0xFF) as u8;
+        new_data[1] = ((target_id >> 8) & 0xFF) as u8;
+        target_tag.data = new_data;
+
+        Ok(true)
+    }
+
+    /// Imports all subordinate definition tags (shapes, sub-sprites) from source_swf and replaces
+    /// the target sprite's internal timeline and frames with the source sprite's animation.
+    /// Crucially keeps target_symbol's character ID in SymbolClass intact without collisions!
+    pub fn import_and_replace_sprite_from_swf(
+        &mut self,
+        source_swf: &SwfPackage,
+        source_symbol: &str,
+        target_symbol: &str,
+    ) -> Result<usize, String> {
+        let target_id = {
+            let sym_tag = self.tags.iter().find(|t| t.tag_code == 76)
+                .ok_or_else(|| "SymbolClass tag not found in target SWF".to_string())?;
+            let syms = parse_symbol_class(&sym_tag.data)?;
+            syms.iter().find(|(_, name)| name.eq_ignore_ascii_case(target_symbol)).map(|(id, _)| *id)
+                .ok_or_else(|| format!("Target symbol '{}' not found in SymbolClass", target_symbol))?
+        };
+
+        let source_id = {
+            let sym_tag = source_swf.tags.iter().find(|t| t.tag_code == 76)
+                .ok_or_else(|| "SymbolClass tag not found in source SWF".to_string())?;
+            let syms = parse_symbol_class(&sym_tag.data)?;
+            syms.iter().find(|(_, name)| name.eq_ignore_ascii_case(source_symbol)).map(|(id, _)| *id)
+                .ok_or_else(|| format!("Source symbol '{}' not found in SymbolClass", source_symbol))?
+        };
+
+        let mut max_id: u16 = 0;
+        for tag in &self.tags {
+            if is_definition_tag(tag.tag_code) && tag.data.len() >= 2 {
+                let id = u16::from_le_bytes([tag.data[0], tag.data[1]]);
+                if id > max_id {
+                    max_id = id;
+                }
+            }
+        }
+        let offset = max_id.saturating_add(10);
+
+        let mut needed_ids = HashSet::new();
+        needed_ids.insert(source_id);
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for tag in &source_swf.tags {
+                if tag.tag_code == 39 && tag.data.len() >= 4 {
+                    let sprite_id = u16::from_le_bytes([tag.data[0], tag.data[1]]);
+                    if needed_ids.contains(&sprite_id) {
+                        let mut inner_offset = 4;
+                        while inner_offset + 2 <= tag.data.len() {
+                            let h = u16::from_le_bytes([tag.data[inner_offset], tag.data[inner_offset + 1]]);
+                            let code = h >> 6;
+                            let mut len = (h & 0x3F) as usize;
+                            let header_size = if len == 0x3F {
+                                if inner_offset + 6 > tag.data.len() { break; }
+                                len = u32::from_le_bytes([
+                                    tag.data[inner_offset + 2],
+                                    tag.data[inner_offset + 3],
+                                    tag.data[inner_offset + 4],
+                                    tag.data[inner_offset + 5],
+                                ]) as usize;
+                                6
+                            } else {
+                                2
+                            };
+
+                            let body_start = inner_offset + header_size;
+                            let next_tag = body_start + len;
+                            if next_tag > tag.data.len() { break; }
+
+                            if code == 26 && len >= 5 {
+                                let flags = tag.data[body_start];
+                                if (flags & 0x02) != 0 {
+                                    let inner_char_id = u16::from_le_bytes([tag.data[body_start + 3], tag.data[body_start + 4]]);
+                                    if needed_ids.insert(inner_char_id) {
+                                        changed = true;
+                                    }
+                                }
+                            } else if code == 70 && len >= 6 {
+                                let flags = tag.data[body_start];
+                                if (flags & 0x02) != 0 {
+                                    let inner_char_id = u16::from_le_bytes([tag.data[body_start + 4], tag.data[body_start + 5]]);
+                                    if needed_ids.insert(inner_char_id) {
+                                        changed = true;
+                                    }
+                                }
+                            }
+
+                            if code == 0 { break; }
+                            inner_offset = next_tag;
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut new_imported_tags = Vec::new();
+        let mut imported_source_sprite = None;
+
+        for tag in &source_swf.tags {
+            if is_definition_tag(tag.tag_code) && tag.data.len() >= 2 {
+                let tid = u16::from_le_bytes([tag.data[0], tag.data[1]]);
+                if !needed_ids.contains(&tid) {
+                    continue;
+                }
+                let mut tag_copy = tag.clone();
+                if tid == source_id && tag.tag_code == 39 {
+                    offset_sprite_inner_ids(&mut tag_copy.data, offset);
+                    imported_source_sprite = Some(tag_copy);
+                    continue;
+                }
+
+                let new_id = tid.saturating_add(offset);
+                tag_copy.data[0] = (new_id & 0xFF) as u8;
+                tag_copy.data[1] = ((new_id >> 8) & 0xFF) as u8;
+
+                if tag_copy.tag_code == 39 && tag_copy.data.len() >= 4 {
+                    offset_sprite_inner_ids(&mut tag_copy.data, offset);
+                }
+                new_imported_tags.push(tag_copy);
+            }
+        }
+
+        let root_sprite = imported_source_sprite
+            .ok_or_else(|| format!("Root sprite for source symbol '{}' not found in source SWF", source_symbol))?;
+
+        let insert_idx = self.tags.iter().position(|t| t.tag_code == 1 || t.tag_code == 76).unwrap_or(0);
+        let imported_count = new_imported_tags.len();
+        for (i, t) in new_imported_tags.into_iter().enumerate() {
+            self.tags.insert(insert_idx + i, t);
+        }
+
+        let target_tag = self.tags.iter_mut()
+            .find(|t| t.tag_code == 39 && t.data.len() >= 4 && u16::from_le_bytes([t.data[0], t.data[1]]) == target_id)
+            .ok_or_else(|| format!("DefineSprite for target ID {} not found", target_id))?;
+
+        let mut new_data = root_sprite.data;
+        new_data[0] = (target_id & 0xFF) as u8;
+        new_data[1] = ((target_id >> 8) & 0xFF) as u8;
+        target_tag.data = new_data;
+
+        Ok(imported_count + 1)
     }
 
     /// Remaps only weapon symbols for a specific weapon type (e.g. Spear, Hammer, Axe, Sword)

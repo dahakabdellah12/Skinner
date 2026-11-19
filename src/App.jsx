@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TitleBar from './components/TitleBar';
 import LegendsPage from './pages/LegendsPage';
+import WeaponsPage from './pages/WeaponsPage';
+import KoEffectsPage from './pages/KoEffectsPage';
+import Sidebar from './components/Sidebar';
 import LegendCustomizer from './components/LegendCustomizer';
 import ErrorBoundary from './components/ErrorBoundary';
 import SettingsModal from './components/SettingsModal';
 import UpdateModal from './components/UpdateModal';
 import Toast from './components/Toast';
 import { api } from './services/api';
-import { setBatchCachedSvgs } from './services/assetImageCache';
+import { executeFullAppPreload } from './services/preloadService';
 import { useLanguage } from './i18n/LanguageContext';
 
 export default function App() {
@@ -16,9 +19,12 @@ export default function App() {
   const [systemInfo, setSystemInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStageTitle, setLoadingStageTitle] = useState('');
   const [loadingStatus, setLoadingStatus] = useState('');
+  const [loadingItemsCount, setLoadingItemsCount] = useState({ processed: 0, total: 0 });
   const [isBusy, setIsBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('legends'); // 'legends' | 'weapons'
   const [activeLegend, setActiveLegend] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [rosterWeaponFilter, setRosterWeaponFilter] = useState('All');
@@ -85,98 +91,68 @@ export default function App() {
     }
   }, []);
 
-  // Initialize catalog and system info on boot (runs strictly once)
+  // Keep current isArabic and showToast in refs for one-time initialization
+  const isArabicRef = useRef(isArabic);
   useEffect(() => {
+    isArabicRef.current = isArabic;
+  }, [isArabic]);
+
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  const hasInitializedRef = useRef(false);
+
+  // Full Application Resource Preloading Engine (Zero-Wait Navigation) — Runs strictly ONCE on startup
+  useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     async function init() {
       setLoading(true);
-      setLoadingProgress(5);
-      setLoadingStatus(isArabic ? 'جاري فحص وتحديد مسار اللعبة...' : 'Detecting game installation...');
+      setLoadingProgress(3);
+      const currArabic = isArabicRef.current;
+      setLoadingStageTitle(currArabic ? 'تهيئة النظام والتحقق من التثبيت' : 'Initializing Application');
+      setLoadingStatus(currArabic ? 'جاري فحص وتحديد مسار اللعبة...' : 'Detecting game installation...');
       try {
-        const [sys, cat] = await Promise.all([
-          api.getSystemInfo(),
-          api.getCatalog()
-        ]);
+        const sys = await api.getSystemInfo();
         setSystemInfo(sys);
+        setLoadingProgress(10);
+        setLoadingStageTitle(currArabic ? 'تحميل بيانات اللعبة والكتالوج' : 'Loading Catalog Data');
+        setLoadingStatus(currArabic ? 'فك تشفير وقراءة سجلات الأساطير والسكنات...' : 'Parsing legends, weapons & costumes catalog...');
+
+        const cat = await api.getCatalog();
         setCatalog(cat);
-        setLoadingProgress(25);
+        setLoadingProgress(18);
 
-        // Pre-caching Algorithm (Warm up cache for all playable legends and default costumes)
-        if (cat && cat.legends && cat.legends.length > 0) {
-          setLoadingStatus(isArabic ? 'جاري استخراج صور وأصول الأساطير المتاحة...' : 'Gathering legend portraits & assets...');
-          const itemsToPreload = [];
-
-          // 1. Playable Legend portraits
-          for (const leg of cat.legends) {
-            if (leg.heroName === 'DEFAULT_CHARACTER' || leg.heroName?.toLowerCase() === 'random') continue;
-            itemsToPreload.push({
-              cacheKey: `legend_${leg.heroName || leg.displayName}`,
-              queryParams: {
-                type: 'legend',
-                name: leg.displayName,
-                hero: leg.heroName
-              }
-            });
-          }
-
-          // 2. Default costumes for each legend to ensure instant card rendering
-          for (const leg of cat.legends) {
-            if (leg.heroName === 'DEFAULT_CHARACTER' || leg.heroName?.toLowerCase() === 'random') continue;
-            const def = (leg.costumes || []).find((c) => c.isDefault) || (leg.costumes || [])[0];
-            if (def) {
-              itemsToPreload.push({
-                cacheKey: `costume_${def.ownerHero}_${def.costumeName}_${def.iconName}`,
-                queryParams: {
-                  type: 'costume',
-                  icon: def.iconName,
-                  iconFile: def.iconFileName,
-                  costumeName: def.costumeName,
-                  ownerHero: def.ownerHero,
-                  swfFile: def.swfFile
-                }
-              });
+        if (cat) {
+          await executeFullAppPreload({
+            catalog: cat,
+            isArabic: currArabic,
+            onProgress: ({ progress, stageTitle, status, processed, total }) => {
+              setLoadingProgress(progress);
+              setLoadingStageTitle(stageTitle);
+              setLoadingStatus(status);
+              setLoadingItemsCount({ processed, total });
             }
-          }
-
-          const total = itemsToPreload.length;
-          const chunkSize = 25;
-          let processed = 0;
-
-          for (let i = 0; i < total; i += chunkSize) {
-            const chunk = itemsToPreload.slice(i, i + chunkSize);
-            const percent = Math.min(95, Math.round(25 + ((processed / total) * 70)));
-            setLoadingProgress(percent);
-            setLoadingStatus(
-              isArabic
-                ? `جاري التحميل السريع والتخزين الفوري للأساطير والسكنات... (${Math.round((processed / total) * 100)}%)`
-                : `Instant pre-caching for legends & skins... (${Math.round((processed / total) * 100)}%)`
-            );
-
-            try {
-              const batchRes = await api.batchGetAssetSvgs(chunk);
-              if (batchRes) {
-                setBatchCachedSvgs(batchRes);
-              }
-            } catch (batchErr) {
-              console.warn('Batch preload warning:', batchErr);
-            }
-
-            processed += chunk.length;
-          }
-
-          setLoadingProgress(100);
-          setLoadingStatus(isArabic ? 'اكتمل التخزين السريع بنجاح! التطبيق جاهز.' : 'Pre-caching complete! Studio ready.');
+          });
         }
+
+        setLoadingProgress(100);
+        setLoadingStageTitle(currArabic ? 'اكتمل التجهيز بنجاح! جاهز للاستخدام' : 'Studio Ready');
+        setLoadingStatus(currArabic ? 'اكتمل التحميل المسبق لجميع الموارد! أهلاً بك في سكينر.' : 'All assets preloaded. Welcome to Skinner.');
       } catch (err) {
         console.error('Initialization error:', err);
-        showToast('Failed to load game catalog / فشل تحميل بيانات اللعبة: ' + err.message, 'error');
+        showToastRef.current?.((isArabicRef.current ? 'فشل تحميل بيانات اللعبة: ' : 'Failed to initialize catalog: ') + err.message, 'error');
       } finally {
         setTimeout(() => {
           setLoading(false);
-        }, 300);
+        }, 320);
       }
     }
     init();
-  }, []); // Run only once on mount, language changes seamlessly without re-triggering loader
+  }, []);
 
   // Listen for background update progress events from WebView bridge
   useEffect(() => {
@@ -390,30 +366,30 @@ export default function App() {
     }
   }, [isArabic, showToast, systemInfo, fetchSystemInfo]);
 
-  // Handler: Restore Target Costume's SWF
+  // Handler: Restore Target Costume and All Weapons/Files for the Active Legend
   const handleRestoreTargetCostume = useCallback(async () => {
-    const swf = activeLegend?.primarySwf;
-    if (!swf) {
-      showToast(isArabic ? 'لا يوجد ملف مرتبط بهذه الأسطورة.' : 'No SWF file linked.', 'error');
+    const legendName = activeLegend?.heroName || activeLegend?.displayName || activeLegend?.name;
+    if (!legendName) {
+      showToast(isArabic ? 'لم يتم تحديد أسطورة.' : 'No legend selected.', 'error');
       return;
     }
 
     setIsBusy(true);
     try {
-      const success = await api.restoreCostume(swf);
-      if (success) {
+      const count = await api.restoreLegend(legendName);
+      if (count > 0) {
         showToast(
           isArabic
-            ? `تمت استعادة ملف "${swf}" لحالته الأصلية بنجاح.`
-            : `Successfully restored "${swf}" to original pristine state.`,
+            ? `تمت استعادة كافة أسلحة وملفات "${legendName}" لحالتها الأصلية بنجاح (${count} ملف).`
+            : `Successfully restored all weapons and files for "${legendName}" to pristine original state (${count} files).`,
           'success'
         );
         await fetchSystemInfo();
       } else {
         showToast(
           isArabic
-            ? `الملف "${swf}" بحالته الأصلية بالفعل.`
-            : `File "${swf}" is already original or has no backup.`,
+            ? `كافة ملفات وأسلحة "${legendName}" بحالتها الأصلية بالفعل.`
+            : `All weapons and files for "${legendName}" are already in original state.`,
           'info'
         );
       }
@@ -423,20 +399,6 @@ export default function App() {
       setIsBusy(false);
     }
   }, [activeLegend, isArabic, showToast, fetchSystemInfo]);
-
-  // Poll isGameRunning every 3.5 seconds to dynamically update Launch/Restart button
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const running = await api.isGameRunning();
-        setSystemInfo((prev) => {
-          if (!prev || prev.isGameRunning === running) return prev;
-          return { ...prev, isGameRunning: running };
-        });
-      } catch { }
-    }, 3500);
-    return () => clearInterval(interval);
-  }, []);
 
   // Handler: Launch Game
   const handleLaunchGame = useCallback(async () => {
@@ -488,6 +450,8 @@ export default function App() {
       const restoredCount = await api.restoreAll();
       try {
         localStorage.removeItem('brawlhalla_legend_customizations');
+        localStorage.removeItem('brawlcraft_ko_customizations');
+        localStorage.removeItem('brawlcraft_ko_effect_customization');
       } catch { }
 
       // Reset all states and menus to original default
@@ -557,9 +521,25 @@ export default function App() {
         onOpenUpdate={() => setIsUpdateModalOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="main-content">
-        <div className="page-container" ref={pageContainerRef} onScroll={handleScroll}>
+      {/* Workspace Body: Sidebar Navigation on Left + Main Content on Right */}
+      <div className="app-body">
+        {/* Navigation Sidebar (Left side) */}
+        <Sidebar
+          activeTab={activeLegend ? 'legends' : activeTab}
+          onSelectTab={(tabId) => {
+            if (tabId === 'weapons') return;
+            if (activeLegend) {
+              setActiveLegend(null);
+            }
+            setActiveTab(tabId);
+          }}
+          catalog={catalog}
+          disabled={loading}
+        />
+
+        {/* Main Content Area (Right side) */}
+        <main className="main-content">
+          <div className="page-container" ref={pageContainerRef} onScroll={handleScroll}>
           {loading ? (
             <div style={{
               display: 'flex',
@@ -586,7 +566,18 @@ export default function App() {
               </div>
 
               {/* Progress Bar Container */}
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Stage Title & Item Counter */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {loadingStageTitle}
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--accent, #3b82f6)' }}>
+                    {loadingItemsCount.total > 0 ? `${loadingItemsCount.processed} / ${loadingItemsCount.total}` : ''}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
                 <div style={{
                   width: '100%',
                   height: '8px',
@@ -600,13 +591,18 @@ export default function App() {
                     height: '100%',
                     backgroundColor: 'var(--accent, #3b82f6)',
                     borderRadius: '999px',
-                    transition: 'width 0.25s ease-out'
+                    transition: 'width 0.2s ease-out'
                   }} />
                 </div>
 
+                {/* Status Description and Percentage */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%' }}>{loadingStatus}</span>
-                  <span style={{ fontWeight: 700, color: 'var(--accent, #3b82f6)' }}>{loadingProgress}%</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                    {loadingStatus}
+                  </span>
+                  <span style={{ fontWeight: 800, color: 'var(--accent, #3b82f6)' }}>
+                    {loadingProgress}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -628,6 +624,25 @@ export default function App() {
                 isBusy={isBusy}
               />
             </ErrorBoundary>
+          ) : activeTab === 'weapons' ? (
+            <WeaponsPage
+              catalog={catalog}
+              systemInfo={systemInfo}
+              showToast={showToast}
+              isBusy={isBusy}
+              onApplyModification={handleApplyModification}
+              onRestartGame={handleRestartGame}
+            />
+          ) : activeTab === 'ko_effects' ? (
+            <KoEffectsPage
+              catalog={catalog}
+              systemInfo={systemInfo}
+              showToast={showToast}
+              isBusy={isBusy}
+              onApplyModification={handleApplyModification}
+              onRestartGame={handleRestartGame}
+              onLaunchGame={handleLaunchGame}
+            />
           ) : (
             <LegendsPage
               catalog={catalog}
@@ -641,7 +656,8 @@ export default function App() {
             />
           )}
         </div>
-      </main>
+        </main>
+      </div>
 
       {/* Settings Modal */}
       <SettingsModal

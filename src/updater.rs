@@ -7,6 +7,17 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+#[allow(unused_mut)]
+fn create_silent_command<S: AsRef<std::ffi::OsStr>>(program: S) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    cmd
+}
+
 /// Official Skinner Ed25519 Public Verification Key (32 bytes)
 /// All production release checksums and manifests MUST be signed with the matching private key.
 pub const OFFICIAL_PUBLIC_KEY_BYTES: [u8; 32] = [
@@ -167,19 +178,27 @@ impl CryptoVerifier {
 
     /// Computes the SHA-256 hex digest of a local file.
     pub fn compute_sha256(path: &Path) -> Result<String, String> {
-        let mut file = File::open(path).map_err(|e| format!("Failed to open file for hashing: {}", e))?;
+        let file = File::open(path).map_err(|e| format!("Failed to open file for hashing: {}", e))?;
+        let mut reader = std::io::BufReader::with_capacity(65536, file);
         let mut hasher = Sha256::new();
-        let mut buffer = [0u8; 32768];
+        let mut buffer = [0u8; 65536];
 
         loop {
-            let n = file.read(&mut buffer).map_err(|e| format!("Failed reading file for hashing: {}", e))?;
+            let n = reader.read(&mut buffer).map_err(|e| format!("Failed reading file for hashing: {}", e))?;
             if n == 0 {
                 break;
             }
             hasher.update(&buffer[..n]);
         }
 
-        Ok(format!("{:x}", hasher.finalize()))
+        let hash_bytes = hasher.finalize();
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut hex = String::with_capacity(64);
+        for &b in hash_bytes.as_slice() {
+            hex.push(HEX[(b >> 4) as usize] as char);
+            hex.push(HEX[(b & 0xF) as usize] as char);
+        }
+        Ok(hex)
     }
 }
 
@@ -277,7 +296,7 @@ impl UpdateManager {
         };
 
         let api_url = format!("https://api.github.com/repos/{}/releases/latest", OFFICIAL_REPO_SLUG);
-        let output = std::process::Command::new("curl.exe")
+        let output = create_silent_command("curl.exe")
             .args(&[
                 "-s",
                 "--max-time", "6",
@@ -405,7 +424,7 @@ impl UpdateManager {
 
         // Download manifest
         if !manifest_url.is_empty() && is_trusted_release_url(manifest_url) {
-            let out = std::process::Command::new("curl.exe")
+            let out = create_silent_command("curl.exe")
                 .args(&[
                     "--proto", "=https",
                     "--proto-redir", "=https",
@@ -422,7 +441,7 @@ impl UpdateManager {
 
         // Download signature
         if !sig_url.is_empty() && is_trusted_release_url(sig_url) {
-            let out = std::process::Command::new("curl.exe")
+            let out = create_silent_command("curl.exe")
                 .args(&[
                     "--proto", "=https",
                     "--proto-redir", "=https",
@@ -474,7 +493,7 @@ impl UpdateManager {
             error_message: None,
         });
 
-        let curl_out = std::process::Command::new("curl.exe")
+        let curl_out = create_silent_command("curl.exe")
             .args(&[
                 "--proto", "=https",
                 "--proto-redir", "=https",
@@ -552,7 +571,7 @@ impl UpdateManager {
             let _ = fs::create_dir_all(&staged_dir);
 
             // Use tar -xf (built-in on Windows 10/11) or PowerShell Expand-Archive
-            let tar_res = std::process::Command::new("tar.exe")
+            let tar_res = create_silent_command("tar.exe")
                 .args(&["-xf", package_path.to_str().unwrap(), "-C", staged_dir.to_str().unwrap()])
                 .output();
 
@@ -561,7 +580,7 @@ impl UpdateManager {
                 _ => {
                     // Fallback to powershell Expand-Archive
                     let ps_cmd = format!("Expand-Archive -LiteralPath '{}' -DestinationPath '{}' -Force", package_path.display(), staged_dir.display());
-                    let ps_res = std::process::Command::new("powershell.exe")
+                    let ps_res = create_silent_command("powershell.exe")
                         .args(&["-NoProfile", "-NonInteractive", "-Command", &ps_cmd])
                         .output();
                     matches!(ps_res, Ok(out) if out.status.success())
@@ -639,7 +658,7 @@ exit
         fs::write(&script_path, script_content)
             .map_err(|e| format!("Failed writing updater script: {}", e))?;
 
-        let mut cmd = std::process::Command::new("cmd.exe");
+        let mut cmd = create_silent_command("cmd.exe");
         cmd.args(&["/C", script_path.to_str().unwrap()]);
         #[cfg(windows)]
         {

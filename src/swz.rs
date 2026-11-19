@@ -1,7 +1,7 @@
 use flate2::read::ZlibDecoder;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Cursor, Read};
+use std::io::{BufReader, Cursor, Read};
 use std::path::Path;
 
 pub struct SwzRandom {
@@ -109,7 +109,8 @@ pub fn find_swz_key(air_swf_path: &Path, swz_path: &Path) -> Option<u32> {
 }
 
 pub fn read_swz_files(swz_path: &Path, key: u32) -> Result<HashMap<String, String>, String> {
-    let mut file = File::open(swz_path).map_err(|e| format!("Failed to open Game.swz: {}", e))?;
+    let file = File::open(swz_path).map_err(|e| format!("Failed to open Game.swz: {}", e))?;
+    let mut file = BufReader::with_capacity(65536, file);
     let mut header = [0u8; 8];
     file.read_exact(&mut header)
         .map_err(|e| format!("Failed to read SWZ header: {}", e))?;
@@ -133,7 +134,7 @@ pub fn read_swz_files(swz_path: &Path, key: u32) -> Result<HashMap<String, Strin
         if file.read_exact(&mut len_buf).is_err() {
             break;
         }
-        let _decomp_size = u32::from_be_bytes(len_buf) ^ rand.next();
+        let decomp_size = (u32::from_be_bytes(len_buf) ^ rand.next()) as usize;
 
         if file.read_exact(&mut len_buf).is_err() {
             break;
@@ -152,9 +153,10 @@ pub fn read_swz_files(swz_path: &Path, key: u32) -> Result<HashMap<String, Strin
             chk = (*b as u32) ^ chk.rotate_right((i % 7 + 1) as u32);
         }
 
-        // Decompress with zlib
+        // Decompress with zlib with pre-allocated buffer
         let mut decoder = ZlibDecoder::new(Cursor::new(&encrypted));
-        let mut decompressed = Vec::new();
+        let cap = decomp_size.min(64 * 1024 * 1024);
+        let mut decompressed = Vec::with_capacity(cap);
         if decoder.read_to_end(&mut decompressed).is_ok() {
             if let Ok(content) = String::from_utf8(decompressed) {
                 let name = get_swz_file_name(&content);

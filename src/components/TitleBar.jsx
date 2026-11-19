@@ -4,7 +4,11 @@ import { api } from '../services/api';
 import appLogo from '../assets/logo.png';
 import { ArrowUpCircle } from 'lucide-react';
 
-export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdate }) {
+export default function TitleBar({
+  onOpenSettings,
+  hasPendingUpdate,
+  onOpenUpdate
+}) {
   const { isArabic } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -110,6 +114,8 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
           </svg>
         </button>
 
+        
+
         {hasPendingUpdate && (
           <button
             type="button"
@@ -124,6 +130,8 @@ export default function TitleBar({ onOpenSettings, hasPendingUpdate, onOpenUpdat
         )}
       </div>
 
+      {/* Drag region spacer */}
+      <div style={{ flex: 1 }} />
 
       <div className="title-bar-actions">
         <div className="window-controls">

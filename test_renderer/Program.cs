@@ -32,6 +32,36 @@ class Program
                     Dictionary<uint, uint>? colorMap = ParseColorMap(root);
                     svg = ResolveLegendPose(uiIcons, name, hero, colorMap);
                 }
+                else if ("color".Equals(type, StringComparison.OrdinalIgnoreCase))
+                {
+                    string? icon = root.TryGetProperty("icon", out var iProp) ? iProp.GetString() : null;
+                    if (!string.IsNullOrEmpty(icon))
+                    {
+                        svg = PreviewRenderer.RenderSymbolToSvg(uiIcons, icon, null, null);
+                    }
+                }
+                else if ("koEffect".Equals(type, StringComparison.OrdinalIgnoreCase) || "ko".Equals(type, StringComparison.OrdinalIgnoreCase))
+                {
+                    string? animFile = root.TryGetProperty("animFile", out var fProp) ? fProp.GetString() : null;
+                    if (string.IsNullOrEmpty(animFile) && root.TryGetProperty("swfFile", out var sfPropKo))
+                    {
+                        animFile = sfPropKo.GetString();
+                    }
+                    string? animClass = root.TryGetProperty("animClass", out var cProp) ? cProp.GetString() : null;
+                    if (string.IsNullOrEmpty(animClass) && root.TryGetProperty("symbol", out var sPropKo))
+                    {
+                        animClass = sPropKo.GetString();
+                    }
+
+                    if (!string.IsNullOrEmpty(animFile) && !string.IsNullOrEmpty(animClass))
+                    {
+                        string fullSwf = Path.Combine(gamePath, animFile);
+                        if (File.Exists(fullSwf))
+                        {
+                            svg = PreviewRenderer.RenderSymbolToSvg(fullSwf, animClass, null, null);
+                        }
+                    }
+                }
                 else if ("costume".Equals(type, StringComparison.OrdinalIgnoreCase))
                 {
                     string? icon = root.TryGetProperty("icon", out var iProp) ? iProp.GetString() : null;
@@ -97,7 +127,8 @@ class Program
                                        bw.Equals("BattleBoots", StringComparison.OrdinalIgnoreCase) ||
                                        bw.Equals("Fists", StringComparison.OrdinalIgnoreCase) ||
                                        bw.Equals("Gauntlet", StringComparison.OrdinalIgnoreCase) ||
-                                       bw.Equals("Gauntlets", StringComparison.OrdinalIgnoreCase);
+                                       bw.Equals("Gauntlets", StringComparison.OrdinalIgnoreCase) ||
+                                       bw.Equals("Chakram", StringComparison.OrdinalIgnoreCase);
 
                     if (isPairedType)
                     {
@@ -405,17 +436,58 @@ class Program
             }
             if (isDefaultRequest) list.Add("a_WeaponCannon");
         }
-        else if (bw.Equals("Gauntlet", StringComparison.OrdinalIgnoreCase) || bw.Equals("Gauntlets", StringComparison.OrdinalIgnoreCase))
+        else if (bw.Equals("Katar", StringComparison.OrdinalIgnoreCase) || bw.Equals("Katars", StringComparison.OrdinalIgnoreCase))
         {
             if (!string.IsNullOrEmpty(symbol))
             {
-                list.Add($"a_WeaponGauntlet_{symbol}");
-                list.Add($"a_WeaponFists_{symbol}");
+                list.Add($"a_WeaponKatarBladeTop_{symbol}");
+                list.Add($"a_WeaponKatarBlade_{symbol}");
+                list.Add($"a_WeaponKatar_{symbol}");
+                list.Add($"a_WeaponKatarTop_{symbol}");
             }
             if (isDefaultRequest)
             {
-                list.Add("a_WeaponGauntlet");
+                list.Add("a_WeaponKatarBladeTop");
+                list.Add("a_WeaponKatarBlade");
+                list.Add("a_WeaponKatar");
+                list.Add("a_WeaponKatarTop");
+            }
+        }
+        else if (bw.Equals("Gauntlet", StringComparison.OrdinalIgnoreCase) || bw.Equals("Gauntlets", StringComparison.OrdinalIgnoreCase) || bw.Equals("Fists", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrEmpty(symbol))
+            {
+                list.Add($"a_WeaponFists03_{symbol}");
+                list.Add($"a_WeaponFists01_{symbol}");
+                list.Add($"a_WeaponFists07_{symbol}");
+                list.Add($"a_WeaponFists01Large_{symbol}");
+                list.Add($"a_WeaponFists_{symbol}");
+                list.Add($"a_WeaponGauntlet_{symbol}");
+            }
+            if (isDefaultRequest)
+            {
+                list.Add("a_WeaponFists03");
+                list.Add("a_WeaponFists01");
+                list.Add("a_WeaponFists07");
                 list.Add("a_WeaponFists");
+                list.Add("a_WeaponGauntlet");
+            }
+        }
+        else if (bw.Equals("Chakram", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrEmpty(symbol))
+            {
+                list.Add($"a_WeaponChakramCombined_{symbol}");
+                list.Add($"a_WeaponChakram_{symbol}");
+                list.Add($"a_WeaponChakramRight_{symbol}");
+                list.Add($"a_WeaponChakramCombinedAngleToward_{symbol}");
+                list.Add($"a_WeaponChakramCombinedSpin_{symbol}");
+            }
+            if (isDefaultRequest)
+            {
+                list.Add("a_WeaponChakramCombined_ChakramBase");
+                list.Add("a_WeaponChakramCombined");
+                list.Add("a_WeaponChakram");
             }
         }
         else if (bw.Equals("Bow", StringComparison.OrdinalIgnoreCase))

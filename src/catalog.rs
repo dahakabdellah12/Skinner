@@ -1,4 +1,4 @@
-use crate::models::{ColorSchemeInfo, CostumeInfo, GameInstallation, LegendInfo, WeaponSkinInfo};
+use crate::models::{ColorSchemeInfo, CostumeInfo, GameInstallation, KoEffectInfo, LegendInfo, WeaponSkinInfo};
 use crate::swz::{find_swz_key, read_swz_files};
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
@@ -41,7 +41,6 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     ("steampunk", 665), // TinyTina
     // Thatch
     ("thatch", 140), // Shark
-    ("thatch", 683), // Chewbacca
     // Ada
     ("cyber", 680), // Mando
     ("cyber", 454), // Heatblast
@@ -160,7 +159,6 @@ pub const EXCLUDED_COSTUME_IDS: &[(&str, i32)] = &[
     // Volkov
     ("vamplord", 617), // EpicWarlock (Epic Volkov)
     // Jaeyun
-    ("sellsword", 536), // Negan
     // Mako
     ("actualshark", 718), // Grievous (General Grievous)
     // Reno
@@ -296,6 +294,7 @@ pub struct Catalog {
     pub weapon_skins: Vec<WeaponSkinInfo>,
     pub color_schemes: Vec<ColorSchemeInfo>,
     pub weapon_skins_by_type: HashMap<String, Vec<WeaponSkinInfo>>,
+    pub ko_effects: Vec<KoEffectInfo>,
     pub is_loaded: bool,
     pub load_error: String,
 }
@@ -387,11 +386,15 @@ impl Catalog {
             return Err(self.load_error.clone());
         }
 
+        let game_dir = Path::new(&installation.game_path);
         let game_swz_path = Path::new(&installation.game_swz_path);
         let air_swf_path = Path::new(&installation.air_swf_path);
 
         let key = find_swz_key(air_swf_path, game_swz_path).unwrap_or(154281100u32);
         let files = read_swz_files(game_swz_path, key)?;
+
+        // Authentic language localization table
+        let string_table = load_language_strings(game_dir);
 
         // 1. Color Schemes
         if let Some(color_xml) = files.get("ColorSchemeTypes.xml") {
@@ -405,13 +408,13 @@ impl Catalog {
 
         // 3. Costumes
         if let Some(costume_csv) = files.get("costumeTypes.csv") {
-            self.costumes = parse_costumes(costume_csv);
+            self.costumes = parse_costumes(costume_csv, &string_table);
             self.clean_and_deduplicate_costumes();
         }
 
         // 4. Weapon Skins
         if let Some(weapon_csv) = files.get("weaponSkinTypes.csv") {
-            self.weapon_skins = parse_weapon_skins(weapon_csv);
+            self.weapon_skins = parse_weapon_skins(weapon_csv, &string_table);
         }
 
         // Group weapon skins by base weapon
@@ -426,15 +429,18 @@ impl Catalog {
                 .push(ws.clone());
         }
 
-        // Associate Costumes with Legends
+        // Associate Costumes with Legends and format default costume display names
         let mut legend_map: HashMap<String, usize> = HashMap::new();
         for (i, legend) in self.legends.iter().enumerate() {
             legend_map.insert(legend.hero_name.to_lowercase(), i);
         }
 
-        for costume in &self.costumes {
+        for costume in &mut self.costumes {
             if let Some(&idx) = legend_map.get(&costume.owner_hero.to_lowercase()) {
                 let legend = &mut self.legends[idx];
+                if costume.is_default {
+                    costume.display_name = format!("Default {}", legend.display_name);
+                }
                 legend.costumes.push(costume.clone());
                 if costume.is_default && legend.primary_swf.is_empty() {
                     legend.primary_swf = costume.swf_file.clone();
@@ -442,9 +448,15 @@ impl Catalog {
             }
         }
 
+        // 5. KO Effects (TrailEffectTypes.xml)
+        if let Some(trail_xml) = files.get("TrailEffectTypes.xml") {
+            self.ko_effects = parse_ko_effects(trail_xml, &string_table, Some(game_dir));
+        }
+
         self.is_loaded = true;
         Ok(())
     }
+
 }
 
 pub fn parse_legends(xml: &str) -> Vec<LegendInfo> {
@@ -554,7 +566,7 @@ pub fn parse_legends(xml: &str) -> Vec<LegendInfo> {
     legends
 }
 
-pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
+pub fn parse_costumes(csv: &str, string_table: &HashMap<String, String>) -> Vec<CostumeInfo> {
     let mut lines = csv.lines();
     let _table_name = lines.next();
     let header_line = match lines.next() {
@@ -569,19 +581,66 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
         .map(|(i, h)| (h.to_lowercase(), i))
         .collect();
 
-    let mut costumes = Vec::new();
+    let idx_costumename = col_map.get("costumename").copied();
+    let idx_ownerhero = col_map.get("ownerhero").copied();
+    let idx_costumeid = col_map.get("costumeid").copied();
+    let idx_displaynamekey = col_map.get("displaynamekey").copied();
+    let idx_defaultunlocked = col_map.get("defaultunlocked").copied();
+    let idx_iscrossover = col_map.get("iscrossover").copied();
+    let idx_ismetadev = col_map.get("ismetadev").copied();
+    let idx_costumeicon = col_map.get("costumeicon").copied();
+    let idx_costumeiconfilename = col_map.get("costumeiconfilename").copied();
+    let idx_weaponset = col_map.get("weaponset").copied();
+    let idx_defaultcape = col_map.get("defaultcape").copied();
+    let idx_headgfxcustomart = col_map.get("headgfxcustomart").copied();
+    let idx_boneoverride = col_map.get("boneoverride").copied();
+    let idx_namesoundevent = col_map.get("namesoundevent").copied();
+    let idx_onselectedsoundevent = col_map.get("onselectedsoundevent").copied();
+    let idx_replacementportrait = col_map.get("replacementportrait").copied();
+    let idx_crossovergem = col_map.get("crossovergem").copied();
+    let idx_handslt_swap = col_map.get("handslt_swap").copied();
+    let idx_handsdk_swap = col_map.get("handsdk_swap").copied();
+    let idx_handsskinlt_swap = col_map.get("handsskinlt_swap").copied();
+    let idx_handsskindk_swap = col_map.get("handsskindk_swap").copied();
+
+    let art_col_indices: Vec<usize> = [
+        "gfxtype.customart2",
+        "gfxtype.customart",
+        "gfxtype.customart3",
+        "gfxtype.customart4",
+        "customart2",
+        "customart",
+        "customart3",
+        "customart4",
+    ]
+    .iter()
+    .filter_map(|name| col_map.get(*name).copied())
+    .collect();
+
+    let swap_col_indices: Vec<usize> = [
+        "swapcustomart",
+        "swapcustomart2",
+        "swapcustomart3",
+        "swapcustomart4",
+        "swapcustomart5",
+    ]
+    .iter()
+    .filter_map(|name| col_map.get(*name).copied())
+    .collect();
+
+    let mut costumes = Vec::with_capacity(1024);
 
     for line in lines {
         if line.trim().is_empty() {
             continue;
         }
-        let cols = parse_csv_line(line);
+        let cols = parse_csv_line_borrowed(line);
         if cols.len() < 10 {
             continue;
         }
 
-        let name = get_col(&cols, &col_map, "costumename");
-        let owner = get_col(&cols, &col_map, "ownerhero");
+        let name = get_col_str(&cols, idx_costumename);
+        let owner = get_col_str(&cols, idx_ownerhero);
 
         if name.is_empty()
             || name.eq_ignore_ascii_case("Template")
@@ -590,30 +649,23 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
             continue;
         }
 
-        let costume_id = get_col(&cols, &col_map, "costumeid").parse().unwrap_or(0);
-        if is_excluded_costume(&owner, costume_id) {
+        let costume_id = get_col_str(&cols, idx_costumeid).parse().unwrap_or(0);
+        if is_excluded_costume(owner, costume_id) {
             continue;
         }
-        let disp_key = get_col(&cols, &col_map, "displaynamekey");
-        let def_raw = get_col(&cols, &col_map, "defaultunlocked");
+        let disp_key = get_col_str(&cols, idx_displaynamekey);
+        let def_raw = get_col_str(&cols, idx_defaultunlocked);
         let default_unlocked = def_raw.eq_ignore_ascii_case("true") || def_raw == "1";
-        let is_crossover = get_col(&cols, &col_map, "iscrossover").eq_ignore_ascii_case("true");
-        let is_metadev = get_col(&cols, &col_map, "ismetadev").eq_ignore_ascii_case("true");
+        let is_crossover = get_col_str(&cols, idx_iscrossover).eq_ignore_ascii_case("true");
+        let is_metadev = get_col_str(&cols, idx_ismetadev).eq_ignore_ascii_case("true");
 
-        let mut custom_arts = Vec::new();
-        for col_name in &[
-            "gfxtype.customart2",
-            "gfxtype.customart",
-            "gfxtype.customart3",
-            "gfxtype.customart4",
-            "customart2",
-            "customart",
-            "customart3",
-            "customart4",
-        ] {
-            let val = get_col(&cols, &col_map, col_name);
-            if !val.is_empty() && val != "--" && val.contains('/') && !custom_arts.contains(&val) {
-                custom_arts.push(val);
+        let mut custom_arts = Vec::with_capacity(4);
+        for &idx in &art_col_indices {
+            if idx < cols.len() {
+                let val = cols[idx];
+                if !val.is_empty() && val != "--" && val.contains('/') && !custom_arts.iter().any(|s: &String| s == val) {
+                    custom_arts.push(val.to_string());
+                }
             }
         }
 
@@ -626,25 +678,34 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
         let (mut swf, symbol) = if let Some((s, sym)) = art_to_use.split_once('/') {
             (s.to_string(), sym.to_string())
         } else if !owner.is_empty() && owner != "--" && owner != "DEFAULT_CHARACTER" {
-            (format!("Gfx_{}.swf", owner), name.clone())
+            (format!("Gfx_{}.swf", owner), name.to_string())
         } else {
-            ("Gfx_Costumes.swf".to_string(), name.clone())
+            ("Gfx_Costumes.swf".to_string(), name.to_string())
         };
 
         if !swf.is_empty() && !swf.to_lowercase().ends_with(".swf") {
             swf.push_str(".swf");
         }
 
-        let friendly_name = format_display_name(&name, &disp_key);
-        let icon = get_col(&cols, &col_map, "costumeicon");
-        let mut icon_file = get_col(&cols, &col_map, "costumeiconfilename");
+        let friendly_name = if let Some(v) = string_table.get(disp_key) {
+            v.clone()
+        } else if let Some(v) = string_table.get(&format!("CostumeType_{}_DisplayName", name)) {
+            v.clone()
+        } else if let Some(v) = string_table.get(&format!("UI_CostumeName_{}", name)) {
+            v.clone()
+        } else {
+            format_display_name(name, disp_key)
+        };
+
+        let icon = get_col_str(&cols, idx_costumeicon).to_string();
+        let mut icon_file = get_col_str(&cols, idx_costumeiconfilename).to_string();
         if icon_file.is_empty() || icon_file == "--" || icon_file == "0" {
             icon_file = "UI_Icons.swf".to_string();
         } else if !icon_file.to_lowercase().ends_with(".swf") {
             icon_file.push_str(".swf");
         }
 
-        let weapon_set = get_col(&cols, &col_map, "weaponset");
+        let weapon_set = get_col_str(&cols, idx_weaponset).to_string();
         let hands_art = custom_arts
             .iter()
             .find(|c| c.to_lowercase().starts_with("gfx_hands.swf/"))
@@ -652,32 +713,28 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
             .unwrap_or_default();
         let hands_suffix = hands_art.split_once('/').map(|(_, s)| s).unwrap_or("").to_string();
 
-        let default_cape = get_col(&cols, &col_map, "defaultcape");
-        let head_gfx = get_col(&cols, &col_map, "headgfxcustomart");
-        let bone_override = get_col(&cols, &col_map, "boneoverride");
-        let name_sound_event = get_col(&cols, &col_map, "namesoundevent");
-        let on_selected_sound_event = get_col(&cols, &col_map, "onselectedsoundevent");
-        let replacement_portrait = get_col(&cols, &col_map, "replacementportrait");
-        let crossover_gem = get_col(&cols, &col_map, "crossovergem");
+        let default_cape = get_col_str(&cols, idx_defaultcape).to_string();
+        let head_gfx = get_col_str(&cols, idx_headgfxcustomart).to_string();
+        let bone_override = get_col_str(&cols, idx_boneoverride).to_string();
+        let name_sound_event = get_col_str(&cols, idx_namesoundevent).to_string();
+        let on_selected_sound_event = get_col_str(&cols, idx_onselectedsoundevent).to_string();
+        let replacement_portrait = get_col_str(&cols, idx_replacementportrait).to_string();
+        let crossover_gem = get_col_str(&cols, idx_crossovergem).to_string();
 
-        let mut swap_custom_arts = Vec::new();
-        for col_name in &[
-            "swapcustomart",
-            "swapcustomart2",
-            "swapcustomart3",
-            "swapcustomart4",
-            "swapcustomart5",
-        ] {
-            let val = get_col(&cols, &col_map, col_name);
-            if !val.is_empty() && val != "--" && val.contains('/') && !swap_custom_arts.contains(&val) {
-                swap_custom_arts.push(val);
+        let mut swap_custom_arts = Vec::with_capacity(4);
+        for &idx in &swap_col_indices {
+            if idx < cols.len() {
+                let val = cols[idx];
+                if !val.is_empty() && val != "--" && val.contains('/') && !swap_custom_arts.iter().any(|s: &String| s == val) {
+                    swap_custom_arts.push(val.to_string());
+                }
             }
         }
 
-        let hands_lt_swap = get_col(&cols, &col_map, "handslt_swap");
-        let hands_dk_swap = get_col(&cols, &col_map, "handsdk_swap");
-        let hands_skin_lt_swap = get_col(&cols, &col_map, "handsskinlt_swap");
-        let hands_skin_dk_swap = get_col(&cols, &col_map, "handsskindk_swap");
+        let hands_lt_swap = get_col_str(&cols, idx_handslt_swap).to_string();
+        let hands_dk_swap = get_col_str(&cols, idx_handsdk_swap).to_string();
+        let hands_skin_lt_swap = get_col_str(&cols, idx_handsskinlt_swap).to_string();
+        let hands_skin_dk_swap = get_col_str(&cols, idx_handsskindk_swap).to_string();
 
         let mut base_colors = HashMap::new();
         for (col_key, idx) in &col_map {
@@ -696,8 +753,8 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
 
         costumes.push(CostumeInfo {
             costume_id,
-            costume_name: name,
-            owner_hero: owner,
+            costume_name: name.to_string(),
+            owner_hero: owner.to_string(),
             display_name: friendly_name,
             is_default,
             swf_file: swf,
@@ -729,7 +786,7 @@ pub fn parse_costumes(csv: &str) -> Vec<CostumeInfo> {
     costumes
 }
 
-pub fn parse_weapon_skins(csv: &str) -> Vec<WeaponSkinInfo> {
+pub fn parse_weapon_skins(csv: &str, string_table: &HashMap<String, String>) -> Vec<WeaponSkinInfo> {
     let mut lines = csv.lines();
     let _table_name = lines.next();
     let header_line = match lines.next() {
@@ -744,20 +801,36 @@ pub fn parse_weapon_skins(csv: &str) -> Vec<WeaponSkinInfo> {
         .map(|(i, h)| (h.to_lowercase(), i))
         .collect();
 
-    let mut weapons = Vec::new();
+    let idx_weaponskinname = col_map.get("weaponskinname").copied();
+    let idx_baseweapon = col_map.get("baseweapon").copied();
+    let idx_ownerhero = col_map.get("ownerhero").copied();
+    let idx_weaponskinid = col_map.get("weaponskinid").copied();
+    let idx_displaynamekey = col_map.get("displaynamekey").copied();
+    let idx_customart = col_map.get("customart").copied();
+    let idx_weaponicon = col_map.get("weaponicon").copied();
+    let idx_soundbank = col_map.get("soundbank").copied();
+    let idx_defaultunlocked = col_map.get("defaultunlocked").copied();
+
+    let define_cols: Vec<(String, usize)> = col_map
+        .iter()
+        .filter(|(k, _)| k.ends_with("_define"))
+        .map(|(k, &idx)| (k.trim_end_matches("_define").to_lowercase(), idx))
+        .collect();
+
+    let mut weapons = Vec::with_capacity(2048);
 
     for line in lines {
         if line.trim().is_empty() {
             continue;
         }
-        let cols = parse_csv_line(line);
+        let cols = parse_csv_line_borrowed(line);
         if cols.len() < 8 {
             continue;
         }
 
-        let name = get_col(&cols, &col_map, "weaponskinname");
-        let base_weapon = get_col(&cols, &col_map, "baseweapon");
-        let mut owner = get_col(&cols, &col_map, "ownerhero");
+        let name = get_col_str(&cols, idx_weaponskinname);
+        let base_weapon = get_col_str(&cols, idx_baseweapon);
+        let mut owner = get_col_str(&cols, idx_ownerhero).to_string();
 
         if name.is_empty()
             || name.eq_ignore_ascii_case("Template")
@@ -767,17 +840,26 @@ pub fn parse_weapon_skins(csv: &str) -> Vec<WeaponSkinInfo> {
             continue;
         }
 
-        let weapon_id = get_col(&cols, &col_map, "weaponskinid").parse().unwrap_or(0);
-        let disp_key = get_col(&cols, &col_map, "displaynamekey");
-        let friendly_name = format_display_name(&name, &disp_key);
+        let weapon_id = get_col_str(&cols, idx_weaponskinid).parse().unwrap_or(0);
+        let disp_key = get_col_str(&cols, idx_displaynamekey);
+        let friendly_name = if let Some(v) = string_table.get(disp_key) {
+            v.clone()
+        } else if let Some(v) = string_table.get(&format!("WeaponSkinType_{}_DisplayName", name)) {
+            v.clone()
+        } else if let Some(v) = string_table.get(&format!("UI_WeaponSkinName_{}", name)) {
+            v.clone()
+        } else {
+            format_display_name(name, disp_key)
+        };
 
-        let custom_art = get_col(&cols, &col_map, "customart");
+
+        let custom_art = get_col_str(&cols, idx_customart);
         let (mut swf, mut symbol) = if let Some((s, sym)) = custom_art.split_once('/') {
             (s.to_string(), sym.to_string())
         } else if !owner.is_empty() && owner != "--" && owner != "DEFAULT_CHARACTER" {
-            (format!("Gfx_{}.swf", owner), name.clone())
+            (format!("Gfx_{}.swf", owner), name.to_string())
         } else {
-            ("Gfx_Weapons.swf".to_string(), name.clone())
+            ("Gfx_Weapons.swf".to_string(), name.to_string())
         };
 
         if !swf.is_empty() && !swf.to_lowercase().ends_with(".swf") {
@@ -803,25 +885,24 @@ pub fn parse_weapon_skins(csv: &str) -> Vec<WeaponSkinInfo> {
             symbol = "Detective".to_string();
         }
 
-        let icon = get_col(&cols, &col_map, "weaponicon");
-        let sound_bank = get_col(&cols, &col_map, "soundbank");
-        let is_default = get_col(&cols, &col_map, "defaultunlocked").eq_ignore_ascii_case("true");
+        let icon = get_col_str(&cols, idx_weaponicon).to_string();
+        let sound_bank = get_col_str(&cols, idx_soundbank).to_string();
+        let is_default = get_col_str(&cols, idx_defaultunlocked).eq_ignore_ascii_case("true");
 
         let mut base_colors = HashMap::new();
-        for (col_key, idx) in &col_map {
-            if col_key.ends_with("_define") && *idx < cols.len() {
-                let hex_str = &cols[*idx];
+        for (clean_key, idx) in &define_cols {
+            if *idx < cols.len() {
+                let hex_str = cols[*idx];
                 if let Some(val) = parse_hex_color(hex_str) {
-                    let clean_key = col_key.trim_end_matches("_define");
-                    base_colors.insert(clean_key.to_lowercase(), val);
+                    base_colors.insert(clean_key.clone(), val);
                 }
             }
         }
 
         weapons.push(WeaponSkinInfo {
             weapon_skin_id: weapon_id,
-            weapon_skin_name: name,
-            base_weapon,
+            weapon_skin_name: name.to_string(),
+            base_weapon: base_weapon.to_string(),
             owner_hero: owner,
             display_name: friendly_name,
             swf_file: swf,
@@ -907,36 +988,304 @@ pub fn parse_color_schemes(xml: &str) -> Vec<ColorSchemeInfo> {
         }
     }
 
+    schemes.retain(|s| {
+        let name = s.scheme_name.to_lowercase();
+        let disp = s.display_name.to_lowercase();
+        let is_team = (name.contains("team") || disp.contains("team"))
+            && !name.contains("hometeam")
+            && !disp.contains("hometeam")
+            && !disp.contains("home team");
+        !is_team
+            && !name.eq_ignore_ascii_case("no_color_scheme")
+            && s.scheme_id < 128
+    });
+
     schemes.sort_by_key(|s| s.scheme_id);
     schemes
 }
 
-pub fn parse_csv_line(line: &str) -> Vec<String> {
-    let mut cols = Vec::new();
-    let mut in_quotes = false;
-    let mut current = String::new();
+pub fn parse_ko_effects(
+    xml: &str,
+    string_table: &HashMap<String, String>,
+    game_dir: Option<&Path>,
+) -> Vec<KoEffectInfo> {
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
+    let mut buf = Vec::new();
 
-    for c in line.chars() {
-        if c == '"' {
-            in_quotes = !in_quotes;
-        } else if c == ',' && !in_quotes {
-            cols.push(current.trim().to_string());
-            current.clear();
-        } else {
-            current.push(c);
+    let mut effects = Vec::new();
+    let mut current_name = String::new();
+    let mut current_id = 0;
+    let mut current_disp = String::new();
+    let mut current_anim_file = String::new();
+    let mut current_anim_class = String::new();
+    let mut current_anim_scale = 1.0f32;
+    let mut current_sound = String::new();
+    let mut tag_stack: Vec<String> = Vec::new();
+
+    // Known symbols in SFX_KO.swf
+    let sfx_ko_1_symbols: HashSet<&str> = [
+        "a_smoketrailendblue",
+        "a_smoketrailendcp",
+        "a_smoketrailend_party",
+        "a_smoketrailend_arcade",
+        "a_smoketrailend_trexbighead",
+        "a_smoketrailend_embers",
+        "a_smoketrailend_pumpkin",
+        "a_smoketrailend_snow",
+        "a_smoketrailend_runicthunder",
+        "a_smoketrailend_hotlava",
+        "a_smoketrailend_dragonflame",
+        "a_smoketrailend_spday",
+        "a_sfxmedievildragon",
+        "a_smoketrailend_demonhand",
+        "a_smoketrailend_bhfest2026",
+        "a_smoketrailend_gingerbreadman1",
+        "a_smoketrailend_bp14",
+        "a_smoketrailend_mythicminotaur",
+        "a_smoketrailend_mythicwu",
+    ].into_iter().collect();
+
+    // Dynamically query symbol classes in installed SFX_KO.swf and SFX_KO2.swf
+    let mut sfx_ko_symbols = HashSet::new();
+    let mut sfx_ko2_symbols = HashSet::new();
+
+    if let Some(gd) = game_dir {
+        let p1 = gd.join("SFX_KO.swf");
+        if let Ok(swf) = crate::swf_engine::SwfPackage::read_from_file(&p1) {
+            if let Ok(syms) = swf.get_symbol_classes() {
+                for (_, name) in syms {
+                    sfx_ko_symbols.insert(name.to_lowercase());
+                }
+            }
+        }
+        let p2 = gd.join("SFX_KO2.swf");
+        if let Ok(swf) = crate::swf_engine::SwfPackage::read_from_file(&p2) {
+            if let Ok(syms) = swf.get_symbol_classes() {
+                for (_, name) in syms {
+                    sfx_ko2_symbols.insert(name.to_lowercase());
+                }
+            }
         }
     }
-    cols.push(current.trim().to_string());
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                if tag == "TrailEffectType" {
+                    current_name.clear();
+                    current_id = 0;
+                    current_disp.clear();
+                    current_anim_file.clear();
+                    current_anim_class.clear();
+                    current_anim_scale = 1.0;
+                    current_sound.clear();
+                    for attr in e.attributes().flatten() {
+                        if attr.key.as_ref() == b"TrailEffectName" {
+                            current_name = String::from_utf8_lossy(&attr.value).to_string();
+                        }
+                    }
+                }
+                tag_stack.push(tag);
+            }
+            Ok(Event::Text(ref e)) => {
+                let text = e.unescape().unwrap_or_default().to_string();
+                if let Some(parent) = tag_stack.last() {
+                    match parent.as_str() {
+                        "TrailEffectID" => current_id = text.parse().unwrap_or(0),
+                        "DisplayNameKey" => current_disp = text,
+                        "KOSoundEvent" => current_sound = text,
+                        "AnimFile" => {
+                            if tag_stack.iter().any(|t| t == "KOGfx") {
+                                current_anim_file = text;
+                            }
+                        }
+                        "AnimClass" => {
+                            if tag_stack.iter().any(|t| t == "KOGfx") {
+                                current_anim_class = text;
+                            }
+                        }
+                        "AnimScale" => {
+                            if tag_stack.iter().any(|t| t == "KOGfx") {
+                                current_anim_scale = text.parse().unwrap_or(1.0);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                if tag == "TrailEffectType" {
+                    if !current_name.is_empty() && current_name != "Template" && current_id > 0 && !current_anim_class.is_empty() {
+                        let is_default = current_id == 1 || current_name.eq_ignore_ascii_case("SmokeTrailEffect");
+                        let class_lower = current_anim_class.to_lowercase();
+                        
+                        // Determine authentic SWF location, or skip if the visual symbol does not exist on disk
+                        let real_swf = if sfx_ko_symbols.contains(&class_lower) || sfx_ko_1_symbols.contains(class_lower.as_str()) || current_anim_file.eq_ignore_ascii_case("SFX_KO.swf") {
+                            "SFX_KO.swf".to_string()
+                        } else if sfx_ko2_symbols.contains(&class_lower) || current_anim_file.eq_ignore_ascii_case("SFX_KO2.swf") {
+                            "SFX_KO2.swf".to_string()
+                        } else if let Some(gd) = game_dir {
+                            if !current_anim_file.is_empty() && gd.join(&current_anim_file).is_file() {
+                                current_anim_file.clone()
+                            } else {
+                                // Missing SWF and symbol not in SFX_KO/SFX_KO2: skip effect to prevent black boxes
+                                tag_stack.pop();
+                                continue;
+                            }
+                        } else {
+                            "SFX_KO2.swf".to_string()
+                        };
+
+                        // Determine friendly Category
+                        let name_lower = current_name.to_lowercase();
+                        let category = if is_default {
+                            "Default".to_string()
+                        } else if name_lower.contains("streetfighter")
+                            || name_lower.contains("megaman")
+                            || name_lower.contains("tmnt")
+                            || name_lower.contains("adventuretime")
+                            || name_lower.contains("malachite")
+                            || name_lower.contains("vilgax")
+                            || name_lower.contains("walkerhands")
+                            || name_lower.contains("kfp")
+                            || name_lower.contains("atla")
+                            || name_lower.contains("animus")
+                            || name_lower.contains("gruntexplosion")
+                            || name_lower.contains("tkpanda")
+                            || name_lower.contains("kingjelly")
+                            || name_lower.contains("gingerbreadman")
+                            || name_lower.contains("titanchomp")
+                            || name_lower.contains("shrek")
+                        {
+                            "Crossover".to_string()
+                        } else if name_lower.contains("bp") || name_lower.contains("nidhogg") || name_lower.contains("blackhole") {
+                            "Battle Pass".to_string()
+                        } else if name_lower.contains("pumpkin")
+                            || name_lower.contains("snow")
+                            || name_lower.contains("cherub")
+                            || name_lower.contains("goldko")
+                            || name_lower.contains("heatwave")
+                            || name_lower.contains("bhfest")
+                        {
+                            "Seasonal".to_string()
+                        } else {
+                            "Store".to_string()
+                        };
+
+                        let friendly_disp = if is_default {
+                            "Default Smoke Trail".to_string()
+                        } else if let Some(v) = string_table.get(&current_disp) {
+                            v.clone()
+                        } else if let Some(v) = string_table.get(&format!("TrailEffectType_{}_DisplayName", current_name)) {
+                            v.clone()
+                        } else if let Some(v) = string_table.get(&format!("UI_TrailEffectName_{}", current_name)) {
+                            v.clone()
+                        } else if current_name == "TitanChompKO" {
+                            "Titan Chomp (Attack on Titan)".to_string()
+                        } else if current_name == "GingerBreadMan1" {
+                            "Gingerbread Man (Shrek)".to_string()
+                        } else if current_name == "ATLA" {
+                            "My Cabbages! (Avatar)".to_string()
+                        } else if current_name == "Animus" {
+                            "Animus Desync (Assassin's Creed)".to_string()
+                        } else if current_name == "StreetFighter" {
+                            "Street Fighter K.O.".to_string()
+                        } else if current_name == "TMNT" {
+                            "TMNT Pizza Power".to_string()
+                        } else if current_name == "AdventureTime" {
+                            "Lady Rainicorn (Adventure Time)".to_string()
+                        } else if current_name == "Malachite" {
+                            "Malachite (Steven Universe)".to_string()
+                        } else if current_name == "Vilgax" {
+                            "Vilgax (Ben 10)".to_string()
+                        } else if current_name == "WalkerHands" {
+                            "Walker Hands (The Walking Dead)".to_string()
+                        } else if current_name == "KFP" {
+                            "Po & Shifu (Kung Fu Panda)".to_string()
+                        } else if current_name == "KingJellyfish" {
+                            "King Jellyfish (SpongeBob)".to_string()
+                        } else if current_name == "MegaMan" {
+                            "Mega Man Defeat".to_string()
+                        } else if current_name == "TKPanda" {
+                            "Panda (Tekken)".to_string()
+                        } else if current_name == "GruntExplosion" {
+                            "Grunt Birthday Party (Halo)".to_string()
+                        } else {
+                            format_display_name(&current_name, &current_disp)
+                        };
+
+                        effects.push(KoEffectInfo {
+                            ko_effect_id: current_id,
+                            ko_effect_name: current_name.clone(),
+                            display_name: friendly_disp,
+                            swf_file: real_swf,
+                            anim_class: current_anim_class.clone(),
+                            anim_scale: current_anim_scale,
+                            sound_event: current_sound.clone(),
+                            is_default,
+                            category,
+                        });
+                    }
+                }
+                tag_stack.pop();
+            }
+            Ok(Event::Eof) => break,
+            Err(_) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+
+    // Deduplicate by anim_class keeping authentic records
+    let mut seen = HashSet::new();
+    effects.retain(|e| seen.insert(e.anim_class.to_lowercase()));
+
+    // Ensure default SmokeTrailEffect is first, then sort by display name
+    effects.sort_by(|a, b| {
+        if a.is_default {
+            std::cmp::Ordering::Less
+        } else if b.is_default {
+            std::cmp::Ordering::Greater
+        } else {
+            a.display_name.cmp(&b.display_name)
+        }
+    });
+
+    effects
+}
+
+#[inline]
+pub fn parse_csv_line_borrowed<'a>(line: &'a str) -> Vec<&'a str> {
+    let mut cols = Vec::with_capacity(32);
+    let mut in_quotes = false;
+    let mut start = 0;
+    let bytes = line.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'"' {
+            in_quotes = !in_quotes;
+        } else if b == b',' && !in_quotes {
+            cols.push(line[start..i].trim().trim_matches('"').trim());
+            start = i + 1;
+        }
+    }
+    cols.push(line[start..].trim().trim_matches('"').trim());
     cols
 }
 
-fn get_col(cols: &[String], map: &HashMap<String, usize>, name: &str) -> String {
-    if let Some(&idx) = map.get(name) {
-        if idx < cols.len() {
-            return cols[idx].trim_matches('"').trim().to_string();
-        }
+#[inline(always)]
+fn get_col_str<'a>(cols: &[&'a str], idx: Option<usize>) -> &'a str {
+    match idx {
+        Some(i) if i < cols.len() => cols[i],
+        _ => "",
     }
-    String::new()
+}
+
+pub fn parse_csv_line(line: &str) -> Vec<String> {
+    parse_csv_line_borrowed(line).into_iter().map(|s| s.to_string()).collect()
 }
 
 fn parse_hex_color(s: &str) -> Option<u32> {
@@ -962,6 +1311,10 @@ fn format_display_name(name: &str, key: &str) -> String {
         .replace("WeaponSkinType", "")
         .replace("ColorSchemeType_", "")
         .replace("ColorSchemeType", "")
+        .replace("TrailEffectType_", "")
+        .replace("TrailEffectType", "")
+        .replace("TrailEffect_", "")
+        .replace("TrailEffect", "")
         .replace("_DisplayName", "")
         .replace("DisplayName", "")
         .replace('_', " ");
@@ -983,3 +1336,54 @@ fn format_display_name(name: &str, key: &str) -> String {
     }
     out.trim().to_string()
 }
+
+/// Loads authentic localization strings from Brawlhalla's language binary file (e.g. languages/language.1.bin).
+pub fn load_language_strings(game_dir: &Path) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    let candidates = [
+        game_dir.join("languages").join("language.1.bin.original_backup"),
+        game_dir.join("languages").join("language.1.bin.new_update_backup"),
+        game_dir.join("languages").join("language.1.bin"),
+    ];
+
+    for path in &candidates {
+        if let Ok(data) = std::fs::read(path) {
+            if data.len() > 8 {
+                use flate2::read::ZlibDecoder;
+                use std::io::Read;
+                let mut decoder = ZlibDecoder::new(&data[4..]);
+                let mut decomp = Vec::new();
+                if decoder.read_to_end(&mut decomp).is_ok() && decomp.len() >= 4 {
+                    let mut i = 4;
+                    while i + 2 <= decomp.len() {
+                        let k_len = u16::from_be_bytes([decomp[i], decomp[i + 1]]) as usize;
+                        i += 2;
+                        if i + k_len > decomp.len() {
+                            break;
+                        }
+                        let key = String::from_utf8_lossy(&decomp[i..i + k_len]).to_string();
+                        i += k_len;
+
+                        if i + 2 > decomp.len() {
+                            break;
+                        }
+                        let v_len = u16::from_be_bytes([decomp[i], decomp[i + 1]]) as usize;
+                        i += 2;
+                        if i + v_len > decomp.len() {
+                            break;
+                        }
+                        let val = String::from_utf8_lossy(&decomp[i..i + v_len]).to_string();
+                        i += v_len;
+
+                        map.insert(key, val);
+                    }
+                    if !map.is_empty() {
+                        return map;
+                    }
+                }
+            }
+        }
+    }
+    map
+}
+

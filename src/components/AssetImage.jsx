@@ -4,10 +4,11 @@ import {
   getCachedSvg,
   hasCachedSvg,
   setCachedSvg,
-  subscribeToCacheInvalidation
+  subscribeToCacheInvalidation,
+  instantRecolorSvg
 } from '../services/assetImageCache';
 
-export default function AssetImage({
+function AssetImage({
   type,
   item,
   colorScheme = null,
@@ -52,7 +53,9 @@ export default function AssetImage({
     } else if (type === 'weapon' && item) {
       const hero = item.ownerHero || ownerHero || '';
       const costKey = costumeName ? `_${costumeName}` : '';
-      cacheKey = `weapon_${item.baseWeapon}_${item.weaponSkinName}_${item.symbolSuffix}_${hero}${costKey}${csKey}`;
+      const isPaired = ['Katar', 'Katars', 'Boots', 'BattleBoots', 'Fists', 'Gauntlet', 'Gauntlets', 'Chakram'].includes(item.baseWeapon);
+      const pairedSuffix = isPaired ? '_paired_v2' : '';
+      cacheKey = `weapon_${item.baseWeapon}_${item.weaponSkinName}_${item.symbolSuffix}_${hero}${costKey}${csKey}${pairedSuffix}`;
       queryParams = {
         type: 'weapon',
         baseWeapon: item.baseWeapon,
@@ -62,6 +65,26 @@ export default function AssetImage({
         ownerHero: hero,
         costumeName: costumeName || '',
         colorSchemeId: csId ? String(csId) : undefined,
+        cacheKey
+      };
+    } else if (type === 'color' && item) {
+      const icon = item.iconName || item.icon || 'a_ColorIcon_None';
+      const keyId = item.schemeId ?? item.schemeName ?? item.displayName ?? 'none';
+      cacheKey = `color_${keyId}_${icon}`;
+      queryParams = {
+        type: 'color',
+        icon,
+        cacheKey
+      };
+    } else if ((type === 'koEffect' || type === 'ko') && item) {
+      const ko = item.rawItem || item;
+      const animFile = ko.animFile || ko.swfFile || 'SFX_KO.swf';
+      const animClass = ko.animClass || ko.symbol || '';
+      cacheKey = `ko_${ko.koEffectId || ko.koEffectName}_${animClass}`;
+      queryParams = {
+        type: 'koEffect',
+        animFile,
+        animClass,
         cacheKey
       };
     }
@@ -91,8 +114,30 @@ export default function AssetImage({
       return;
     }
 
+    // High performance instant client-side palette recoloring
+    let instantFound = false;
+    if (colorScheme) {
+      const baseKey = cacheKey.replace(/_cs_[^_]+$/, '');
+      if (hasCachedSvg(baseKey)) {
+        const baseSvg = getCachedSvg(baseKey);
+        if (typeof baseSvg === 'string' && baseSvg.trim().startsWith('<svg')) {
+          const instantSvg = instantRecolorSvg(baseSvg, colorScheme, item?.baseColors || {});
+          if (instantSvg) {
+            setCachedSvg(cacheKey, instantSvg);
+            setSvg(instantSvg);
+            instantFound = true;
+          }
+        }
+      }
+    }
+
     let isCancelled = false;
-    setSvg('');
+    if (!instantFound) {
+      // Retain current SVG if transitioning between color variations instead of flashing blank
+      if (!cacheKey.includes('_cs_')) {
+        setSvg('');
+      }
+    }
 
     api.getAssetSvg(queryParams)
       .then((result) => {
@@ -100,14 +145,14 @@ export default function AssetImage({
           if (result && typeof result === 'string' && result.trim().startsWith('<svg')) {
             setCachedSvg(cacheKey, result);
             setSvg(result);
-          } else {
+          } else if (!instantFound) {
             setCachedSvg(cacheKey, '__FAILED__');
             setSvg('');
           }
         }
       })
       .catch(() => {
-        if (!isCancelled) {
+        if (!isCancelled && !instantFound) {
           setCachedSvg(cacheKey, '__FAILED__');
           setSvg('');
         }
@@ -116,7 +161,7 @@ export default function AssetImage({
     return () => {
       isCancelled = true;
     };
-  }, [cacheKey, queryParams, cacheEpoch]);
+  }, [cacheKey, queryParams, colorScheme, item, cacheEpoch]);
 
   const currentSvg = (cacheKey && hasCachedSvg(cacheKey)) ? getCachedSvg(cacheKey) : svg;
   const isSvgValid = typeof currentSvg === 'string' && currentSvg.trim().startsWith('<svg');
@@ -190,3 +235,5 @@ export default function AssetImage({
     </div>
   );
 }
+
+export default React.memo(AssetImage);

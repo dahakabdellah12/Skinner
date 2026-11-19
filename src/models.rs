@@ -164,6 +164,29 @@ pub struct ColorSchemeInfo {
     pub swap_colors: HashMap<String, u32>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct KoEffectInfo {
+    #[serde(default)]
+    pub ko_effect_id: i32,
+    #[serde(default)]
+    pub ko_effect_name: String,
+    #[serde(default)]
+    pub display_name: String,
+    #[serde(default)]
+    pub swf_file: String,
+    #[serde(default)]
+    pub anim_class: String,
+    #[serde(default)]
+    pub anim_scale: f32,
+    #[serde(default)]
+    pub sound_event: String,
+    #[serde(default)]
+    pub is_default: bool,
+    #[serde(default)]
+    pub category: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Preset {
@@ -210,6 +233,10 @@ pub struct ModificationRequest {
     pub replacement_weapon1_name: Option<String>,
     pub target_weapon2_name: Option<String>,
     pub replacement_weapon2_name: Option<String>,
+    pub target_ko_effect: Option<KoEffectInfo>,
+    pub replacement_ko_effect: Option<KoEffectInfo>,
+    pub target_ko_effect_name: Option<String>,
+    pub replacement_ko_effect_name: Option<String>,
     pub color_scheme_name: Option<String>,
     #[serde(default)]
     pub custom_palette: HashMap<String, u32>,
@@ -254,6 +281,16 @@ impl ModificationRequest {
     pub fn get_replacement_weapon2_name(&self) -> Option<String> {
         self.replacement_weapon2.as_ref().map(|w| w.weapon_skin_name.clone())
             .or_else(|| self.replacement_weapon2_name.clone())
+    }
+
+    pub fn get_target_ko_effect_name(&self) -> Option<String> {
+        self.target_ko_effect.as_ref().map(|k| k.ko_effect_name.clone())
+            .or_else(|| self.target_ko_effect_name.clone())
+    }
+
+    pub fn get_replacement_ko_effect_name(&self) -> Option<String> {
+        self.replacement_ko_effect.as_ref().map(|k| k.ko_effect_name.clone())
+            .or_else(|| self.replacement_ko_effect_name.clone())
     }
 
     pub fn get_color_scheme_name(&self) -> Option<String> {

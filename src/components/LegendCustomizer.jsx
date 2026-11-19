@@ -207,10 +207,41 @@ export default function LegendCustomizer({
     return null;
   };
 
+  // Multi-slot customization presets (Skin 1, Skin 2, ...)
+  const initialSlots = useMemo(() => {
+    if (savedCustomization?.slots && Array.isArray(savedCustomization.slots) && savedCustomization.slots.length > 0) {
+      return savedCustomization.slots;
+    }
+    const defaultSlot = {
+      id: 'slot-1',
+      name: 'Skin 1',
+      targetCostumeId: savedCustomization?.targetCostumeId ?? null,
+      replacementHero: savedCustomization?.replacementHero ?? legend?.heroName,
+      replacementCostumeId: savedCustomization?.replacementCostumeId ?? null,
+      weapon1Id: savedCustomization?.weapon1Id ?? null,
+      weapon2Id: savedCustomization?.weapon2Id ?? null,
+      colorSchemeId: savedCustomization?.colorSchemeId ?? null,
+      autoRestart: savedCustomization?.autoRestart !== undefined ? savedCustomization.autoRestart : true
+    };
+    return [defaultSlot];
+  }, [savedCustomization, legend]);
+
+  const [slots, setSlots] = useState(initialSlots);
+  const [activeSlotIndex, setActiveSlotIndex] = useState(() => {
+    const idx = savedCustomization?.activeSlotIndex;
+    if (typeof idx === 'number' && idx >= 0 && idx < initialSlots.length) {
+      return idx;
+    }
+    return 0;
+  });
+
+  const activeSlot = slots[activeSlotIndex] || slots[0];
+
   // Target costume (costume to be replaced in user inventory, defaults to Classic/Default)
   const [selectedTargetCostume, setSelectedTargetCostume] = useState(() => {
-    if (savedCustomization?.targetCostumeId != null) {
-      const found = legendCostumes.find((c) => matchCostume(c, savedCustomization.targetCostumeId));
+    const targetId = activeSlot?.targetCostumeId ?? savedCustomization?.targetCostumeId;
+    if (targetId != null) {
+      const found = legendCostumes.find((c) => matchCostume(c, targetId));
       if (found) return found;
     }
     return legendCostumes.find((c) => c.isDefault) || legendCostumes[0] || null;
@@ -218,33 +249,49 @@ export default function LegendCustomizer({
 
   // Replacement costume (costume whose visual look will be applied)
   const initialReplacementCostume = useMemo(() => {
-    if (savedCustomization?.replacementCostumeId === '__NONE__') return null;
-    if (savedCustomization?.replacementCostumeId != null) {
-      const found = legendCostumes.find((c) => matchCostume(c, savedCustomization.replacementCostumeId))
-        || (ENABLE_CROSS_LEGEND_PICKER ? allCatalogCostumes.find((c) => matchCostume(c, savedCustomization.replacementCostumeId)) : null);
+    const repId = activeSlot?.replacementCostumeId ?? savedCustomization?.replacementCostumeId;
+    if (repId === '__NONE__') return null;
+    if (repId != null) {
+      const found = legendCostumes.find((c) => matchCostume(c, repId))
+        || (ENABLE_CROSS_LEGEND_PICKER ? allCatalogCostumes.find((c) => matchCostume(c, repId)) : null);
       if (found) return found;
     }
     return legendCostumes.find((c) => !c.isDefault) || null;
-  }, [savedCustomization, legendCostumes, allCatalogCostumes]);
+  }, [activeSlot, savedCustomization, legendCostumes, allCatalogCostumes]);
 
   const [selectedReplacementCostume, setSelectedReplacementCostume] = useState(initialReplacementCostume);
 
+
+  // Group weapon skins by base weapon once for O(1) instant lookups across all legends
+  const weaponSkinsByBase = useMemo(() => {
+    const map = new Map();
+    if (!catalog?.weaponSkins) return map;
+    for (let i = 0; i < catalog.weaponSkins.length; i++) {
+      const w = catalog.weaponSkins[i];
+      const base = (w.baseWeapon || '').trim().toLowerCase();
+      if (!base) continue;
+      let list = map.get(base);
+      if (!list) {
+        list = [];
+        map.set(base, list);
+      }
+      list.push(w);
+    }
+    return map;
+  }, [catalog?.weaponSkins]);
+
   // Available weapon skins matching Weapon 1 and Weapon 2 (Strictly isolated by baseWeapon)
   const weapon1Skins = useMemo(() => {
-    if (!catalog?.weaponSkins || !legend?.weapon1) return [];
+    if (!legend?.weapon1) return [];
     const base = legend.weapon1.trim().toLowerCase();
-    return catalog.weaponSkins.filter(
-      (w) => (w.baseWeapon || '').trim().toLowerCase() === base
-    );
-  }, [catalog, legend]);
+    return weaponSkinsByBase.get(base) || [];
+  }, [weaponSkinsByBase, legend?.weapon1]);
 
   const weapon2Skins = useMemo(() => {
-    if (!catalog?.weaponSkins || !legend?.weapon2) return [];
+    if (!legend?.weapon2) return [];
     const base = legend.weapon2.trim().toLowerCase();
-    return catalog.weaponSkins.filter(
-      (w) => (w.baseWeapon || '').trim().toLowerCase() === base
-    );
-  }, [catalog, legend]);
+    return weaponSkinsByBase.get(base) || [];
+  }, [weaponSkinsByBase, legend?.weapon2]);
 
   // Target weapons (strictly authentic defaults for this legend, never falls back to another legend)
   const defaultWeapon1 = useMemo(() => {
@@ -287,9 +334,10 @@ export default function LegendCustomizer({
 
   const selectedTargetWeapon1 = defaultWeapon1;
   const [selectedReplacementWeapon1, setSelectedReplacementWeapon1] = useState(() => {
-    if (savedCustomization?.weapon1Id === '__NONE__') return null;
-    if (savedCustomization?.weapon1Id != null) {
-      const found = weapon1Skins.find((w) => matchWeapon(w, savedCustomization.weapon1Id));
+    const w1Id = activeSlot?.weapon1Id ?? savedCustomization?.weapon1Id;
+    if (w1Id === '__NONE__') return null;
+    if (w1Id != null) {
+      const found = weapon1Skins.find((w) => matchWeapon(w, w1Id));
       if (found) return found;
     }
     if (initialReplacementCostume) {
@@ -303,9 +351,10 @@ export default function LegendCustomizer({
 
   const selectedTargetWeapon2 = defaultWeapon2;
   const [selectedReplacementWeapon2, setSelectedReplacementWeapon2] = useState(() => {
-    if (savedCustomization?.weapon2Id === '__NONE__') return null;
-    if (savedCustomization?.weapon2Id != null) {
-      const found = weapon2Skins.find((w) => matchWeapon(w, savedCustomization.weapon2Id));
+    const w2Id = activeSlot?.weapon2Id ?? savedCustomization?.weapon2Id;
+    if (w2Id === '__NONE__') return null;
+    if (w2Id != null) {
+      const found = weapon2Skins.find((w) => matchWeapon(w, w2Id));
       if (found) return found;
     }
     if (initialReplacementCostume) {
@@ -318,9 +367,10 @@ export default function LegendCustomizer({
   });
 
   const [selectedColorScheme, setSelectedColorScheme] = useState(() => {
-    if (savedCustomization?.colorSchemeId === '__NONE__') return null;
-    if (savedCustomization?.colorSchemeId != null) {
-      const found = catalog?.colorSchemes?.find((cs) => matchColorScheme(cs, savedCustomization.colorSchemeId));
+    const csId = activeSlot?.colorSchemeId ?? savedCustomization?.colorSchemeId;
+    if (csId === '__NONE__') return null;
+    if (csId != null) {
+      const found = catalog?.colorSchemes?.find((cs) => matchColorScheme(cs, csId));
       if (found) return found;
     }
     return null;
@@ -328,17 +378,20 @@ export default function LegendCustomizer({
 
 
   const [autoRestart, setAutoRestart] = useState(() => {
-    return savedCustomization?.autoRestart !== undefined ? savedCustomization.autoRestart : true;
+    const ar = activeSlot?.autoRestart ?? savedCustomization?.autoRestart;
+    return ar !== undefined ? ar : true;
   });
 
   // Character/legend selected as source for replacement visual skin.
   // Locked to active studio legend to focus on quality; kept extensible for future character additions.
   const [selectedReplacementHero, setSelectedReplacementHero] = useState(() => {
-    if (ENABLE_CROSS_LEGEND_PICKER && savedCustomization?.replacementHero) {
-      return savedCustomization.replacementHero;
+    const rh = activeSlot?.replacementHero ?? savedCustomization?.replacementHero;
+    if (ENABLE_CROSS_LEGEND_PICKER && rh) {
+      return rh;
     }
     return legend?.heroName || '';
   });
+
 
   useEffect(() => {
     if (!ENABLE_CROSS_LEGEND_PICKER && legend?.heroName) {
@@ -376,7 +429,7 @@ export default function LegendCustomizer({
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   }, [catalog?.legends, legend, tWeapon, isArabic]);
 
-  // Selected hero object for thumbnail image
+  // Selected hero object for costume preview
   const selectedHeroObject = useMemo(() => {
     if (!selectedReplacementHero) return null;
     return (catalog?.legends || []).find(
@@ -418,12 +471,270 @@ export default function LegendCustomizer({
   const [compatibility, setCompatibility] = useState(null);
   const [activePicker, setActivePicker] = useState(null);
 
+  // Slot Context Menu state
+  const [isSlotMenuOpen, setIsSlotMenuOpen] = useState(false);
+  const slotMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (slotMenuRef.current && !slotMenuRef.current.contains(e.target)) {
+        setIsSlotMenuOpen(false);
+      }
+    };
+    if (isSlotMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSlotMenuOpen]);
+
+  // Handle switching slots
+  const handleSelectSlot = useCallback((index) => {
+    if (index < 0 || index >= slots.length) return;
+    const targetSlot = slots[index];
+    if (!targetSlot) return;
+
+    // Load target costume
+    const tCostume = targetSlot.targetCostumeId != null
+      ? (legendCostumes.find((c) => matchCostume(c, targetSlot.targetCostumeId)) || legendCostumes.find((c) => c.isDefault) || legendCostumes[0])
+      : (legendCostumes.find((c) => c.isDefault) || legendCostumes[0] || null);
+    setSelectedTargetCostume(tCostume);
+
+    // Load replacement costume
+    if (targetSlot.replacementCostumeId === '__NONE__') {
+      setSelectedReplacementCostume(null);
+    } else if (targetSlot.replacementCostumeId != null) {
+      const found = legendCostumes.find((c) => matchCostume(c, targetSlot.replacementCostumeId))
+        || (ENABLE_CROSS_LEGEND_PICKER ? allCatalogCostumes.find((c) => matchCostume(c, targetSlot.replacementCostumeId)) : null);
+      setSelectedReplacementCostume(found || null);
+    } else {
+      setSelectedReplacementCostume(legendCostumes.find((c) => !c.isDefault) || null);
+    }
+
+    // Load weapons
+    if (targetSlot.weapon1Id === '__NONE__') {
+      setSelectedReplacementWeapon1(null);
+    } else if (targetSlot.weapon1Id != null) {
+      const found = weapon1Skins.find((w) => matchWeapon(w, targetSlot.weapon1Id));
+      setSelectedReplacementWeapon1(found || null);
+    } else {
+      setSelectedReplacementWeapon1(null);
+    }
+
+    if (targetSlot.weapon2Id === '__NONE__') {
+      setSelectedReplacementWeapon2(null);
+    } else if (targetSlot.weapon2Id != null) {
+      const found = weapon2Skins.find((w) => matchWeapon(w, targetSlot.weapon2Id));
+      setSelectedReplacementWeapon2(found || null);
+    } else {
+      setSelectedReplacementWeapon2(null);
+    }
+
+    // Load color scheme
+    if (targetSlot.colorSchemeId === '__NONE__') {
+      setSelectedColorScheme(null);
+    } else if (targetSlot.colorSchemeId != null) {
+      const found = catalog?.colorSchemes?.find((cs) => matchColorScheme(cs, targetSlot.colorSchemeId));
+      setSelectedColorScheme(found || null);
+    } else {
+      setSelectedColorScheme(null);
+    }
+
+    if (targetSlot.autoRestart !== undefined) {
+      setAutoRestart(targetSlot.autoRestart);
+    }
+
+    if (targetSlot.replacementHero) {
+      setSelectedReplacementHero(targetSlot.replacementHero);
+    }
+
+    setActiveSlotIndex(index);
+  }, [slots, legendCostumes, allCatalogCostumes, weapon1Skins, weapon2Skins, catalog?.colorSchemes]);
+
+  // Add new slot
+  const handleAddSlot = useCallback(() => {
+    const nextNumber = slots.length + 1;
+    const newSlot = {
+      id: `slot-${Date.now()}`,
+      name: `Skin ${nextNumber}`,
+      targetCostumeId: null,
+      replacementHero: legend?.heroName,
+      replacementCostumeId: null,
+      weapon1Id: null,
+      weapon2Id: null,
+      colorSchemeId: null,
+      autoRestart: true
+    };
+    const newSlots = [...slots, newSlot];
+    const newIndex = newSlots.length - 1;
+    setSlots(newSlots);
+
+    const defTarget = legendCostumes.find((c) => c.isDefault) || legendCostumes[0] || null;
+    setSelectedTargetCostume(defTarget);
+    setSelectedReplacementCostume(legendCostumes.find((c) => !c.isDefault) || null);
+    setSelectedReplacementWeapon1(null);
+    setSelectedReplacementWeapon2(null);
+    setSelectedColorScheme(null);
+    setAutoRestart(true);
+    setSelectedReplacementHero(legend?.heroName || '');
+    setActiveSlotIndex(newIndex);
+
+    showToast?.(
+      isArabic ? `تمت إضافة خانة تعديل جديدة: ${newSlot.name}` : `Added new skin preset slot: ${newSlot.name}`,
+      'success'
+    );
+  }, [slots, legend, legendCostumes, isArabic, showToast]);
+
+  // Duplicate current slot
+  const handleDuplicateSlot = useCallback(() => {
+    const current = slots[activeSlotIndex] || slots[0];
+    const nextNumber = slots.length + 1;
+    const duplicatedSlot = {
+      ...current,
+      id: `slot-${Date.now()}`,
+      name: `Skin ${nextNumber}`
+    };
+    const newSlots = [...slots, duplicatedSlot];
+    const newIndex = newSlots.length - 1;
+    setSlots(newSlots);
+    setActiveSlotIndex(newIndex);
+
+    showToast?.(
+      isArabic ? `تم نسخ التعديل إلى خانة جديدة: ${duplicatedSlot.name}` : `Duplicated skin customization to ${duplicatedSlot.name}`,
+      'success'
+    );
+  }, [slots, activeSlotIndex, isArabic, showToast]);
+
+  // Delete slot
+  const handleDeleteSlot = useCallback((indexToDelete) => {
+    if (slots.length <= 1) {
+      showToast?.(
+        isArabic ? 'لا يمكن حذف الخانة الوحيدة المتبقية' : 'Cannot delete the only remaining skin slot',
+        'info'
+      );
+      return;
+    }
+    const newSlots = slots.filter((_, i) => i !== indexToDelete);
+    const newIndex = Math.min(
+      activeSlotIndex >= indexToDelete ? Math.max(0, activeSlotIndex - 1) : activeSlotIndex,
+      newSlots.length - 1
+    );
+    setSlots(newSlots);
+    setActiveSlotIndex(newIndex);
+
+    const targetSlot = newSlots[newIndex];
+    if (targetSlot) {
+      const tCostume = targetSlot.targetCostumeId != null
+        ? (legendCostumes.find((c) => matchCostume(c, targetSlot.targetCostumeId)) || legendCostumes.find((c) => c.isDefault) || legendCostumes[0])
+        : (legendCostumes.find((c) => c.isDefault) || legendCostumes[0] || null);
+      setSelectedTargetCostume(tCostume);
+      setSelectedReplacementCostume(
+        targetSlot.replacementCostumeId === '__NONE__' ? null : (legendCostumes.find((c) => matchCostume(c, targetSlot.replacementCostumeId)) || null)
+      );
+      setSelectedReplacementWeapon1(
+        targetSlot.weapon1Id === '__NONE__' ? null : (weapon1Skins.find((w) => matchWeapon(w, targetSlot.weapon1Id)) || null)
+      );
+      setSelectedReplacementWeapon2(
+        targetSlot.weapon2Id === '__NONE__' ? null : (weapon2Skins.find((w) => matchWeapon(w, targetSlot.weapon2Id)) || null)
+      );
+      setSelectedColorScheme(
+        targetSlot.colorSchemeId === '__NONE__' ? null : (catalog?.colorSchemes?.find((cs) => matchColorScheme(cs, targetSlot.colorSchemeId)) || null)
+      );
+      setAutoRestart(targetSlot.autoRestart !== undefined ? targetSlot.autoRestart : true);
+    }
+
+    showToast?.(
+      isArabic ? 'تم حذف الخانة بنجاح' : 'Skin slot deleted successfully',
+      'info'
+    );
+  }, [slots, activeSlotIndex, legendCostumes, weapon1Skins, weapon2Skins, catalog?.colorSchemes, isArabic, showToast]);
+
+  // Reset current slot
+  const handleResetCurrentSlot = useCallback(() => {
+    const defTarget = legendCostumes.find((c) => c.isDefault) || legendCostumes[0] || null;
+    setSelectedTargetCostume(defTarget);
+    setSelectedReplacementCostume(legendCostumes.find((c) => !c.isDefault) || null);
+    setSelectedReplacementWeapon1(null);
+    setSelectedReplacementWeapon2(null);
+    setSelectedColorScheme(null);
+    setAutoRestart(true);
+    setSelectedReplacementHero(legend?.heroName || '');
+
+    showToast?.(
+      isArabic ? 'تمت إعادة تعيين الخانة الحالية للوضع الافتراضي' : 'Reset active slot to defaults',
+      'info'
+    );
+  }, [legendCostumes, legend, isArabic, showToast]);
+
+  // Rename slot
+  const handleRenameSlot = useCallback((index, newName) => {
+    if (!newName || !newName.trim()) return;
+    setSlots((prev) => {
+      const updated = [...prev];
+      if (updated[index]) {
+        updated[index] = { ...updated[index], name: newName.trim() };
+      }
+      return updated;
+    });
+  }, []);
+
+  // Sync active selections into current slot
+  useEffect(() => {
+    setSlots((prevSlots) => {
+      const current = prevSlots[activeSlotIndex];
+      if (!current) return prevSlots;
+
+      const targetCostumeId = selectedTargetCostume?.costumeId ?? selectedTargetCostume?.costumeName;
+      const replacementCostumeId = selectedReplacementCostume ? (selectedReplacementCostume.costumeId ?? selectedReplacementCostume.costumeName) : '__NONE__';
+      const weapon1Id = selectedReplacementWeapon1 ? (selectedReplacementWeapon1.weaponSkinId ?? selectedReplacementWeapon1.weaponSkinName) : '__NONE__';
+      const weapon2Id = selectedReplacementWeapon2 ? (selectedReplacementWeapon2.weaponSkinId ?? selectedReplacementWeapon2.weaponSkinName) : '__NONE__';
+      const colorSchemeId = selectedColorScheme ? (selectedColorScheme.schemeId ?? selectedColorScheme.schemeName) : '__NONE__';
+
+      if (
+        current.targetCostumeId === targetCostumeId &&
+        current.replacementHero === selectedReplacementHero &&
+        current.replacementCostumeId === replacementCostumeId &&
+        current.weapon1Id === weapon1Id &&
+        current.weapon2Id === weapon2Id &&
+        current.colorSchemeId === colorSchemeId &&
+        current.autoRestart === autoRestart
+      ) {
+        return prevSlots;
+      }
+
+      const updated = [...prevSlots];
+      updated[activeSlotIndex] = {
+        ...current,
+        targetCostumeId,
+        replacementHero: selectedReplacementHero,
+        replacementCostumeId,
+        weapon1Id,
+        weapon2Id,
+        colorSchemeId,
+        autoRestart
+      };
+      return updated;
+    });
+  }, [
+    activeSlotIndex,
+    selectedTargetCostume,
+    selectedReplacementHero,
+    selectedReplacementCostume,
+    selectedReplacementWeapon1,
+    selectedReplacementWeapon2,
+    selectedColorScheme,
+    autoRestart
+  ]);
+
   // Sync state to parent for persistence whenever any option changes
   const isFirstMount = useRef(true);
   const lastSavedPayloadRef = useRef(null);
 
   const getCurrentCustomizationPayload = useCallback(() => {
     return {
+      activeSlotIndex,
+      slots,
       targetCostumeId: selectedTargetCostume?.costumeId ?? selectedTargetCostume?.costumeName,
       replacementHero: selectedReplacementHero,
       replacementCostumeId: selectedReplacementCostume ? (selectedReplacementCostume.costumeId ?? selectedReplacementCostume.costumeName) : '__NONE__',
@@ -433,6 +744,8 @@ export default function LegendCustomizer({
       autoRestart
     };
   }, [
+    activeSlotIndex,
+    slots,
     selectedTargetCostume,
     selectedReplacementHero,
     selectedReplacementCostume,
@@ -441,6 +754,7 @@ export default function LegendCustomizer({
     selectedColorScheme,
     autoRestart
   ]);
+
 
   useEffect(() => {
     if (isFirstMount.current) {
@@ -524,6 +838,11 @@ export default function LegendCustomizer({
     };
 
     const rest = (catalog?.colorSchemes || [])
+      .filter((cs) => {
+        const name = (cs?.schemeName || '').toLowerCase();
+        const disp = (cs?.displayName || '').toLowerCase();
+        return !name.startsWith('team') && !disp.startsWith('team') && name !== 'no_color_scheme' && (cs?.schemeId == null || cs.schemeId < 128);
+      })
       .map((cs) => ({
         id: cs?.schemeId ?? cs?.schemeName ?? '__SCHEME__',
         title: cs?.displayName || cs?.schemeName || 'Color',
@@ -828,7 +1147,128 @@ export default function LegendCustomizer({
             <h2 style={{ fontSize: '18px', fontWeight: 800 }}>{legend.displayName}</h2>
           </div>
         </div>
+
+        {/* Right side: Masterful Skin Preset Slots Switcher & Options */}
+        <div className="slot-switcher-bar">
+          <div className="slot-pill-group">
+            {slots.map((slot, idx) => (
+              <button
+                key={slot.id || idx}
+                type="button"
+                className={`slot-pill-btn ${idx === activeSlotIndex ? 'active' : ''}`}
+                onClick={() => handleSelectSlot(idx)}
+                title={slot.name || `Skin ${idx + 1}`}
+              >
+                <span className="slot-pill-indicator" />
+                <span className="slot-pill-text">{slot.name || `Skin ${idx + 1}`}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              className="slot-pill-add-btn"
+              onClick={handleAddSlot}
+              title={isArabic ? 'إضافة خانة سكن جديدة' : 'Add New Skin Slot'}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>{isArabic ? 'سكن جديد' : 'New Slot'}</span>
+            </button>
+          </div>
+
+          {/* Slot options menu (Duplicate, Rename, Reset, Delete) */}
+          <div className="slot-menu-wrapper" ref={slotMenuRef}>
+            <button
+              type="button"
+              className="slot-menu-btn"
+              onClick={() => setIsSlotMenuOpen(!isSlotMenuOpen)}
+              title={isArabic ? 'خيارات الخانة الحالية' : 'Slot Options'}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+
+            {isSlotMenuOpen && (
+              <div className="slot-context-menu">
+                <div className="slot-menu-header">
+                  <span>{slots[activeSlotIndex]?.name || `Skin ${activeSlotIndex + 1}`}</span>
+                </div>
+                <button
+                  type="button"
+                  className="slot-menu-item"
+                  onClick={() => {
+                    setIsSlotMenuOpen(false);
+                    handleDuplicateSlot();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <span>{isArabic ? 'نسخ هذا التعديل (Duplicate)' : 'Duplicate Skin Slot'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="slot-menu-item"
+                  onClick={() => {
+                    setIsSlotMenuOpen(false);
+                    const promptName = window.prompt(
+                      isArabic ? 'أدخل اسم الخانة:' : 'Enter slot name:',
+                      slots[activeSlotIndex]?.name || `Skin ${activeSlotIndex + 1}`
+                    );
+                    if (promptName) handleRenameSlot(activeSlotIndex, promptName);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                  <span>{isArabic ? 'إعادة تسمية الخانة' : 'Rename Slot'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="slot-menu-item"
+                  onClick={() => {
+                    setIsSlotMenuOpen(false);
+                    handleResetCurrentSlot();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  <span>{isArabic ? 'إعادة تعيين الخانة للافتراضي' : 'Reset Slot Defaults'}</span>
+                </button>
+
+                {slots.length > 1 && (
+                  <>
+                    <div className="slot-menu-divider" />
+                    <button
+                      type="button"
+                      className="slot-menu-item slot-menu-danger"
+                      onClick={() => {
+                        setIsSlotMenuOpen(false);
+                        handleDeleteSlot(activeSlotIndex);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      <span>{isArabic ? 'حذف هذه الخانة' : 'Delete Slot'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
 
       {/* 4 Authentic Showcase Cards */}
       <div className="workbench-cards-grid">
@@ -1192,7 +1632,7 @@ export default function LegendCustomizer({
             title={isArabic ? 'اضغط لفتح واجهة البطاقات واختيار نظام الألوان' : 'Click to pick color palette from visual cards'}
           >
             <div className="card-selector-trigger-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ColorEmblem colorData={selectedColorScheme} size={32} />
+              <ColorEmblem colorData={selectedColorScheme} size={36} />
             </div>
             <div className="card-selector-trigger-info">
               <div className="card-selector-trigger-title">
@@ -1251,6 +1691,8 @@ export default function LegendCustomizer({
             </svg>
             <span>{isArabic ? 'تحديث اللعبة' : 'Restart Game'}</span>
           </button>
+
+          
 
           <button
             className="button-primary"

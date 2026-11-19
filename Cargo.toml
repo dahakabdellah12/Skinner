@@ -1,6 +1,6 @@
 [package]
 name = "brawlcraft-slint"
-version = "3.3.5"
+version = "4.0.0"
 edition = "2021"
 
 [[bin]]
@@ -29,7 +29,7 @@ winres = "0.1"
 
 [profile.release]
 opt-level = 3
-lto = "thin"
+lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true

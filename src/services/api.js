@@ -161,7 +161,11 @@ export const api = {
   validateModification: (req) => invoke('validateModification', req),
   applyModification: (req) => invoke('applyModification', req, 60000),
   applyAdvancedModification: (req) => invoke('applyAdvancedModification', req, 60000),
+  restoreLegend: (legendName) => invoke('restoreLegend', { legendName }),
   restoreCostume: (swfFile) => invoke('restoreCostume', { swfFile }),
+  restoreWeaponSkin: (swfFile) => invoke('restoreCostume', { swfFile }),
+  restoreKoEffects: () => invoke('restoreKoEffects'),
+  restoreKoEffect: (swfFile) => invoke('restoreKoEffect', { swfFile }),
   restoreAll: () => invoke('restoreAll'),
   getPresets: () => invoke('getPresets'),
   savePreset: (preset) => invoke('savePreset', preset),
@@ -218,10 +222,87 @@ function getMockResponse(action, _payload) {
       });
     case 'getCatalog':
       return Promise.resolve({
-        legends: [],
+        legends: [
+          {
+            heroId: 3,
+            heroName: 'Viking',
+            displayName: 'Bödvar',
+            bio: 'The Great Bear',
+            weapon1: 'Hammer',
+            weapon2: 'Sword',
+            costumes: [
+              { costumeId: 1, costumeName: 'Default', displayName: 'Default Bödvar', ownerHero: 'Viking', iconName: 'a_Icon__Default' },
+              { costumeId: 2, costumeName: 'Warrior', displayName: 'Marauder Bödvar', ownerHero: 'Viking', iconName: 'a_Icon__Warrior' }
+            ]
+          },
+          {
+            heroId: 4,
+            heroName: 'Cowgirl',
+            displayName: 'Cassidy',
+            bio: 'The Marshal',
+            weapon1: 'Blasters',
+            weapon2: 'Hammer',
+            costumes: [
+              { costumeId: 10, costumeName: 'Default', displayName: 'Default Cassidy', ownerHero: 'Cowgirl', iconName: 'a_Icon__Default' }
+            ]
+          },
+          {
+            heroId: 12,
+            heroName: 'Pirate',
+            displayName: 'Thatch',
+            bio: 'The Madman of Barbados',
+            weapon1: 'Sword',
+            weapon2: 'Blasters',
+            costumes: [
+              { costumeId: 20, costumeName: 'Default', displayName: 'Default Thatch', ownerHero: 'Pirate', iconName: 'a_Icon__Default' }
+            ]
+          },
+          {
+            heroId: 18,
+            heroName: 'Dwarf',
+            displayName: 'Ulgrim',
+            bio: 'The Sons of Ivaldi',
+            weapon1: 'Axe',
+            weapon2: 'Rocket Lance',
+            costumes: [
+              { costumeId: 30, costumeName: 'Default', displayName: 'Default Ulgrim', ownerHero: 'Dwarf', iconName: 'a_Icon__Default' }
+            ]
+          },
+          {
+            heroId: 34,
+            heroName: 'Sellsword',
+            displayName: 'Jaeyun',
+            bio: 'The Mercenary',
+            weapon1: 'Sword',
+            weapon2: 'Greatsword',
+            costumes: [
+              { costumeId: 40, costumeName: 'Default', displayName: 'Default Jaeyun', ownerHero: 'Sellsword', iconName: 'a_Icon__Default' }
+            ]
+          },
+          {
+            heroId: 42,
+            heroName: 'Gargoyle',
+            displayName: 'Onyx',
+            bio: 'The Gargoyle',
+            weapon1: 'Gauntlets',
+            weapon2: 'Cannon',
+            costumes: [
+              { costumeId: 50, costumeName: 'Default', displayName: 'Default Onyx', ownerHero: 'Gargoyle', iconName: 'a_Icon__Default' }
+            ]
+          }
+        ],
         costumes: [],
-        weaponSkins: [],
-        colorSchemes: [],
+        weaponSkins: [
+          { baseWeapon: 'Hammer', weaponSkinName: 'HammerViking', symbolSuffix: 'Hammer_Viking', displayName: 'Bödvar Hammer', ownerHero: 'Viking' },
+          { baseWeapon: 'Sword', weaponSkinName: 'SwordViking', symbolSuffix: 'Sword_Viking', displayName: 'Bödvar Sword', ownerHero: 'Viking' },
+          { baseWeapon: 'Axe', weaponSkinName: 'AxeDwarf', symbolSuffix: 'Axe_Dwarf', displayName: 'Ulgrim Axe', ownerHero: 'Dwarf' }
+        ],
+        colorSchemes: [
+          { schemeId: 1, schemeName: 'Classic', displayName: 'Default Color', indicatorColor: 0xDC2626 },
+          { schemeId: 2, schemeName: 'Blue', displayName: 'Blue Color', indicatorColor: 0x3B82F6 },
+          { schemeId: 3, schemeName: 'Yellow', displayName: 'Yellow Color', indicatorColor: 0xFACC15 },
+          { schemeId: 11, schemeName: 'Black', displayName: 'Black Color', indicatorColor: 0x18181B }
+        ],
         weaponTypes: ['Axe', 'Battle Boots', 'Blasters', 'Bow', 'Cannon', 'Gauntlets', 'Greatsword', 'Hammer', 'Katars', 'Orb', 'Rocket Lance', 'Scythe', 'Spear', 'Sword']
       });
     default:

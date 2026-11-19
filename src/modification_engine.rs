@@ -224,6 +224,207 @@ impl<'a> ModificationEngine<'a> {
         (target_w1, repl_w1, target_w2, repl_w2)
     }
 
+    pub fn apply_ko_effect_modification(&mut self, request: &ModificationRequest) -> ModificationResult {
+        let mut result = ModificationResult {
+            success: false,
+            message: String::new(),
+            modified_files: Vec::new(),
+            backup_id: String::new(),
+            operation_log: Vec::new(),
+        };
+
+        let target_ko_name = request.get_target_ko_effect_name().unwrap_or_default();
+        let repl_ko_name = request.get_replacement_ko_effect_name().unwrap_or_default();
+
+        let repl_ko = request.replacement_ko_effect.as_ref().or_else(|| {
+            self.catalog.ko_effects.iter().find(|k| {
+                k.ko_effect_name.eq_ignore_ascii_case(&repl_ko_name)
+                    || k.display_name.eq_ignore_ascii_case(&repl_ko_name)
+                    || k.anim_class.eq_ignore_ascii_case(&repl_ko_name)
+                    || (k.ko_effect_id != 0 && k.ko_effect_id.to_string() == repl_ko_name)
+            })
+        });
+
+        let repl_ko = match repl_ko {
+            Some(k) => k,
+            None => {
+                result.message = format!("Replacement KO effect '{}' not found in catalog.", repl_ko_name);
+                return result;
+            }
+        };
+
+        let default_target = self.catalog.ko_effects.iter().find(|k| k.is_default);
+        let target_ko = request.target_ko_effect.as_ref().or_else(|| {
+            if !target_ko_name.is_empty() {
+                self.catalog.ko_effects.iter().find(|k| {
+                    k.ko_effect_name.eq_ignore_ascii_case(&target_ko_name)
+                        || k.display_name.eq_ignore_ascii_case(&target_ko_name)
+                        || k.anim_class.eq_ignore_ascii_case(&target_ko_name)
+                        || (k.ko_effect_id != 0 && k.ko_effect_id.to_string() == target_ko_name)
+                })
+            } else {
+                default_target
+            }
+        }).or(default_target);
+
+        let target_ko = match target_ko {
+            Some(k) => k,
+            None => {
+                result.message = "Target KO effect not found in catalog.".into();
+                return result;
+            }
+        };
+
+        let target_swf_path = self.game_path.join(&target_ko.swf_file);
+        if !target_swf_path.is_file() {
+            result.message = format!("Target KO SWF '{}' does not exist in game directory.", target_ko.swf_file);
+            return result;
+        }
+
+        let mut files_vec = vec![target_swf_path.clone()];
+        let ui_bnk_path = self.game_path.join("audio").join("pc").join("UI.bnk");
+        if ui_bnk_path.is_file() {
+            files_vec.push(ui_bnk_path.clone());
+        }
+        let backup_reason = format!("KOEffect: {} -> {}", target_ko.display_name, repl_ko.display_name);
+
+        match self.backup_manager.create_backup(&files_vec, &backup_reason) {
+            Ok(backup_id) => {
+                crate::telemetry::log("INFO", "BACKUP", &format!("Created KO backup '{}' for {:?}", backup_id, files_vec), None);
+                result.backup_id = backup_id;
+                result.operation_log.push(format!("Created backup snapshot: {}", result.backup_id));
+            }
+            Err(e) => {
+                crate::telemetry::log("ERROR", "BACKUP", &format!("Backup failed: {}", e), None);
+                result.message = format!("Failed to create backup: {}", e);
+                return result;
+            }
+        }
+
+        let _ = self.backup_manager.restore_file(&target_ko.swf_file);
+        if ui_bnk_path.is_file() {
+            let _ = self.backup_manager.restore_file("audio/pc/UI.bnk");
+        }
+
+        if target_ko.swf_file.eq_ignore_ascii_case(&repl_ko.swf_file) {
+            match SwfPackage::read_from_file(&target_swf_path) {
+                Ok(mut swf) => {
+                    let remapped = if !target_ko.anim_class.eq_ignore_ascii_case(&repl_ko.anim_class) {
+                        match swf.replace_sprite_animation(&target_ko.anim_class, &repl_ko.anim_class) {
+                            Ok(_) => 1,
+                            Err(e) => {
+                                let _ = self.backup_manager.restore_backup(&result.backup_id);
+                                result.message = format!("Failed to swap KO sprite: {}", e);
+                                return result;
+                            }
+                        }
+                    } else {
+                        0
+                    };
+
+                    if let Err(e) = swf.write_to_file(&target_swf_path) {
+                        let _ = self.backup_manager.restore_backup(&result.backup_id);
+                        result.message = format!("Failed writing target KO SWF: {}", e);
+                        return result;
+                    }
+
+                    result.modified_files.push(target_ko.swf_file.clone());
+                    result.operation_log.push(format!(
+                        "Intra-SWF KO effect timeline replaced: {} sprite '{}' -> '{}' in '{}'",
+                        remapped, target_ko.anim_class, repl_ko.anim_class, target_ko.swf_file
+                    ));
+                }
+                Err(e) => {
+                    result.message = format!("Failed to parse target SWF '{}': {}", target_ko.swf_file, e);
+                    return result;
+                }
+            }
+        } else {
+            let repl_swf_path = self.game_path.join(&repl_ko.swf_file);
+            if !repl_swf_path.is_file() {
+                result.message = format!("Replacement KO SWF '{}' does not exist in game directory.", repl_ko.swf_file);
+                return result;
+            }
+
+            match (SwfPackage::read_from_file(&target_swf_path), SwfPackage::read_from_file(&repl_swf_path)) {
+                (Ok(mut swf_target), Ok(swf_source)) => {
+                    let imported = match swf_target.import_and_replace_sprite_from_swf(
+                        &swf_source,
+                        &repl_ko.anim_class,
+                        &target_ko.anim_class,
+                    ) {
+                        Ok(count) => count,
+                        Err(e) => {
+                            let _ = self.backup_manager.restore_backup(&result.backup_id);
+                            result.message = format!("Failed importing KO effect: {}", e);
+                            return result;
+                        }
+                    };
+
+                    if let Err(e) = swf_target.write_to_file(&target_swf_path) {
+                        let _ = self.backup_manager.restore_backup(&result.backup_id);
+                        result.message = format!("Failed writing target SWF: {}", e);
+                        return result;
+                    }
+
+                    result.modified_files.push(target_ko.swf_file.clone());
+                    result.operation_log.push(format!(
+                        "Cross-SWF KO effect imported & replaced: {} definitions from '{}' into '{}' as '{}'",
+                        imported, repl_ko.swf_file, target_ko.swf_file, target_ko.anim_class
+                    ));
+                }
+                (Err(e), _) => {
+                    result.message = format!("Failed to parse target SWF '{}': {}", target_ko.swf_file, e);
+                    return result;
+                }
+                (_, Err(e)) => {
+                    result.message = format!("Failed to parse replacement SWF '{}': {}", repl_ko.swf_file, e);
+                    return result;
+                }
+            }
+        }
+
+        // Apply KO sound event swapping in UI.bnk
+        let target_sound = if !target_ko.sound_event.is_empty() {
+            target_ko.sound_event.as_str()
+        } else {
+            "UI_InGame_KO_Default_Play"
+        };
+        let repl_sound = repl_ko.sound_event.as_str();
+
+        if !repl_sound.is_empty() && !target_sound.eq_ignore_ascii_case(repl_sound) && ui_bnk_path.is_file() {
+            match crate::bnk_engine::swap_bnk_events(&ui_bnk_path, target_sound, repl_sound) {
+                Ok(swapped) if swapped > 0 => {
+                    let rel_bnk = "audio/pc/UI.bnk".to_string();
+                    if !result.modified_files.contains(&rel_bnk) {
+                        result.modified_files.push(rel_bnk);
+                    }
+                    result.operation_log.push(format!(
+                        "KO Sound event applied: '{}' swapped with '{}' in UI.bnk.",
+                        target_sound, repl_sound
+                    ));
+                }
+                Ok(_) => {
+                    result.operation_log.push(format!(
+                        "Notice: KO sound events '{}' and '{}' are identical or already mapped.",
+                        target_sound, repl_sound
+                    ));
+                }
+                Err(e) => {
+                    crate::telemetry::log("WARN", "BNK-KO", &format!("KO sound event swap notice: {}", e), None);
+                    result.operation_log.push(format!("Notice on KO audio: {}", e));
+                }
+            }
+        }
+
+        result.success = true;
+        result.message = format!(
+            "Successfully modified KO Effect: replaced '{}' with '{}' (Visual + Audio).",
+            target_ko.display_name, repl_ko.display_name
+        );
+        result
+    }
+
     pub fn apply_modification(&mut self, request: &ModificationRequest) -> ModificationResult {
         let mut result = ModificationResult {
             success: false,
@@ -232,6 +433,15 @@ impl<'a> ModificationEngine<'a> {
             backup_id: String::new(),
             operation_log: Vec::new(),
         };
+
+        // Check if this is a KO Effect modification
+        if request.target_ko_effect.is_some()
+            || request.target_ko_effect_name.is_some()
+            || request.replacement_ko_effect.is_some()
+            || request.replacement_ko_effect_name.is_some()
+        {
+            return self.apply_ko_effect_modification(request);
+        }
 
         let legend_name = request.get_legend_name();
         let target_costume_name = request.get_target_costume_name();

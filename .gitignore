@@ -35,6 +35,7 @@ cache/
 release/*.exe
 release/*.zip
 BrawlCraft.exe
+Skinner.exe
 
 # Cryptographic release signing keys (MUST NEVER BE COMMITTED)
 *.key

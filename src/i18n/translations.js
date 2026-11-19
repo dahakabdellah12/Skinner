@@ -7,6 +7,7 @@ export const translations = {
     tab_legends: 'Playable Legends',
     tab_costumes: 'Costumes Catalog',
     tab_weapons: 'Weapon Skins',
+    tab_ko_effects: 'KO Effects',
 
     // Titles & Subtitles
     title_studio: 'Customization Studio',
@@ -17,6 +18,8 @@ export const translations = {
     subtitle_costumes: 'Select from 794+ canonical and crossover costumes',
     title_weapons: 'Weapon Cosmetics',
     subtitle_weapons: 'Customize weapon appearances independently across 14 weapon types',
+    title_ko_effects: 'KO Effects Showcase',
+    subtitle_ko_effects: 'Customize in-game Knockout explosion animations',
 
     // Header & Global Buttons
     btn_restore_pristine: 'Restore Pristine',
@@ -186,6 +189,7 @@ export const translations = {
     tab_legends: 'الأساطير القابلة للعب',
     tab_costumes: 'كتالوج الأزياء',
     tab_weapons: 'مظاهر الأسلحة',
+    tab_ko_effects: 'تأثيرات الإطاحة',
 
     // Titles & Subtitles
     title_studio: 'استوديو التخصيص',
@@ -196,6 +200,8 @@ export const translations = {
     subtitle_costumes: 'اختر من بين أكثر من 794 زياً أصلياً ومن أزياء الكروس أوفر',
     title_weapons: 'مظاهر الأسلحة',
     subtitle_weapons: 'تخصيص مظاهر الأسلحة بشكل مستقل عبر 14 فئة سلاح',
+    title_ko_effects: 'معرض تأثيرات الإطاحة (KO)',
+    subtitle_ko_effects: 'تخصيص تأثيرات وانفجارات إطاحة الخصوم في اللعبة',
 
     // Header & Global Buttons
     btn_restore_pristine: 'استعادة الأصلية',

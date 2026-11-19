@@ -234,6 +234,61 @@ impl BackupManager {
         Ok(restored)
     }
 
+    pub fn restore_legend(&self, legend_name: &str, catalog: &crate::catalog::Catalog) -> Result<usize, String> {
+        let mut files_to_restore: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        let legend_opt = catalog.legends.iter().find(|l| {
+            l.hero_name.eq_ignore_ascii_case(legend_name)
+                || l.display_name.eq_ignore_ascii_case(legend_name)
+        });
+
+        if let Some(legend) = legend_opt {
+            // 1. All costume SWFs for this legend
+            for c in &legend.costumes {
+                if !c.swf_file.is_empty() {
+                    files_to_restore.insert(c.swf_file.clone());
+                }
+            }
+
+            // 2. All character-dedicated weapon SWFs owned exclusively by this legend
+            for w in &catalog.weapon_skins {
+                if w.owner_hero.eq_ignore_ascii_case(&legend.hero_name) {
+                    if !w.swf_file.is_empty() && w.swf_file.starts_with("Gfx_") && !w.swf_file.starts_with("Gfx_Weapons") {
+                        files_to_restore.insert(w.swf_file.clone());
+                    }
+                }
+            }
+        }
+
+        // 3. Optional character select / crossover presentation assets associated with legend customizations
+        files_to_restore.insert("UI_Icons.swf".to_string());
+        files_to_restore.insert("anims/Animation_CharacterSelect.anm".to_string());
+        files_to_restore.insert("audio/pc/English(US)/VOX_Announcer.bnk".to_string());
+        files_to_restore.insert("audio/pc/PC_Movement.bnk".to_string());
+        files_to_restore.insert("audio/pc/WEP_Pistol.bnk".to_string());
+
+        // 6. Crossover signature BNK files
+        let crossover_bnks = [
+            "SIG_Hammer_01.bnk", "SIG_Sword_01.bnk", "SIG_Sword_02.bnk", "SIG_Pistol_01.bnk",
+            "SIG_Pistol_02.bnk", "SIG_Axe_01.bnk", "SIG_Lance_01.bnk", "SIG_Fists_01.bnk",
+            "SIG_Cannon_01.bnk", "SIG_Greatsword_01.bnk"
+        ];
+        for bnk in crossover_bnks {
+            files_to_restore.insert(format!("audio/pc/{}", bnk));
+        }
+
+        let mut restored_count = 0;
+        for rel_path in &files_to_restore {
+            if let Ok(true) = self.restore_file(rel_path) {
+                restored_count += 1;
+            }
+        }
+
+        self.invalidate_cache();
+        crate::telemetry::log("INFO", "RESTORE-LEGEND", &format!("Restored {} files for legend '{}'", restored_count, legend_name), None);
+        Ok(restored_count)
+    }
+
     /// Health-check and repair all sound effect files (SFX_*.swf).
     /// Ensures DirectX audio engine (XAudio2_9.dll) stability and eliminates 0xc0000005 crashes.
     pub fn repair_sfx_files(&self) -> Result<usize, String> {
@@ -341,16 +396,24 @@ impl BackupManager {
     }
 
     pub fn compute_sha256(path: &Path) -> Result<String, String> {
-        let mut file = File::open(path).map_err(|e| e.to_string())?;
+        let file = File::open(path).map_err(|e| e.to_string())?;
+        let mut reader = std::io::BufReader::with_capacity(65536, file);
         let mut hasher = Sha256::new();
-        let mut buffer = [0u8; 16384];
-        while let Ok(n) = file.read(&mut buffer) {
+        let mut buffer = [0u8; 65536];
+        while let Ok(n) = reader.read(&mut buffer) {
             if n == 0 {
                 break;
             }
             hasher.update(&buffer[..n]);
         }
-        Ok(format!("{:x}", hasher.finalize()))
+        let hash_bytes = hasher.finalize();
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut hex = String::with_capacity(64);
+        for &b in hash_bytes.as_slice() {
+            hex.push(HEX[(b >> 4) as usize] as char);
+            hex.push(HEX[(b & 0xF) as usize] as char);
+        }
+        Ok(hex)
     }
 
     fn load_manifest(&mut self) {
