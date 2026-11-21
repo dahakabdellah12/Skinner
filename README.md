@@ -184,3 +184,4 @@ The project maintains comprehensive regression and security test suites:
 - **Repository:** [https://github.com/dahakabdellah12/Skinner](https://github.com/dahakabdellah12/Skinner)
 - **Issues & Bug Reports:** [https://github.com/dahakabdellah12/Skinner/issues](https://github.com/dahakabdellah12/Skinner/issues)
 - **Author:** [dahakabdellah12](https://github.com/dahakabdellah12)
+- **Discord Server:** (https://discord.com/invite/NB6tunYEJ)
